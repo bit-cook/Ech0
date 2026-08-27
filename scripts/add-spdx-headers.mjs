@@ -36,6 +36,7 @@ const SKIP_DIRS = new Set([
   'bin',
   'release',
   'dist',
+  '.react-router', // site/ 的 react-router typegen 产物（已 gitignore）
 ])
 
 // Files explicitly excluded — generated, vendored, or upstream-owned.
@@ -45,7 +46,6 @@ const SKIP_FILES = new Set([
 ])
 
 const SKIP_PATH_FRAGMENTS = [
-  'internal/swagger/',
   'template/dist/',
   'web/dist/',
   'web/src/components/icons/', // SVG icons embed their own source/license attribution
