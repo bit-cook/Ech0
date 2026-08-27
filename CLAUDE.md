@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Ech0 is a self-hosted personal microblog (timeline) platform. It is shipped as a single Go binary that serves both the REST API and the built SPA. Backend is Go 1.26+ (Gin + Wire DI + GORM + SQLite via CGO), frontend is Vue 3 + Vite + TypeScript + UnoCSS under `web/`. Two satellite web projects also live in-repo: `hub/` (Vue 3 public-directory site) and `site/` (React Router marketing/docs site) — they are independent of the Go binary.
+Ech0 is a self-hosted personal microblog (timeline) platform. It is shipped as a single Go binary that serves both the REST API and the built SPA. Backend is Go 1.27+ (Gin + Wire DI + GORM + SQLite via CGO), frontend is Vue 3 + Vite + TypeScript + UnoCSS under `web/`. Two satellite web projects also live in-repo: `hub/` (Vue 3 public-directory site) and `site/` (React Router marketing/docs site) — they are independent of the Go binary.
 
 **For a full architecture walkthrough, read `docs/dev/architecture-overview.md` first** — it covers the layered backend, business domains, Agent/MCP capability layers, event subsystem, infra modules, and `pkg/` libraries end-to-end.
 
