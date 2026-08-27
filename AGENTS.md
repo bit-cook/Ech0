@@ -4,7 +4,7 @@ Compact guidance for AI agents working in the Ech0 repository.
 
 ## What this is
 
-Ech0 is a self-hosted personal microblog platform. Single Go binary serves both the REST API and the embedded Vue SPA. Backend: Go 1.26+ (Gin + Wire DI + GORM + SQLite via CGO). Frontend: Vue 3 + Vite + TypeScript + UnoCSS under `web/`.
+Ech0 is a self-hosted personal microblog platform. Single Go binary serves both the REST API and the embedded Vue SPA. Backend: Go 1.27+ (Gin + Wire DI + GORM + SQLite via CGO). Frontend: Vue 3 + Vite + TypeScript + UnoCSS under `web/`.
 
 **Additional packages:** `hub/` (Vue 3 public directory site), `site/` (React Router marketing/docs site).
 
@@ -113,7 +113,7 @@ In-process async event bus. Publishers at `internal/event/publisher`, subscriber
 - Env vars parsed from `.env` (loaded via `joho/godotenv`). See `.env.example` for the full set.
 - Defaults target `./data/` for SQLite + uploads. Docker images mount `/app/data`.
 - Server port: 6277 (default).
-- Node.js 26.0.0+, pnpm 10+, Go 1.26.0+, C toolchain for CGO.
+- Node.js 26.0.0+, pnpm 10+, Go 1.27.0+, C toolchain for CGO.
 
 ## Key in-repo docs
 

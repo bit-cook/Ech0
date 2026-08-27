@@ -1284,8 +1284,8 @@ func (_c *MockRepository_CacheGetPasskeySession_Call) Run(run func(key string)) 
 	return _c
 }
 
-func (_c *MockRepository_CacheGetPasskeySession_Call) Return(v any, err error) *MockRepository_CacheGetPasskeySession_Call {
-	_c.Call.Return(v, err)
+func (_c *MockRepository_CacheGetPasskeySession_Call) Return(anyMoqParam any, err error) *MockRepository_CacheGetPasskeySession_Call {
+	_c.Call.Return(anyMoqParam, err)
 	return _c
 }
 
