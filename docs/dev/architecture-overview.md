@@ -121,7 +121,7 @@ type Component interface {
 
 ## 4. 依赖注入（Google Wire）
 
-`internal/di` 是整个后端的"装配车间"。`wire.go`（手写、`//go:build wireinject`）声明 ProviderSet 与注入器，`wire_gen.go`（生成、勿手改）是实际代码。**改了构造函数 / 绑定，必须 `make wire`**，CI 跑 `make wire-check`。
+`internal/di` 是整个后端的"装配车间"。`wire.go`（手写、`//go:build wireinject`）声明 ProviderSet 与注入器，`wire_gen.go`（生成、勿手改）是实际代码。**改了构造函数 / 绑定，必须 `just wire`**，CI 跑 `just wire-check`。
 
 ### 4.1 ProviderSet 与注入器
 
@@ -504,7 +504,7 @@ web/src/
 - **公开侧**（home/hub/zen/echo）：只读浏览时间线、联邦发现。
 - **管理侧**（panel/\*）：仪表盘、设置、用户、存储、数据迁移、评论审核、系统日志、高级配置。
 - **后端通信**：REST `/api/*`（带鉴权头）；Chat 用 SSE（`searching/sources/delta/done/error` 事件流，对应 §7 的 `AgentEvent`）；文件走 multipart 上传。
-- **i18n 红线**：禁止硬编码 UI 字符串，一律用翻译 key；`pnpm i18n:check` 是 `make check` 的一部分。
+- **i18n 红线**：禁止硬编码 UI 字符串，一律用翻译 key；`pnpm i18n:check` 是 `just check` 的一部分。
 
 ---
 
@@ -593,7 +593,7 @@ POST /migration/export  (鉴权)
 
 ## 15. 红线速查（接手前务必记住）
 
-1. **改 DI 图必跑 `make wire`**；提 PR 前 `make check`（后端 lint+swagger + 前端 lint+i18n）是强制的，`go build ./...` 与 `pnpm build` 必须过。
+1. **改 DI 图必跑 `just wire`**；提 PR 前 `just check`（后端 lint+openapi + 前端 lint+i18n）是强制的，`go build ./...` 与 `pnpm build` 必须过。
 2. **三个共享单例**（`visitor.Tracker` / `storage.Manager` / `job.Manager`）只能在顶层注入一次，别让 Wire 复制出第二份。
 3. **跨层导入用别名**（`xxxHandler/Service/Repository/Model/Util`）。
 4. **加副作用优先发事件**，别在 handler 里直接调服务；事件路由靠 Go 类型，不靠 topic。

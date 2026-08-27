@@ -245,7 +245,7 @@ Ech0 是**微博客**（朋友圈式的日常分享 + 偶尔的想法/思考）�
   - `POST /api/chat`（或 `/api/chat/stream`）：提交问题，返回 **SSE** 流。
   - `GET /api/chat/suggestions`：返回预设入口问题（可由后端给定或前端静态，倾向后端以便 i18n/可配）。
   - 回填：admin/CLI 触发的索引重建入口。
-- 路由变更后更新 **Swagger**（`make swagger`）。
+- 路由变更后重新生成 **OpenAPI 规格**（`just openapi`，产物 internal/openapi/openapi.yaml）。
 
 ### 6.9 前端形态
 
@@ -312,7 +312,7 @@ Ech0 是**微博客**（朋友圈式的日常分享 + 偶尔的想法/思考）�
 - **M2**：embedding 独立配置（KeyValue 设置项 + admin UI）。
 - **M3**：检索 + 生成。**含 net-new 的流式生成入口**（`internal/agent` 给三家 SDK 各加 streaming 封装，§6.6）+ Chat Handler 用 dashboard 的 SSE 写法转发。
 - **M4**：前端 Chat 面 + 预设问题 + 引用跳转 + i18n。
-- **M5**：`make check`（lint / i18n / swagger / wire-check）+ `make wire` + 文档完善。
+- **M5**：`just check`（lint / i18n / openapi / wire-check）+ `just wire` + 文档完善。
 
 ---
 
@@ -335,11 +335,11 @@ Ech0 是**微博客**（朋友圈式的日常分享 + 偶尔的想法/思考）�
 - [ ] **DB 设置体系**：参考 `internal/service/setting/agent_setting_service.go` 与 KeyValue 设置（key 见 `internal/model/common/common.go`），新增 `embedding_setting`。
 - [ ] **sqlite 连接**：`internal/database/database.go` 用 `gorm.io/driver/sqlite` 直接 `gorm.Open`，**无扩展钩子**；需自定义 driver + `ConnectHook` 注册 sqlite-vec（§6.2）。
 - [ ] **迁移注册**：在 `database.go` 的 `MigrateDB()` models 列表登记 `echo_embedding`；如需后处理，加 `internal/database/migration/` 迁移器。
-- [ ] **Wire DI**：`internal/di/wire.go` —— 新 domain 的 repo/service/handler 加入 `HandlerSet`（仿 `service.AgentSet/handler.AgentSet`）；索引订阅者加入 `EventSet` 并在 `ProvideSubscriptionProviders` 注册；改后 `make wire`。
+- [ ] **Wire DI**：`internal/di/wire.go` —— 新 domain 的 repo/service/handler 加入 `HandlerSet`（仿 `service.AgentSet/handler.AgentSet`）；索引订阅者加入 `EventSet` 并在 `ProvideSubscriptionProviders` 注册；改后 `just wire`。
 - [ ] **鉴权路由**：chat 端点挂 `AuthRouterGroup`（`middleware.RequireAuth`），按需加 `middleware.RequireScopes(...)`；owner-only。注意现有 `/agent/recent` 用的是 `PublicRouterGroup`，chat 不可照搬。
 - [x] **SSE 写法**：`internal/service/dashboard/dashboard.go` 已有 `http.Flusher` + `text/event-stream` + 15s keep-alive，可作模板。
 - [ ] **i18n**：预设问题、按钮、错误提示全部走 key，跑 `pnpm i18n:check`。
 
 ---
 
-> 本文档聚焦需求/价值与设计；具体实现 PR 前请完成 `make check` 与本文 §13 的全部核对项。
+> 本文档聚焦需求/价值与设计；具体实现 PR 前请完成 `just check` 与本文 §13 的全部核对项。

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-import MarkdownIt from 'markdown-it'
+import markdownit, { type MarkdownIt } from 'markdown-it'
 
 type HighlightJsModule = (typeof import('./markdown-highlight'))['default']
 
@@ -141,8 +141,10 @@ function setRenderCache(key: string, value: string): void {
   renderCache.set(key, value)
 }
 
-const markdown: MarkdownIt = new MarkdownIt({
+const markdown: MarkdownIt = markdownit({
   html: false,
+  // markdown-it 15 的 linkify-it v6 只把带协议的地址（http://、https://、ftp://、mailto:）与
+  // 邮箱自动成链，裸域名（含 www. 前缀）不再成链——要链接就用 [文本](链接) 语法。跟随上游默认值。
   linkify: true,
   typographer: false,
   langPrefix: 'language-',
@@ -177,7 +179,8 @@ const originalLinkOpen: LinkOpenRule =
 markdown.renderer.rules.link_open = (...args: Parameters<LinkOpenRule>) => {
   const [tokens, idx, options, env, self] = args
   const token = tokens[idx]
-  const href = token.attrGet('href') ?? ''
+  // markdown-it 15 起 attrGet 返回 string | number | null（属性值允许数字）。
+  const href = String(token.attrGet('href') ?? '')
 
   if (/^https?:\/\//i.test(href)) {
     token.attrSet('target', '_blank')

@@ -24,7 +24,7 @@ Install [Golangci-Lint](https://golangci-lint.run/) for linting and formatting:
 - Run `golangci-lint fmt` in the project root for formatting
 
 📌 **Air (Optional, Backend Hot Reload)**
-- Recommended via Makefile: `make air-install`
+- Recommended via justfile: `just air-install`
 - Or install manually: `go install github.com/air-verse/air@latest`
 
 📌 **Swagger**
@@ -46,15 +46,15 @@ Install [Swagger](https://github.com/swaggo/gin-swagger) to generate/use OpenAPI
 
 ## Frontend Requirements
 
-📌 **NodeJS v25.5.0+, PNPM v10.30.0+**
+📌 **NodeJS v26.0.0+, PNPM v10.30.0+**
 > Note: if you need multiple Node.js versions, use [fnm](https://github.com/Schniz/fnm) to manage them.
 
 ## Start Backend & Frontend
 
 **Step 1: Backend (in Ech0 root directory)**
 ```shell
-make run # normal backend start (equivalent to go run main.go serve)
-make dev # backend hot reload with Air
+just run # normal backend start (equivalent to go run main.go serve)
+just dev # backend hot reload with Air
 ```
 > If dependency injection relationships change, run `wire` first in `ech0/internal/di/` to regenerate `wire_gen.go`.
 
@@ -65,7 +65,7 @@ cd web # enter frontend directory
 pnpm install # run if dependencies are not installed
 
 pnpm dev # start frontend preview
-# or run from project root: make web-dev
+# or run from project root: just web dev
 ```
 
 **Step 3: After both are running**
@@ -82,8 +82,8 @@ pnpm dev # start frontend preview
 ## Pre-PR Checklist
 
 ```shell
-make check        # backend fmt + lint + swagger, web format + lint + i18n:check
-make wire-check   # ensure wire_gen.go is up-to-date
+just check        # backend fmt + lint + openapi, web format + lint + i18n:check
+just wire-check   # ensure wire_gen.go is up-to-date
 go build ./...
 pnpm -C web build
 ```

@@ -10,32 +10,44 @@ Ech0 is a self-hosted personal microblog (timeline) platform. It is shipped as a
 
 ## Common commands
 
-All backend commands run from the repository root; frontend commands run from `web/` (or via the `make web-*` wrappers).
+`just` is the repo's only task runner (there is no justfile). Root recipes cover the backend
+and repo-wide chores; the sub-projects are `just` modules, so `just web build` runs inside
+`web/`, `just site dev` inside `site/`, and so on. `just --list web` lists a module's recipes.
 
 ```bash
-# Backend
-make run             # go run ./cmd/ech0 serve (blocks on :6277)
-make dev             # Air hot-reload (auto-installs Air via `make air-install` if missing)
-make test            # go test ./...
-make lint            # golangci-lint run
-make fmt             # golangci-lint fmt
-make wire            # regenerate internal/di/wire_gen.go (run after changing provider sets / DI graph)
-make wire-check      # fails if wire_gen.go is stale vs. wire.go
-make openapi         # regenerate OpenAPI spec (Huma type-first) -> internal/openapi/openapi.yaml
-make openapi-check   # fails if the committed OpenAPI spec is stale vs. code (mirrors wire-check)
+# Backend (repo root)
+just run             # ECH0_SERVER_MODE=debug go run ./cmd/ech0 serve (blocks on :6277)
+just dev             # Air hot-reload (auto-installs Air via `just air-install` if missing)
+just build           # go build -> ./bin/ech0 with version/commit injected
+just test            # go test ./...
+just test-race       # CGO_ENABLED=1 go test -race ./...
+just test-cover      # coverage, prints RAW + CALIBRATED totals
+just lint            # golangci-lint run
+just fmt             # golangci-lint fmt
+just wire            # regenerate internal/di/wire_gen.go (run after changing provider sets / DI graph)
+just wire-check      # fails if wire_gen.go is stale vs. wire.go
+just mocks           # regenerate testify mocks (mockery v3, pinned in justfile)
+just mocks-check     # fails if committed mocks are stale (also runs in CI)
+just openapi         # regenerate OpenAPI spec (Huma type-first) -> internal/openapi/openapi.yaml
+just openapi-check   # fails if the committed OpenAPI spec is stale vs. code (mirrors wire-check)
 
-# Frontend (from web/)
-pnpm install
-pnpm dev             # Vite dev server on :5173, proxies to backend on :6277
-pnpm build           # type-check + vite build
-pnpm test:unit       # vitest run
-pnpm lint            # eslint . --fix
-pnpm lint:style      # stylelint --fix (CSS/SCSS/<style> blocks in Vue SFCs)
-pnpm format          # prettier --write src/
-pnpm i18n:check      # runs key / unused / hardcoded / pseudo-smoke checks (required before PR)
+# Frontend module (equivalent pnpm scripts still work from web/)
+just web install     # pnpm install --frozen-lockfile
+just web dev         # Vite dev server on :5173, proxies to backend on :6277
+just web build       # type-check + vite build -> template/dist
+just web test        # vitest run
+just web lint        # eslint . --fix
+just web lint-style  # stylelint --fix (CSS/SCSS/<style> blocks in Vue SFCs)
+just web format      # prettier --write src/
+just web i18n-check  # key / unused / hardcoded / pseudo-smoke checks (required before PR)
+
+# Other modules
+just site build      # docs/marketing site (React Router, ssr: false)
+just hub build       # public instance directory site
+just docker build    # container image (OS=/ARCH=/IMAGE_TAG= overridable)
 
 # Full pre-PR verification (mandatory per CONTRIBUTING.md)
-make check           # alias of make dev-lint: backend fmt+lint+openapi + web format+lint+i18n:check
+just check           # SPDX + backend fmt/lint/openapi + web format/lint/style/i18n
 
 # Single Go test
 go test ./internal/middleware -run TestAuth     # example
@@ -52,7 +64,7 @@ Binary entrypoint is `cmd/ech0/main.go`. CLI verbs (Cobra): `ech0 serve` (HTTP),
 
 Backend follows a strict layered architecture — **handler → service → repository → database** — with Google Wire generating the dependency graph. Each business domain (echo, comment, file, connect, user, auth, init, setting, embedding, copilot, dashboard, migrator, common) has parallel packages under `internal/handler/<x>`, `internal/service/<x>`, `internal/repository/<x>`, and `internal/model/<x>` (plus handler-only `web` and `mcp`). Note: `internal/agent` is **not** a layered domain — it is the LLM core package consumed by the copilot service.
 
-- `internal/di/wire.go` declares provider sets (`InfraSet`, `DomainSet`, `HandlerSet`, `EventSet`, `TaskerSet`, `MiddlewareSet`, `StorageSet`, `VisitorSet`, `RuntimeSet`, `AppSet`) and the `BuildApp` injector that composes the full runtime. **If you add/remove a constructor or change a binding, run `make wire`** before committing.
+- `internal/di/wire.go` declares provider sets (`InfraSet`, `DomainSet`, `HandlerSet`, `EventSet`, `TaskerSet`, `MiddlewareSet`, `StorageSet`, `VisitorSet`, `RuntimeSet`, `AppSet`) and the `BuildApp` injector that composes the full runtime. **If you add/remove a constructor or change a binding, run `just wire`** before committing.
 - **Three stateful singletons must be injected once at the top level** (`BuildApp`/`BuildServer`) and shared down, or Wire silently builds a second copy and breaks things: `visitor.Tracker` (VisitorSet), `storage.Manager` (StorageSet), `job.Manager` (BuildJobManager). The `wire.go` comments explain each failure mode.
 - Cross-domain aliases are required when importing layers: `xxxHandler`, `xxxService`, `xxxRepository`, `xxxModel`, `xxxUtil` (enforced by existing code; see README "Start Backend & Frontend" note).
 - `internal/app` is a generic component lifecycle orchestrator. `internal/server` is the thin Gin/HTTP `Component` it manages. The other managed components are `job.Manager` and `task.Manager` (started in order job → task → server); the `EventRegistrar` registers/drains subscriptions and `setting.Seed` runs via `BeforeStart`/`AfterStop` hooks.
@@ -79,7 +91,7 @@ Two function-calling integrations that point opposite ways:
 ### Frontend
 
 - Vue 3 SFCs in `web/src`, Pinia stores, Vue Router, i18n via `vue-i18n`, UnoCSS (Wind4 preset), markdown via `markdown-it` + Vditor editor.
-- i18n guardrails in `web/scripts/` (key completeness, unused keys, hardcoded strings, pseudo-locale smoke) are part of `make check` — **do not introduce hardcoded UI strings**; use translation keys.
+- i18n guardrails in `web/scripts/` (key completeness, unused keys, hardcoded strings, pseudo-locale smoke) are part of `just check` — **do not introduce hardcoded UI strings**; use translation keys.
 - Vite serves `:5173` during dev and proxies `/api` to the backend on `:6277`. `pnpm build` outputs to `template/dist/`, which the Go binary embeds via `//go:embed all:dist` (`template/template.go`) and serves through `internal/handler/web` in production.
 
 ### Configuration
@@ -88,9 +100,9 @@ Two function-calling integrations that point opposite ways:
 
 ## Conventions to respect
 
-- **Before a PR**: `make check` is mandatory (enforces backend lint, frontend lint, i18n checks). `go build ./...` and `pnpm build` must pass. Regenerate the OpenAPI spec (`make openapi`) whenever routes or request/response shapes change and commit `internal/openapi/openapi.yaml`; CI-style `make openapi-check` fails on drift.
-- **DI changes**: regenerate with `make wire`; CI runs `make wire-check`.
-- **SPDX headers**: every `.go` / `.ts` / `.vue` file needs an SPDX license header. `make spdx` adds missing ones; CI enforces via `make spdx-check`.
+- **Before a PR**: `just check` is mandatory (enforces backend lint, frontend lint, i18n checks). `go build ./...` and `pnpm build` must pass. Regenerate the OpenAPI spec (`just openapi`) whenever routes or request/response shapes change and commit `internal/openapi/openapi.yaml`; CI-style `just openapi-check` fails on drift.
+- **DI changes**: regenerate with `just wire`; CI runs `just wire-check`.
+- **SPDX headers**: every `.go` / `.ts` / `.vue` file needs an SPDX license header. `just spdx` adds missing ones; CI enforces via `just spdx-check`.
 - **Migrator (data portability)**: the admin panel's "数据管理" page wraps a bidirectional Migrator domain. **Import** supports Ech0 snapshot → Ech0 and Memos → Ech0; **Export** produces a unified **Snapshot** (a zip of `data/`, see `internal/migrator/snapshot`) that round-trips back through the `ech0` import. Core engine (importer/exporter execution, ETL, snapshot resource) lives in `internal/migrator`; `internal/service/migrator` is a thin layer doing auth + job lifecycle + DTO + upload orchestration. Export triggers: manual snapshot (`POST /migration/export`, async via `job.Manager`, `TypeExport`), scheduled snapshot (`internal/task/scheduled` cron, syncs through the exporter), and synchronous download (`GET /migration/export/download`). There is no separate "backup" concept — it is all snapshot export.
 - **Integration comment endpoint**: `POST /api/comments/integration` intentionally bypasses captcha/form-token — it requires an access token with `comment:write` scope and `integration` audience. Preserve this behavior.
 - **Access tokens**: scope/audience/`typ` design is documented at `docs/dev/access-token-scope-design.md`; implementation is authoritative.
@@ -105,5 +117,6 @@ Two function-calling integrations that point opposite ways:
 - `docs/dev/auth-design.md`, `docs/dev/access-token-scope-design.md` — auth model & token scopes
 - `docs/dev/i18n-contract.md` — frontend/backend i18n contract (locale header, error field shapes, key naming)
 - `docs/dev/logging.md`, `docs/dev/timezone-design.md`, `docs/dev/table-design-standard.md` — logging fields, TZ handling, admin table conventions
-- `docs/usage/storage-migration.md`, `docs/usage/mcp-usage.md`, `docs/usage/webhook-usage.md` — operator/integration guides
+- `docs/usage/storage-migration.md`, `docs/usage/mcp-usage.md`, `docs/usage/webhook-usage.md`, `docs/usage/capsule.md` — operator/integration guides
+- `docs/dev/capsule/spec.md` — Capsule interchange format + CLI (normative); `docs/dev/capsule/capsule-design.md` — why it is shaped that way
 - `CONTRIBUTING.md` — PR workflow and pre-submission checks; `docs/README.md` — doc index

@@ -1,0 +1,43 @@
+# site 模块（官网 / 文档站，React Router framework mode，ssr: false）。
+# 从仓库根用 `just site <recipe>` 调用；recipe 的工作目录就是 site/。
+
+set shell := ["bash", "-cu"]
+
+# 默认：列出 site 模块的 recipe
+default:
+    @just --list
+
+# 安装依赖（严格按 lockfile）
+install:
+    pnpm install --frozen-lockfile
+
+# 开发服务器
+dev:
+    pnpm dev
+
+# 构建静态产物到 build/client
+build:
+    pnpm build
+
+# 本地起构建产物（serve -s build/client）
+start:
+    pnpm start
+
+# 路由类型生成 + tsc
+typecheck:
+    pnpm typecheck
+
+# ESLint
+lint:
+    pnpm lint
+
+# Prettier 格式化
+format:
+    pnpm format
+
+# Prettier 校验（不改文件）
+format-check:
+    pnpm format:check
+
+# 站点自查合集
+check: format-check lint typecheck

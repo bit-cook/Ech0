@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# scripts/check.sh — Orchestrate the `make check` / `make dev-lint` pipeline.
+# scripts/check.sh — Orchestrate the `just check` pipeline.
 #
 # Each step runs even if a prior step fails, so a single pass surfaces every
 # problem at once. A summary table is printed at the end. Exits non-zero if
@@ -24,7 +24,7 @@ STEPS=(
   "spdx|$C_HDR_ALL|全仓：SPDX/Copyright 头补齐 (scripts/add-spdx-headers.mjs)|node scripts/add-spdx-headers.mjs"
   "go-fmt|$C_HDR|后端：格式化 (golangci-lint fmt)|golangci-lint fmt"
   "go-lint|$C_HDR|后端：Lint (golangci-lint run)|golangci-lint run"
-  "openapi|$C_HDR|后端：OpenAPI 规格生成 (Huma, make openapi)|go run ./cmd/openapi-gen"
+  "openapi|$C_HDR|后端：OpenAPI 规格生成 (Huma, just openapi)|go run ./cmd/openapi-gen"
   "web-format|$C_HDR_WEB|前端 web：格式化 (prettier --write src/)|(cd web && pnpm format)"
   "web-lint|$C_HDR_WEB|前端 web：Lint (eslint . --fix)|(cd web && pnpm lint)"
   "web-style|$C_HDR_WEB|前端 web：Stylelint (stylelint --fix)|(cd web && pnpm lint:style)"
