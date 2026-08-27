@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -300,9 +301,22 @@ func (f *recordingEchoSvc) UpdateEcho(_ context.Context, echo *echoModel.Echo) e
 	return nil
 }
 
+// testEchoID is a real UUID because the write tools require one: an id that is
+// not a UUID is refused before anything is asked, which is the behaviour that
+// keeps a positional 【1】 from ever reaching the database.
+const testEchoID = "019ce0ea-82dd-774f-ae2d-5445512d42ad"
+
+// echoArgs builds a write tool's arguments around that id.
+func echoArgs(id string, extra ...string) string {
+	if len(extra) == 0 {
+		return fmt.Sprintf(`{"id":%q}`, id)
+	}
+	return fmt.Sprintf(`{"id":%q,%s}`, id, strings.Join(extra, ","))
+}
+
 func existingEcho() *echoModel.Echo {
 	return &echoModel.Echo{
-		ID:        "echo-1",
+		ID:        testEchoID,
 		Content:   "今天天气不错",
 		Private:   false,
 		Tags:      []echoModel.Tag{{ID: "t1", Name: "日常"}},
@@ -358,11 +372,11 @@ func TestDeleteEchoTool_DeletesOnlyAfterApproval(t *testing.T) {
 		return []AskAnswer{{QuestionID: q.ID, Selected: []string{ws.DeleteYes}}}
 	})
 
-	out, err := runMutation(t, s.deleteEchoTool(a, "zh-CN", time.UTC), `{"id":"echo-1"}`)
+	out, err := runMutation(t, s.deleteEchoTool(a, "zh-CN", time.UTC), echoArgs(testEchoID))
 	if err != nil {
 		t.Fatalf("delete_echo: %v", err)
 	}
-	if len(echoSvc.deleted) != 1 || echoSvc.deleted[0] != "echo-1" {
+	if len(echoSvc.deleted) != 1 || echoSvc.deleted[0] != testEchoID {
 		t.Fatalf("deleted = %v, want [echo-1]", echoSvc.deleted)
 	}
 	if out.Content == "" {
@@ -382,7 +396,7 @@ func TestDeleteEchoTool_CancelLeavesTheEchoAlone(t *testing.T) {
 		return []AskAnswer{{QuestionID: ask.Questions[0].ID, Selected: []string{ws.Cancel}}}
 	})
 
-	out, err := runMutation(t, s.deleteEchoTool(a, "zh-CN", time.UTC), `{"id":"echo-1"}`)
+	out, err := runMutation(t, s.deleteEchoTool(a, "zh-CN", time.UTC), echoArgs(testEchoID))
 	if err != nil {
 		t.Fatalf("delete_echo: %v", err)
 	}
@@ -391,6 +405,52 @@ func TestDeleteEchoTool_CancelLeavesTheEchoAlone(t *testing.T) {
 	}
 	if out.Content != askStringsFor("zh-CN").declined("") {
 		t.Fatalf("model was told %q, want the declined note", out.Content)
+	}
+}
+
+// The bug this guards: search results are numbered 【1】【2】 for the model to
+// name in prose, and a model told to pass "the id" reaches for that number.
+// Handed straight to GetEchoById it resolves to nothing and the Echo reads as
+// missing — a wrong answer, when the truth is that the model quoted the wrong
+// field. Nothing is read, nothing is asked, and the refusal says what to do.
+func TestWriteTools_RejectNonUUIDIDs(t *testing.T) {
+	ws := writeStringsFor("zh-CN")
+	bad := []string{`{"id":"1"}`, `{"id":"【1】"}`, `{"id":"echo-1"}`, `{"id":"  "}`, `{}`}
+
+	for _, args := range bad {
+		t.Run(args, func(t *testing.T) {
+			echoSvc := &recordingEchoSvc{}
+			reads := 0
+			echoSvc.getByIDFn = func(string) (*echoModel.Echo, error) {
+				reads++
+				return existingEcho(), nil
+			}
+			s := &CopilotService{echoService: echoSvc, asks: newAskRegistry()}
+			a, events := newTestAsker(time.Second)
+			a.registry = s.asks
+
+			for _, tool := range []agent.Tool{
+				s.deleteEchoTool(a, "zh-CN", time.UTC),
+				s.updateEchoTool(a, "zh-CN", time.UTC),
+			} {
+				_, err := runMutation(t, tool, args)
+				if err == nil {
+					t.Fatalf("%s accepted %s", tool.Def.Name, args)
+				}
+				if err.Error() != ws.BadEchoID {
+					t.Fatalf("%s said %q, want the instruction that names the id= field", tool.Def.Name, err)
+				}
+			}
+			if reads != 0 {
+				t.Fatalf("the Echo was read %d times for an id that is not one", reads)
+			}
+			if len(events) != 0 {
+				t.Fatal("a confirmation was shown for an id that is not one")
+			}
+			if len(echoSvc.deleted) != 0 || len(echoSvc.updated) != 0 {
+				t.Fatal("a write happened for an id that is not one")
+			}
+		})
 	}
 }
 
@@ -403,7 +463,7 @@ func TestDeleteEchoTool_ExpiryLeavesTheEchoAlone(t *testing.T) {
 	a, _ := newTestAsker(20 * time.Millisecond)
 	a.registry = s.asks
 
-	if _, err := runMutation(t, s.deleteEchoTool(a, "zh-CN", time.UTC), `{"id":"echo-1"}`); err == nil {
+	if _, err := runMutation(t, s.deleteEchoTool(a, "zh-CN", time.UTC), echoArgs(testEchoID)); err == nil {
 		t.Fatal("delete_echo returned no error when nobody answered")
 	}
 	if len(echoSvc.deleted) != 0 {
@@ -488,7 +548,7 @@ func TestUpdateEchoTool_CarriesUnshownFieldsThrough(t *testing.T) {
 	})
 
 	if _, err := runMutation(t, s.updateEchoTool(a, "zh-CN", time.UTC),
-		`{"id":"echo-1","content":"改过的内容"}`); err != nil {
+		echoArgs(testEchoID, `"content":"改过的内容"`)); err != nil {
 		t.Fatalf("update_echo: %v", err)
 	}
 	if len(echoSvc.updated) != 1 {
@@ -517,7 +577,7 @@ func TestUpdateEchoTool_NoRealChangeNeverAsks(t *testing.T) {
 	// Same content, the same tag in a different spelling, and the visibility it
 	// already has: nothing to approve.
 	if _, err := runMutation(t, s.updateEchoTool(a, "zh-CN", time.UTC),
-		`{"id":"echo-1","content":"今天天气不错","tags":["#日常"],"private":false}`); err == nil {
+		echoArgs(testEchoID, `"content":"今天天气不错","tags":["#日常"],"private":false`)); err == nil {
 		t.Fatal("update_echo should refuse a change that changes nothing")
 	}
 	if len(events) != 0 {

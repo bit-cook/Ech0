@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/lin-snow/ech0/internal/agent"
-	commonModel "github.com/lin-snow/ech0/internal/model/common"
 	echoModel "github.com/lin-snow/ech0/internal/model/echo"
+	uuidUtil "github.com/lin-snow/ech0/internal/util/uuid"
 )
 
 // How much of an Echo a confirmation shows. Enough to recognise which one is
@@ -103,9 +103,9 @@ func (s *CopilotService) updateEchoTool(a *asker, locale string, loc *time.Locat
 		if err := json.Unmarshal(args, &in); err != nil {
 			return AskQuestion{}, nil, err
 		}
-		id := strings.TrimSpace(in.ID)
-		if id == "" {
-			return AskQuestion{}, nil, errors.New(commonModel.ECHO_NOT_FOUND)
+		id, err := echoIDArg(in.ID, ws)
+		if err != nil {
+			return AskQuestion{}, nil, err
 		}
 		current, err := s.echoService.GetEchoById(ctx, id)
 		if err != nil {
@@ -180,9 +180,9 @@ func (s *CopilotService) deleteEchoTool(a *asker, locale string, loc *time.Locat
 		if err := json.Unmarshal(args, &in); err != nil {
 			return AskQuestion{}, nil, err
 		}
-		id := strings.TrimSpace(in.ID)
-		if id == "" {
-			return AskQuestion{}, nil, errors.New(commonModel.ECHO_NOT_FOUND)
+		id, err := echoIDArg(in.ID, ws)
+		if err != nil {
+			return AskQuestion{}, nil, err
 		}
 		current, err := s.echoService.GetEchoById(ctx, id)
 		if err != nil {
@@ -217,6 +217,28 @@ func (s *CopilotService) deleteEchoTool(a *asker, locale string, loc *time.Locat
 			return agent.ToolOutput{Content: fmt.Sprintf(ws.Deleted, id)}, nil
 		}, nil
 	})
+}
+
+// echoIDArg reads the Echo id a write tool was called with, and refuses
+// anything that is not one.
+//
+// The refusal is worded as an instruction rather than as "not found", because
+// the mistake it catches has a specific shape: search results are numbered
+// 【1】【2】 for the model to refer to in prose, and a model told to pass "the
+// id" reaches for that number. Handed to GetEchoById it would resolve to
+// nothing, and the model would report the Echo as missing — a wrong answer,
+// where the truth is that it quoted the wrong field. Told what it did instead,
+// it re-reads the id= value and retries inside the same run.
+//
+// This is the enforcing half of a rule the schema and the prompt also state. It
+// is here because those two are read by a model whose attention is finite, and
+// this is not.
+func echoIDArg(raw string, ws writeStrings) (string, error) {
+	id := strings.TrimSpace(raw)
+	if id == "" || !uuidUtil.IsValid(id) {
+		return "", errors.New(ws.BadEchoID)
+	}
+	return id, nil
 }
 
 // field is one line of a confirmation's detail block.
@@ -306,6 +328,6 @@ func sameStrings(a, b []string) bool {
 
 const createEchoSchema = `{"type":"object","properties":{"content":{"type":"string","description":"Echo 的正文，用用户想发布的原话/内容，不要加你自己的解说"},"tags":{"type":"array","items":{"type":"string"},"description":"标签名（不带 #）；优先复用系统提示里列出的已有标签，不要凭空造新标签"},"private":{"type":"boolean","description":"true 为仅自己可见；用户没说就传 false"}},"required":["content"]}`
 
-const updateEchoSchema = `{"type":"object","properties":{"id":{"type":"string","description":"要修改的 Echo 的 ID，必须来自 search_echos 的结果，不要猜"},"content":{"type":"string","description":"新的正文；只在要改正文时传，传就是整条替换"},"tags":{"type":"array","items":{"type":"string"},"description":"新的标签名列表；只在要改标签时传，传就是整组替换（要保留原有标签就把它们一起写进来）"},"private":{"type":"boolean","description":"新的可见性；只在要改可见性时传"}},"required":["id"]}`
+const updateEchoSchema = `{"type":"object","properties":{"id":{"type":"string","description":"要修改的 Echo 的 ID：照抄 search_echos 结果里那条的 id= 后面的 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）。绝对不要传【1】这类序号，也不要自己编"},"content":{"type":"string","description":"新的正文；只在要改正文时传，传就是整条替换"},"tags":{"type":"array","items":{"type":"string"},"description":"新的标签名列表；只在要改标签时传，传就是整组替换（要保留原有标签就把它们一起写进来）"},"private":{"type":"boolean","description":"新的可见性；只在要改可见性时传"}},"required":["id"]}`
 
-const deleteEchoSchema = `{"type":"object","properties":{"id":{"type":"string","description":"要删除的 Echo 的 ID，必须来自 search_echos 的结果，不要猜"}},"required":["id"]}`
+const deleteEchoSchema = `{"type":"object","properties":{"id":{"type":"string","description":"要删除的 Echo 的 ID：照抄 search_echos 结果里那条的 id= 后面的 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）。绝对不要传【1】这类序号，也不要自己编"}},"required":["id"]}`

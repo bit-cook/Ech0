@@ -198,7 +198,7 @@ func TestRoundTrip_ApprovedDeleteRunsAndStreamResumes(t *testing.T) {
 	echoSvc.getByIDFn = func(string) (*echoModel.Echo, error) { return existingEcho(), nil }
 
 	srv := modelServer(t,
-		[]string{toolCallChunk("call-1", "delete_echo", `{"id":"echo-1"}`)},
+		[]string{toolCallChunk("call-1", "delete_echo", echoArgs(testEchoID))},
 		[]string{textChunk("已经删掉了。")},
 	)
 	defer srv.Close()
@@ -216,7 +216,7 @@ func TestRoundTrip_ApprovedDeleteRunsAndStreamResumes(t *testing.T) {
 	// The question has to name the Echo concretely; "delete Echo 019a…" is not
 	// something a person can consent to.
 	q := ask.Questions[0]
-	if !strings.Contains(q.Detail, "echo-1") || !strings.Contains(q.Detail, "今天天气不错") {
+	if !strings.Contains(q.Detail, testEchoID) || !strings.Contains(q.Detail, "今天天气不错") {
 		t.Fatalf("detail did not describe the Echo: %q", q.Detail)
 	}
 	if len(echoSvc.deleted) != 0 {
@@ -234,7 +234,7 @@ func TestRoundTrip_ApprovedDeleteRunsAndStreamResumes(t *testing.T) {
 		t.Fatalf("AskStream: %v", err)
 	}
 
-	if len(echoSvc.deleted) != 1 || echoSvc.deleted[0] != "echo-1" {
+	if len(echoSvc.deleted) != 1 || echoSvc.deleted[0] != testEchoID {
 		t.Fatalf("deleted = %v, want [echo-1]", echoSvc.deleted)
 	}
 
@@ -270,7 +270,7 @@ func TestRoundTrip_CancelledDeleteChangesNothing(t *testing.T) {
 	echoSvc.getByIDFn = func(string) (*echoModel.Echo, error) { return existingEcho(), nil }
 
 	srv := modelServer(t,
-		[]string{toolCallChunk("call-1", "delete_echo", `{"id":"echo-1"}`)},
+		[]string{toolCallChunk("call-1", "delete_echo", echoArgs(testEchoID))},
 		[]string{textChunk("好，没有删。")},
 	)
 	defer srv.Close()
@@ -310,7 +310,7 @@ func TestRoundTrip_SecondAnswerIsRefused(t *testing.T) {
 	echoSvc.getByIDFn = func(string) (*echoModel.Echo, error) { return existingEcho(), nil }
 
 	srv := modelServer(t,
-		[]string{toolCallChunk("call-1", "delete_echo", `{"id":"echo-1"}`)},
+		[]string{toolCallChunk("call-1", "delete_echo", echoArgs(testEchoID))},
 		[]string{textChunk("已经删掉了。")},
 	)
 	defer srv.Close()
@@ -348,7 +348,7 @@ func TestRoundTrip_ForeignUserCannotAnswer(t *testing.T) {
 	echoSvc.getByIDFn = func(string) (*echoModel.Echo, error) { return existingEcho(), nil }
 
 	srv := modelServer(t,
-		[]string{toolCallChunk("call-1", "delete_echo", `{"id":"echo-1"}`)},
+		[]string{toolCallChunk("call-1", "delete_echo", echoArgs(testEchoID))},
 		[]string{textChunk("好。")},
 	)
 	defer srv.Close()

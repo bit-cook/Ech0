@@ -52,7 +52,7 @@ const chatSystemPrompt = `你是用户的私人助手。你可以检索 ta 过�
 - 写这类总结时，**严格依据 summarize_echos 的聚合材料**，覆盖材料里的各个月份/各条主线，不要只挑某几条生动的展开、不要把少量样本当成全貌。材料里的 #标签、[img×N]（配图数）、[音乐/网站/位置…] 等都是线索，可用于归纳主题与活跃度。
 - search_echos 通常 1～2 次就够：拿到结果立刻综合作答，不要为同一问题反复检索或凑关键词空搜，只有首次明显偏题才换角度再搜一次。
 - 只有用户明确要求「发/改/删」时才调管理工具。仅仅聊到某件事、或觉得某条写得不好，都不是让你动手。
-- 改和删必须先用 search_echos 确定 id，**绝对不要凭印象猜 ID**；命中多条又分不清时，用 ask_user 让用户选。
+- 改和删必须先用 search_echos 拿到那条的 id：结果里每条都带「id=<UUID>」，**照抄那串 UUID**。【1】【2】是结果编号不是 ID，凭印象编的 ID 也一律无效；命中多条又分不清时，用 ask_user 让用户选。
 - 确认是系统自动做的：不要自己再用 ask_user 或用文字问一遍「要我删掉吗」，那会让用户点两次。直接调用工具，确认界面会自己出现。
 - 工具返回「用户没有确认」时，说明什么都没改动：如实告诉用户，不要重试、不要换个说法再调一次。
 作答要求：
@@ -75,7 +75,7 @@ Key discipline (must follow):
 - When writing such a summary, ground it STRICTLY in the summarize_echos material, covering the various months / main threads in it; do not just expand a few vivid entries and do not treat a small sample as the whole. The #tags, [img×N] (image counts), and [music/website/location…] markers in the material are cues for themes and activity.
 - search_echos usually needs only 1-2 calls: synthesize and answer right away; do not repeatedly search the same question or pad keywords; search again only if the first results are clearly off-topic.
 - Only call a management tool when the user actually asks you to post, edit or delete. Discussing a topic, or thinking an Echo is badly written, is not such a request.
-- Editing and deleting require an id from search_echos. NEVER guess an ID from memory; when several Echos match and you cannot tell them apart, use ask_user to have the user pick.
+- Editing and deleting need that Echo's id from search_echos: every result carries "id=<UUID>", and you copy that UUID verbatim. 【1】【2】 are result numbers, not IDs, and an ID recalled from memory is never valid. When several Echos match and you cannot tell them apart, use ask_user to have the user pick.
 - The confirmation is automatic: do not add your own ask_user, and do not ask "shall I delete it?" in prose — that makes the user click twice. Call the tool; the confirmation appears on its own.
 - When a tool reports that the user did not confirm, nothing changed: say so plainly, and do not retry or rephrase and call again.
 Answering requirements:
@@ -360,10 +360,11 @@ type writeStrings struct {
 	NoTags          string
 	Arrow           string
 
-	Created  string
-	Updated  string
-	Deleted  string
-	NoChange string
+	Created   string
+	Updated   string
+	Deleted   string
+	NoChange  string
+	BadEchoID string
 }
 
 func writeStringsFor(locale string) writeStrings {
@@ -394,6 +395,7 @@ func writeStringsFor(locale string) writeStrings {
 			Updated:         "已更新，Echo ID：%s",
 			Deleted:         "已删除，Echo ID：%s",
 			NoChange:        "没有需要修改的字段：content、tags、private 至少要给一个，且要和现在的值不同",
+			BadEchoID:       "id 不是一个有效的 Echo ID。请先用 search_echos 检索，然后照抄结果里那条的 id= 后面的完整 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）——【1】【2】只是结果编号，不是 ID。",
 		}
 	}
 	return writeStrings{
@@ -422,6 +424,7 @@ func writeStringsFor(locale string) writeStrings {
 		Updated:         "Updated. Echo ID: %s",
 		Deleted:         "Deleted. Echo ID: %s",
 		NoChange:        "Nothing to update: give at least one of content, tags or private, and it must differ from the current value",
+		BadEchoID:       "id is not a valid Echo ID. Search with search_echos first, then copy the full UUID after id= on the result you mean (e.g. 019ce0ea-82dd-774f-ae2d-5445512d42ad) — 【1】【2】 are result numbers, not IDs.",
 	}
 }
 
@@ -455,7 +458,7 @@ func updateEchoDescriptionFor(locale string) string {
 调用后会把改动（原内容 → 新内容）摆到用户面前请 ta 确认，确认了才真的修改——这一步是自动的，不要再用 ask_user 问一遍。
 
 务必遵守：
-- id 必须来自 search_echos 的检索结果。不知道改哪一条就先检索，绝对不要猜 ID。
+- id 必须照抄 search_echos 结果里那条的「id=」后面的完整 UUID。【1】【2】是结果编号，传它一定失败。不知道改哪一条就先检索，绝对不要猜 ID。
 - 只传你要改的字段。content、tags、private 都是整体替换：传了 tags 就是把标签换成这一组，想保留原有标签就把它们一起写进来。
 - 检索命中多条、不确定用户指的是哪一条时，先用 ask_user 让 ta 选，再来改。
 - 工具返回「已更新」才算成功；返回「用户没有确认」就是没改，如实告诉 ta，不要重试。`
@@ -465,7 +468,7 @@ func updateEchoDescriptionFor(locale string) string {
 Calling this shows the user the change (old content -> new content) for confirmation first, and it is only applied if they confirm. That step is automatic — do not add a separate ask_user for permission.
 
 Must follow:
-- "id" must come from a search_echos result. If you do not know which Echo, search first; never guess an ID.
+- "id" is the full UUID after "id=" on the search_echos result you mean, copied verbatim. 【1】【2】 are result numbers and will always fail. If you do not know which Echo, search first; never guess an ID.
 - Pass only the fields you are changing. content, tags and private each replace wholesale: passing tags sets the tag set to exactly that list, so include the existing tags if they should stay.
 - If several Echos match and you are unsure which one the user means, use ask_user to have them pick before editing.
 - Success is the tool returning "Updated". If it returns that the user did not confirm, nothing changed — say so and do not retry.`
@@ -478,7 +481,7 @@ func deleteEchoDescriptionFor(locale string) string {
 调用后会把这条 Echo 完整地摆到用户面前请 ta 确认，确认了才真的删除——这一步是自动的，不要再用 ask_user 问一遍。
 
 务必遵守：
-- id 必须来自 search_echos 的检索结果。绝对不要猜 ID。
+- id 必须照抄 search_echos 结果里那条的「id=」后面的完整 UUID。【1】【2】是结果编号，传它一定失败。绝对不要猜 ID。
 - 删除不可恢复。用户只有明确要求删除时才调它；说「这条写得不好」不等于要删。
 - 检索命中多条、不确定是哪一条时，先用 ask_user 让 ta 选。
 - 一次只删一条。用户要删多条时，一条一条来，每条都要 ta 单独确认。
@@ -489,7 +492,7 @@ func deleteEchoDescriptionFor(locale string) string {
 Calling this puts the whole Echo in front of the user for confirmation first, and it is only deleted if they confirm. That step is automatic — do not add a separate ask_user for permission.
 
 Must follow:
-- "id" must come from a search_echos result. Never guess an ID.
+- "id" is the full UUID after "id=" on the search_echos result you mean, copied verbatim. 【1】【2】 are result numbers and will always fail. Never guess an ID.
 - Deletion cannot be undone. Only call this when the user explicitly asks to delete something; "this one is badly written" is not a request to delete it.
 - If several Echos match and you are unsure which one, use ask_user to have them pick.
 - One Echo per call. To delete several, do them one at a time so each is confirmed on its own.
