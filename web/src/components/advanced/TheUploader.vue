@@ -2,7 +2,6 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="rounded-md overflow-hidden">
-    <!-- Drop zone (also click-to-pick) -->
     <button
       type="button"
       class="w-full flex flex-col items-center justify-center gap-1 py-5 px-3 rounded-md border-1 border-dashed transition-colors cursor-pointer text-center select-none"
@@ -36,7 +35,6 @@
       @change="handleInputChange"
     />
 
-    <!-- Per-file rows -->
     <ul v-if="items.length > 0" class="mt-2 flex flex-col gap-1.5">
       <li
         v-for="item in items"
@@ -57,8 +55,6 @@
         @drop.prevent="onItemDrop(item)"
         @dragend="onItemDragEnd"
       >
-        <!-- Thumbnail: images show a preview; audio/video show a type icon
-             (a blob URL in <img> would render broken for non-image files). -->
         <img
           v-if="isImageItem(item)"
           :src="item.preview"
@@ -72,9 +68,7 @@
           <component :is="isVideoItem(item) ? VideoIcon : AudioIcon" class="w-5 h-5" />
         </span>
 
-        <!-- Info column -->
         <div class="flex-1 min-w-0">
-          <!-- Filename (left) | size + compression badge + status (right) -->
           <div class="flex items-center justify-between gap-2">
             <span
               class="flex-1 min-w-0 text-sm truncate text-[var(--color-text-primary)]"
@@ -106,7 +100,6 @@
             </div>
           </div>
 
-          <!-- Progress bar / error text -->
           <div
             v-if="
               item.status === UPLOAD_STATUS.UPLOADING || item.status === UPLOAD_STATUS.COMPRESSING
@@ -129,7 +122,6 @@
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="flex items-center gap-1 shrink-0">
           <button
             v-if="item.status === UPLOAD_STATUS.ERROR || item.status === UPLOAD_STATUS.CANCELLED"
@@ -151,7 +143,6 @@
       </li>
     </ul>
 
-    <!-- Global status -->
     <div
       v-if="isUploading"
       class="mt-2 flex items-center justify-between text-xs text-[var(--color-text-muted)]"
@@ -166,7 +157,6 @@
       </button>
     </div>
 
-    <!-- Reorder hint (only once any image is uploaded) -->
     <div
       v-else-if="hasReorderable"
       class="mt-1.5 text-xs text-[var(--color-text-muted)] text-center"
@@ -219,7 +209,6 @@ const acceptAttr = computed(() => allowedTypes.value.join(','))
 const maxFiles = computed(() => props.maxFiles)
 const maxFileSize = computed(() => props.maxFileSize)
 
-// Drop-zone 文案按媒体类别切换；音频/视频不支持粘贴，故文案不含“粘贴”。
 const isSingleMedia = computed(
   () => props.fileCategory === FILE_CATEGORY.AUDIO || props.fileCategory === FILE_CATEGORY.VIDEO,
 )
@@ -262,11 +251,6 @@ watch(
   { immediate: true },
 )
 
-// 队列 ✕：与大预览的 ✕ 行为一致——出队后
-//   1) 把已上传到本地/S3 的文件从后端删除（直链不归我们存储，跳过），避免留下孤儿文件；
-//   2) 从 filesToAdd 移除，否则用户"删掉"的文件仍会随发布 payload 提交（两份列表漂移的一半）；
-//   3) 更新模式下把删除同步回该 Echo，否则 echo_files 会悬挂已删文件直到下次保存。
-// 后端删除失败不阻断前端移除，仅告警（可能残留孤儿文件，由临时文件回收兜底）。
 async function handleRemoveItem(item: QueueItem) {
   const fileId = item.result?.id
   const storageType = item.result?.storage_type
@@ -289,9 +273,6 @@ async function handleRemoveItem(item: QueueItem) {
   }
 }
 
-// 另一半对账：当某个已投递文件在别处（大预览的 ✕ / 外链移除）被移出 filesToAdd 时，
-// 同步剔除本队列里对应的成功项，避免残留幽灵行继续占用 maxFiles 名额（音视频 maxFiles=1
-// 时会因此卡住无法替换）。用 id 串作为 watch 源，仅在增删时触发、重排不误伤。
 watch(
   () => editorStore.filesToAdd.map((f) => f.id ?? '').join('|'),
   () => {
@@ -329,8 +310,6 @@ function openFilePicker() {
 }
 
 function onZoneDragOver(e: DragEvent) {
-  // Show "drop to add" highlight only when external files are being dragged in,
-  // not when the user is reordering an internal queue item.
   if (draggingId.value) return
   if (e.dataTransfer?.types?.includes('Files')) {
     isDropOverZone.value = true
@@ -347,7 +326,6 @@ function handleInputChange(e: Event) {
 
 function handleDrop(e: DragEvent) {
   isDropOverZone.value = false
-  // Internal reorder drag should never be treated as a "drop to add" event.
   if (draggingId.value) return
   const dt = e.dataTransfer
   if (!dt) return
@@ -372,7 +350,6 @@ function handlePaste(e: ClipboardEvent) {
     if (item.kind === 'file' && item.type.startsWith('image/')) {
       const f = item.getAsFile()
       if (f) {
-        // Preserve lastModified so the dedup id matches across paste + pick of the same image.
         files.push(new File([f], f.name, { type: f.type, lastModified: f.lastModified }))
       }
     }
@@ -386,13 +363,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('paste', handlePaste)
   cancelAll()
-  // 卸载时 uploads 已被 cancelAll 中止，必须显式把"上传中"标志落回 false：
-  // 单片段上传成功会令上层 v-if 立刻卸载本组件，watch(isUploading) 来不及把
-  // fileUploading 置回 false 就被清理，否则发布会一直被 fileUploadingWait 拦住。
   editorStore.fileUploading = false
 })
-
-// ---------- Drag-to-reorder ----------
 
 const draggingId = ref<string | null>(null)
 const dragOverId = ref<string | null>(null)
@@ -405,7 +377,6 @@ function onItemDragStart(item: QueueItem, e: DragEvent) {
   draggingId.value = item.id
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
-    // Some browsers require setData for the drag to fire.
     e.dataTransfer.setData('text/plain', item.id)
   }
 }
@@ -431,7 +402,6 @@ function onItemDrop(target: QueueItem) {
   dragOverId.value = null
   if (!fromId || fromId === target.id || !isReorderable(target)) return
   moveItem(fromId, target.id)
-  // Propagate to the editor's filesToAdd so the post payload reflects the new order.
   const orderedIds = items.value
     .filter((i) => i.status === UPLOAD_STATUS.SUCCESS && i.result?.id)
     .map((i) => i.result!.id!)
@@ -443,17 +413,11 @@ function onItemDragEnd() {
   dragOverId.value = null
 }
 
-// ---------- Display helpers ----------
-
 type CompressionBadge =
   | { tone: 'savings'; label: string; tooltip: string }
   | { tone: 'none'; label: string; tooltip: string }
   | null
 
-// Three states for the compression badge:
-//   - savings: compressor ran AND output was meaningfully smaller → "−42%"
-//   - none:    compressor ran but no benefit (already optimal, or format unsupported) → "原始"
-//   - null:    compressor was off for this item → no badge
 function compressionBadge(item: QueueItem): CompressionBadge {
   if (!item.compressionAttempted) return null
   const before = item.originalSize

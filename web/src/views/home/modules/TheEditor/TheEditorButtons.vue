@@ -3,14 +3,12 @@
 <template>
   <div class="editor-actions">
     <div class="editor-actions__left">
-      <!-- ShowMore -->
       <BaseButton
         :icon="currentMode === Mode.ECH0 ? Advance : Back"
         @click="handleChangeMode"
         :class="['w-8 h-8 sm:w-9 sm:h-9 rounded-xs'].join(' ')"
         :tooltip="currentMode === Mode.ECH0 ? t('editor.more') : t('editor.backToEditor')"
       />
-      <!-- Attachment Upload -->
       <BaseButton
         v-if="currentMode === Mode.ECH0"
         :icon="AttachmentIcon"
@@ -18,7 +16,6 @@
         class="w-8 h-8 sm:w-9 sm:h-9 rounded-xs"
         :tooltip="t('editor.addImage')"
       />
-      <!-- Tag Multi-Select -->
       <div v-if="currentMode === Mode.ECH0" class="editor-actions__tag">
         <Popover>
           <PopoverButton
@@ -69,7 +66,6 @@
     </div>
 
     <div class="editor-actions__right">
-      <!-- Published Info -->
       <div v-if="hasContent || hasFile || hasExtension" class="relative group">
         <Info class="w-6 h-6 text-[var(--color-text-muted)] hover:text-[var(--color-text-muted)]" />
         <div class="editor-actions__info-pop">
@@ -90,7 +86,6 @@
         </div>
       </div>
 
-      <!-- Exit Update -->
       <div v-if="currentMode !== Mode.Panel && isUpdateMode === true">
         <BaseButton
           :icon="ExitUpdate"
@@ -99,7 +94,6 @@
           :tooltip="t('editor.exitUpdateMode')"
         />
       </div>
-      <!-- Publish / Update with privacy choice -->
       <Popover
         v-if="currentMode !== Mode.Panel && currentMode !== Mode.TagManage"
         class="editor-actions__publish"
@@ -249,7 +243,6 @@ const handleChangeMode = () => {
 const handleAddMediaMode = () => {
   fileToAdd.value.storage_type = FILE_STORAGE_TYPE.LOCAL
 
-  // 检查localStg中是否有记忆的上传方式
   const rememberedSource = localStg.getItem<App.Api.File.StorageType>('file_storage_type')
   if (rememberedSource) {
     fileToAdd.value.storage_type = rememberedSource

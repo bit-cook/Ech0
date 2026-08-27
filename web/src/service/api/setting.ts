@@ -3,7 +3,6 @@
 
 import { request } from '../request'
 
-// 获取系统设置
 export function fetchGetSettings() {
   return request<App.Api.Setting.SystemSetting>({
     url: '/settings',
@@ -11,7 +10,6 @@ export function fetchGetSettings() {
   })
 }
 
-// 更新系统设置
 export function fetchUpdateSettings(systemSetting: App.Api.Setting.SystemSetting) {
   return request({
     url: '/settings',
@@ -20,7 +18,6 @@ export function fetchUpdateSettings(systemSetting: App.Api.Setting.SystemSetting
   })
 }
 
-// 获取 S3 存储设置
 export function fetchGetS3Settings() {
   return request<App.Api.Setting.S3Setting>({
     url: '/s3/settings',
@@ -28,7 +25,6 @@ export function fetchGetS3Settings() {
   })
 }
 
-// 更新 S3 存储设置
 export function fetchUpdateS3Settings(s3Setting: App.Api.Setting.S3Setting) {
   return request({
     url: '/s3/settings',
@@ -37,7 +33,6 @@ export function fetchUpdateS3Settings(s3Setting: App.Api.Setting.S3Setting) {
   })
 }
 
-// 测试 S3 存储连接（不保存，仅探测连通性）。silentError 关闭通用错误 toast，由调用方自行提示。
 export function fetchTestS3Connection(s3Setting: App.Api.Setting.S3Setting) {
   return request({
     url: '/s3/settings/test',
@@ -47,7 +42,6 @@ export function fetchTestS3Connection(s3Setting: App.Api.Setting.S3Setting) {
   })
 }
 
-// 获取 OAuth2 设置
 export function fetchGetOAuth2Settings() {
   return request<App.Api.Setting.OAuth2Setting>({
     url: '/oauth2/settings',
@@ -55,7 +49,6 @@ export function fetchGetOAuth2Settings() {
   })
 }
 
-// 更新 OAuth2 设置
 export function fetchUpdateOAuth2Settings(oauth2Setting: App.Api.Setting.OAuth2Setting) {
   return request({
     url: '/oauth2/settings',
@@ -64,7 +57,6 @@ export function fetchUpdateOAuth2Settings(oauth2Setting: App.Api.Setting.OAuth2S
   })
 }
 
-// 获取 OAuth2 状态
 export function fetchGetOAuth2Status() {
   return request<App.Api.Setting.OAuth2Status>({
     url: '/oauth2/status',
@@ -72,7 +64,6 @@ export function fetchGetOAuth2Status() {
   })
 }
 
-// 获取 Passkey 状态
 export function fetchGetPasskeyStatus() {
   return request<App.Api.Setting.PasskeyStatus>({
     url: '/passkey/status',
@@ -80,7 +71,6 @@ export function fetchGetPasskeyStatus() {
   })
 }
 
-// 获取 Passkey 设置
 export function fetchGetPasskeySettings() {
   return request<App.Api.Setting.PasskeySetting>({
     url: '/passkey/settings',
@@ -88,7 +78,6 @@ export function fetchGetPasskeySettings() {
   })
 }
 
-// 更新 Passkey 设置
 export function fetchUpdatePasskeySettings(passkeySetting: App.Api.Setting.PasskeySetting) {
   return request({
     url: '/passkey/settings',
@@ -97,7 +86,6 @@ export function fetchUpdatePasskeySettings(passkeySetting: App.Api.Setting.Passk
   })
 }
 
-// 获取 OAuth2 绑定信息
 export function fetchGetOAuthInfo(provider?: string) {
   return request<App.Api.Setting.OAuthInfo>({
     url: '/oauth/info?' + (provider ? `provider=${encodeURIComponent(provider)}` : ''),
@@ -105,7 +93,6 @@ export function fetchGetOAuthInfo(provider?: string) {
   })
 }
 
-// 获取 Webhook 列表
 export function fetchGetAllWebhooks() {
   return request<App.Api.Setting.Webhook[]>({
     url: '/webhook',
@@ -113,7 +100,6 @@ export function fetchGetAllWebhooks() {
   })
 }
 
-// 创建 Webhook
 export function fetchCreateWebhook(webhook: App.Api.Setting.WebhookDto) {
   return request({
     url: '/webhook',
@@ -122,7 +108,6 @@ export function fetchCreateWebhook(webhook: App.Api.Setting.WebhookDto) {
   })
 }
 
-// 更新 Webhook
 export function fetchUpdateWebhook(webhookId: string, webhook: App.Api.Setting.WebhookDto) {
   return request({
     url: `/webhook/${webhookId}`,
@@ -131,7 +116,6 @@ export function fetchUpdateWebhook(webhookId: string, webhook: App.Api.Setting.W
   })
 }
 
-// 删除 Webhook
 export function fetchDeleteWebhook(webhookId: string) {
   return request({
     url: `/webhook/${webhookId}`,
@@ -139,7 +123,6 @@ export function fetchDeleteWebhook(webhookId: string) {
   })
 }
 
-// 测试 Webhook
 export function fetchTestWebhook(webhookId: string) {
   return request({
     url: `/webhook/${webhookId}/test`,
@@ -147,7 +130,6 @@ export function fetchTestWebhook(webhookId: string) {
   })
 }
 
-// 列出访问令牌
 export function fetchListAccessTokens() {
   return request<App.Api.Setting.AccessToken[]>({
     url: '/access-tokens',
@@ -155,7 +137,6 @@ export function fetchListAccessTokens() {
   })
 }
 
-// 创建访问令牌
 export function fetchCreateAccessToken(dto: App.Api.Setting.AccessTokenDto) {
   return request<string>({
     url: '/access-tokens',
@@ -164,7 +145,6 @@ export function fetchCreateAccessToken(dto: App.Api.Setting.AccessTokenDto) {
   })
 }
 
-// 删除访问令牌
 export function fetchDeleteAccessToken(tokenId: string) {
   return request({
     url: `/access-tokens/${tokenId}`,
@@ -172,7 +152,6 @@ export function fetchDeleteAccessToken(tokenId: string) {
   })
 }
 
-// 获取定时快照计划
 export function fetchGetSnapshotScheduleSetting() {
   return request<App.Api.Setting.SnapshotSchedule>({
     url: '/snapshot/schedule',
@@ -180,7 +159,6 @@ export function fetchGetSnapshotScheduleSetting() {
   })
 }
 
-// 更新定时快照计划
 export function fetchUpdateSnapshotScheduleSetting(
   snapshotSchedule: App.Api.Setting.SnapshotScheduleDto,
 ) {
@@ -191,10 +169,6 @@ export function fetchUpdateSnapshotScheduleSetting(
   })
 }
 
-// 手动快照（导出）已统一收敛到 Migrator 域，见 service/api/other.ts 的 fetchStartExport /
-// fetchGetExportStatus / fetchCancelExport（走 /migration/export*，job.Manager 驱动）。
-
-// 获取LLM Agent信息(无需鉴权)
 export function fetchGetAgentInfo() {
   return request<App.Api.Setting.AgentSetting>({
     url: '/agent/info',
@@ -202,7 +176,6 @@ export function fetchGetAgentInfo() {
   })
 }
 
-// 获取LLM Agent设置
 export function fetchGetAgentSettings() {
   return request<App.Api.Setting.AgentSetting>({
     url: '/agent/settings',
@@ -210,7 +183,6 @@ export function fetchGetAgentSettings() {
   })
 }
 
-// 更新LLM Agent设置
 export function fetchUpdateAgentSettings(agentSetting: App.Api.Setting.AgentSettingDto) {
   return request({
     url: '/agent/settings',
@@ -219,7 +191,6 @@ export function fetchUpdateAgentSettings(agentSetting: App.Api.Setting.AgentSett
   })
 }
 
-// 测试 Ech0 Copilot（LLM）连接（不保存，仅探测连通性）。silentError 关闭通用错误 toast，由调用方自行提示。
 export function fetchTestAgentConnection(agentSetting: App.Api.Setting.AgentSettingDto) {
   return request({
     url: '/agent/settings/test',

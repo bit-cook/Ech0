@@ -5,8 +5,6 @@ package log
 
 import "testing"
 
-// msgsOf extracts the Msg field of each entry for order assertions.
-// Shared across log test files in package util.
 func msgsOf(entries []LogEntry) []string {
 	out := make([]string, 0, len(entries))
 	for _, e := range entries {
@@ -129,15 +127,12 @@ func TestLogStreamHubCancelRemovesSubscriber(t *testing.T) {
 		t.Errorf("subscriber %d still present after cancel", id)
 	}
 
-	// Channel must be closed after cancel.
 	if _, ok := <-ch; ok {
 		t.Error("channel should be closed after cancel")
 	}
 
-	// Cancel is idempotent (no panic, no effect).
 	cancel()
 
-	// Publishing after cancel must not panic or deliver.
 	h.Publish(entry("ignored"))
 }
 
@@ -146,8 +141,8 @@ func TestLogStreamHubDropNewest(t *testing.T) {
 	_, ch, cancel := h.Subscribe(1)
 	defer cancel()
 
-	h.Publish(entry("first"))  // fills the 1-slot buffer
-	h.Publish(entry("second")) // buffer full -> dropped (newest)
+	h.Publish(entry("first"))
+	h.Publish(entry("second"))
 
 	if got := h.dropped.Load(); got != 1 {
 		t.Errorf("dropped = %d, want 1", got)
@@ -168,8 +163,8 @@ func TestLogStreamHubDropOldest(t *testing.T) {
 	_, ch, cancel := h.Subscribe(1)
 	defer cancel()
 
-	h.Publish(entry("first"))  // fills the 1-slot buffer
-	h.Publish(entry("second")) // buffer full -> drops oldest, keeps newest
+	h.Publish(entry("first"))
+	h.Publish(entry("second"))
 
 	select {
 	case got := <-ch:
@@ -187,15 +182,12 @@ func TestLogStreamHubClose(t *testing.T) {
 
 	h.Close()
 
-	// Subscriber channel must be closed.
 	if _, ok := <-ch; ok {
 		t.Error("subscriber channel should be closed after Close")
 	}
 
-	// Close is idempotent.
 	h.Close()
 
-	// Publish after close is a no-op (no panic).
 	h.Publish(entry("ignored"))
 	if got := h.Recent(10); got != nil {
 		t.Errorf("Recent after close with no prior entries = %v, want nil", got)
@@ -213,5 +205,5 @@ func TestLogStreamHubSubscribeAfterClose(t *testing.T) {
 	if _, ok := <-ch; ok {
 		t.Error("channel from closed hub should be closed")
 	}
-	cancel() // no-op, must not panic
+	cancel()
 }

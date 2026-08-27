@@ -22,7 +22,6 @@ func TestHistoryForModel_Empty(t *testing.T) {
 	}
 }
 
-// 旧轮 Sources 被丢弃；仅「最近一条带 Sources 的 assistant」把检索原文折进文本。
 func TestHistoryForModel_DropsOldSourcesFoldsRecent(t *testing.T) {
 	msgs := []ChatMessage{
 		{Role: "user", Content: "q1"},
@@ -36,7 +35,6 @@ func TestHistoryForModel_DropsOldSourcesFoldsRecent(t *testing.T) {
 		t.Fatalf("expected 4 messages, got %d", len(got))
 	}
 
-	// 时间正序，角色映射正确。
 	wantRoles := []agent.Role{agent.RoleUser, agent.RoleAssistant, agent.RoleUser, agent.RoleAssistant}
 	for i, r := range wantRoles {
 		if got[i].Role != r {
@@ -44,7 +42,6 @@ func TestHistoryForModel_DropsOldSourcesFoldsRecent(t *testing.T) {
 		}
 	}
 
-	// 旧轮（a1）的 Sources 不应出现在任何文本里。
 	a1 := got[1].Content
 	if a1 != "a1" {
 		t.Fatalf("old assistant content should stay plain, got %q", a1)
@@ -55,18 +52,16 @@ func TestHistoryForModel_DropsOldSourcesFoldsRecent(t *testing.T) {
 		}
 	}
 
-	// 最近一轮（a2）应折入其检索原文。
 	a2 := got[3].Content
 	if !strings.Contains(a2, "a2") || !strings.Contains(a2, "RECENT_ECHO") {
 		t.Fatalf("recent assistant should fold in its sources, got %q", a2)
 	}
 }
 
-// Content 为空且无 Sources 的消息应被跳过。
 func TestHistoryForModel_SkipsEmpty(t *testing.T) {
 	msgs := []ChatMessage{
 		{Role: "user", Content: "q1"},
-		{Role: "assistant", Content: ""}, // 空且无 sources → 跳过
+		{Role: "assistant", Content: ""},
 		{Role: "user", Content: "q2"},
 		{Role: "assistant", Content: "a2"},
 	}
@@ -82,9 +77,7 @@ func TestHistoryForModel_SkipsEmpty(t *testing.T) {
 	}
 }
 
-// 超 token 预算时只保留最近若干条，且返回为时间正序。
 func TestHistoryForModel_TokenBudgetKeepsRecentInOrder(t *testing.T) {
-	// 每条 10 个 rune，预算 25 → 只能容纳最近 2 条。
 	msgs := []ChatMessage{
 		{Role: "user", Content: strings.Repeat("a", 10)},
 		{Role: "assistant", Content: strings.Repeat("b", 10)},
@@ -96,13 +89,11 @@ func TestHistoryForModel_TokenBudgetKeepsRecentInOrder(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("expected 2 messages within budget, got %d", len(got))
 	}
-	// 时间正序：倒数第二条在前，最近一条在后。
 	if got[0].Content != strings.Repeat("c", 10) || got[1].Content != strings.Repeat("d", 10) {
 		t.Fatalf("expected most-recent two in time order, got [%q, %q]", got[0].Content, got[1].Content)
 	}
 }
 
-// 极小预算下至少保留最近一条，不返回空、不 panic。
 func TestHistoryForModel_TinyBudgetKeepsAtLeastOne(t *testing.T) {
 	msgs := []ChatMessage{
 		{Role: "user", Content: "q1"},

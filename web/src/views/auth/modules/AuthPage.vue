@@ -8,9 +8,7 @@
       >
         Ech0
       </h1>
-      <!-- 登录  -->
       <div v-if="AuthMode === 'login'">
-        <!-- 模式切换 -->
         <div class="flex items-center justify-between gap-3 mb-3">
           <h2 class="text-lg font-bold text-[var(--color-text-muted)] leading-tight">
             {{ t('authPage.login') }}
@@ -25,7 +23,6 @@
             </div>
           </button>
         </div>
-        <!-- 账号密码输入 -->
         <BaseInput
           v-model="username"
           type="text"
@@ -46,7 +43,6 @@
             class="rounded-md w-9 h-9 flex-shrink-0"
           />
           <div class="w-full flex items-center justify-end gap-1">
-            <!-- Passkey 登录（Resident Key / 无用户名） -->
             <BaseButton
               :icon="Passkey"
               v-if="passkeySupported"
@@ -55,7 +51,6 @@
               class="rounded-md w-9 h-9"
               :tooltip="t('authPage.passkeyLoginTitle')"
             />
-            <!-- OAuth2 登录 -->
             <BaseButton
               v-if="oauth2Status && oauth2Status.enabled"
               :icon="
@@ -73,13 +68,11 @@
               :tooltip="t('authPage.oauth2LoginTitle')"
             />
           </div>
-          <!-- 账号密码登录 -->
           <BaseButton @click="handleLogin" class="min-w-fit px-3 h-9 rounded-md ml-1 flex-shrink-0">
             <span class="text-[var(--color-text-secondary)]">{{ t('authPage.login') }}</span>
           </BaseButton>
         </div>
       </div>
-      <!-- 注册 -->
       <div v-else-if="AuthMode === 'register'">
         <div class="flex items-center justify-between gap-3 mb-3">
           <h2 class="text-lg font-bold text-[var(--color-text-muted)] leading-tight">
@@ -143,7 +136,7 @@ import { theToast } from '@/utils/toast'
 import { base64urlToUint8Array, uint8ArrayToBase64url } from '@/utils/other'
 import { useI18n } from 'vue-i18n'
 
-const AuthMode = ref<'login' | 'register'>('login') // login / register
+const AuthMode = ref<'login' | 'register'>('login')
 const username = ref<string>('')
 const password = ref<string>('')
 const userStore = useUserStore()
@@ -190,7 +183,6 @@ const getPasskeyStatus = async () => {
 const router = useRouter()
 
 const handleLogin = async () => {
-  // console.log('登录', username.value, password.value)
   await userStore.login({
     username: username.value,
     password: password.value,
@@ -278,14 +270,12 @@ const handlePasskeyLogin = async () => {
 }
 
 const handleRegister = async () => {
-  // console.log('注册', username.value, password.value)
   if (
     await userStore.signup({
       username: username.value,
       password: password.value,
     })
   ) {
-    // 注册成功，切换到登录模式
     AuthMode.value = 'login'
   }
 }

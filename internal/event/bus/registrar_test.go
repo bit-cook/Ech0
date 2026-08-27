@@ -17,14 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeSubscriber exposes a controllable set of registrations.
 type fakeSubscriber struct {
 	regs []eventbus.Registration
 }
 
 func (f fakeSubscriber) Registrations() []eventbus.Registration { return f.regs }
 
-// drainingSubscriber additionally implements eventbus.Draining.
 type drainingSubscriber struct {
 	fakeSubscriber
 	stopCalls int
@@ -34,8 +32,6 @@ type drainingSubscriber struct {
 func (d *drainingSubscriber) Stop() { d.stopCalls++ }
 func (d *drainingSubscriber) Wait() { d.waitCalls++ }
 
-// recordingReg returns a registration that records its id into unsubLog when its
-// returned unsubscribe func is invoked.
 func recordingReg(id int, unsubLog *[]int) eventbus.Registration {
 	return func(_ *busen.Bus) (func(), error) {
 		return func() { *unsubLog = append(*unsubLog, id) }, nil
@@ -78,13 +74,10 @@ func TestEventRegistrar_RollbackOnRegistrationFailure(t *testing.T) {
 
 	err := reg.Register()
 	require.ErrorIs(t, err, boom)
-	// Already-registered subscriptions are rolled back in reverse order.
 	assert.Equal(t, []int{2, 1}, unsubLog)
 }
 
 func TestEventRegistrar_RegisterAgainAfterFailure(t *testing.T) {
-	// A failed Register leaves the registrar unregistered, so a later Register
-	// re-runs the registrations.
 	var attempts int
 	fail := true
 	sub := fakeSubscriber{regs: []eventbus.Registration{
@@ -177,7 +170,6 @@ func TestEventRegistrar_EndToEndWithRealBus(t *testing.T) {
 	eventbus.Notify(context.Background(), b, event.EchoCreated{Echo: echoModel.Echo{ID: "e2e-1"}})
 	assert.Equal(t, 1, delivered)
 
-	// After Stop the subscription is removed, so further events are not delivered.
 	require.NoError(t, reg.Stop())
 	eventbus.Notify(context.Background(), b, event.EchoCreated{Echo: echoModel.Echo{ID: "e2e-2"}})
 	assert.Equal(t, 1, delivered)

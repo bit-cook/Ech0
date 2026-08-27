@@ -6,8 +6,6 @@
       {{ t('editor.mediaSectionTitle') }}
     </h2>
 
-    <!-- 媒体类别切换（图片/音频/视频）：分段控件，激活项浮起高亮；
-         有附件后由 setSelectedCategory 软锁定，点其他类别会提示需先移除文件 -->
     <div class="mb-3 flex items-center gap-2">
       <span class="shrink-0 whitespace-nowrap text-[var(--color-text-secondary)]">{{
         t('editor.mediaTypeLabel')
@@ -23,21 +21,18 @@
     <div v-if="!fileUploading" class="flex items-center gap-2 mb-3">
       <div class="flex items-center gap-2">
         <span class="text-[var(--color-text-secondary)]">{{ t('editor.imageAddMethod') }}</span>
-        <!-- 直链 -->
         <BaseButton
           :icon="Url"
           class="w-7 h-7 sm:w-7 sm:h-7 rounded-md"
           @click="handleSetFileSource(FILE_STORAGE_TYPE.EXTERNAL)"
           :tooltip="t('editor.imageSourceExternal')"
         />
-        <!-- 上传本地 -->
         <BaseButton
           :icon="Upload"
           class="w-7 h-7 sm:w-7 sm:h-7 rounded-md"
           @click="handleSetFileSource(FILE_STORAGE_TYPE.LOCAL)"
           :tooltip="t('editor.imageSourceLocal')"
         />
-        <!-- S3 存储 -->
         <BaseButton
           v-if="S3Setting.enable"
           :icon="Bucket"
@@ -48,7 +43,6 @@
       </div>
     </div>
 
-    <!-- 布局方式选择（仅图片） -->
     <div v-if="effectiveCategory === FILE_CATEGORY.IMAGE" class="mb-2 flex items-center gap-2">
       <span class="text-[var(--color-text-secondary)]">{{ t('editor.imageLayout') }}</span>
       <BaseSelect
@@ -59,7 +53,6 @@
       />
     </div>
 
-    <!-- 智能压缩（仅图片） -->
     <div
       v-if="
         effectiveCategory === FILE_CATEGORY.IMAGE &&
@@ -71,7 +64,6 @@
       <BaseSwitch v-model="enableCompressor" />
     </div>
 
-    <!-- 当前上传方式与状态 -->
     <div class="text-[var(--color-text-muted)] text-sm mb-2">
       {{ t('editor.currentUploadMode') }}
       <span class="font-bold">
@@ -87,7 +79,6 @@
     </div>
 
     <div class="my-1">
-      <!-- 媒体上传（key 绑定类别：切换时重挂载，刷新 accept/大小上限快照） -->
       <TheUploader
         v-if="fileToAdd.storage_type !== FILE_STORAGE_TYPE.EXTERNAL && !singleClipFull"
         :key="effectiveCategory"
@@ -99,7 +90,6 @@
         :maxFiles="maxFiles"
       />
 
-      <!-- 音视频单片段已满：不再挂上传器，避免白传一份被后端/前端拒绝；提示先移除再替换 -->
       <div
         v-else-if="singleClipFull && fileToAdd.storage_type !== FILE_STORAGE_TYPE.EXTERNAL"
         class="text-[var(--color-text-muted)] text-sm px-1 py-2"
@@ -107,7 +97,6 @@
         {{ t('editor.singleMediaLimit') }}
       </div>
 
-      <!-- 媒体直链 -->
       <div
         v-if="fileToAdd.storage_type === FILE_STORAGE_TYPE.EXTERNAL"
         class="flex items-center gap-2"
@@ -148,18 +137,14 @@ import TheUploader from '@/components/advanced/TheUploader.vue'
 import { localStg } from '@/utils/storage'
 import { useI18n } from 'vue-i18n'
 
-// Per-category upload caps, mirroring the backend defaults (config.go) so an
-// oversized file is rejected up-front instead of after a wasted upload.
-const IMAGE_MAX_FILE_SIZE = 20 * 1024 * 1024 // ImageMaxSize
-const AUDIO_MAX_FILE_SIZE = 20 * 1024 * 1024 // AudioMaxSize
-const VIDEO_MAX_FILE_SIZE = 64 * 1024 * 1024 // VideoMaxSize
+const IMAGE_MAX_FILE_SIZE = 20 * 1024 * 1024
+const AUDIO_MAX_FILE_SIZE = 20 * 1024 * 1024
+const VIDEO_MAX_FILE_SIZE = 64 * 1024 * 1024
 
 const editorStore = useEditorStore()
 const { fileToAdd, filesToAdd, fileUploading, echoToAdd, effectiveCategory } =
   storeToRefs(editorStore)
 
-// 音视频每条 Echo 至多一个：已有附件时视为"已满",隐藏上传入口(改为提示先移除再替换)。
-// 图片走多图画廊不受此限。这样既避免更新模式下白传一份被拒，也不触碰 maxFiles 的双列表计数。
 const singleClipFull = computed(
   () =>
     (effectiveCategory.value === FILE_CATEGORY.AUDIO ||
@@ -174,11 +159,9 @@ const { t } = useI18n()
 const handleSetFileSource = (source: App.Api.File.StorageType) => {
   fileToAdd.value.storage_type = source
 
-  // 记忆上传方式
   localStg.setItem('file_storage_type', source)
 }
 
-// 媒体类别选项（分段控件；BaseSegmented 只吃 label/value）
 const mediaTypeOptions = computed<{ label: string; value: FileCategory }[]>(() => [
   { label: String(t('editor.mediaTypeImage')), value: FILE_CATEGORY.IMAGE },
   { label: String(t('editor.mediaTypeAudio')), value: FILE_CATEGORY.AUDIO },
@@ -186,7 +169,6 @@ const mediaTypeOptions = computed<{ label: string; value: FileCategory }[]>(() =
 ])
 const onSelectCategory = (v: string) => editorStore.setSelectedCategory(v as FileCategory)
 
-// 依类别决定上传器可接受的 MIME 与大小上限
 const acceptedTypes = computed<string[]>(() => {
   switch (effectiveCategory.value) {
     case FILE_CATEGORY.AUDIO:
@@ -208,14 +190,11 @@ const maxFileSize = computed<number>(() => {
   }
 })
 
-// 单条 Echo 的媒体数量上限：图片支持多图画廊（最多 9 张）；
-// 音频/视频每条仅 1 个，与后端单类别硬校验一致，前端先行拦截。
 const IMAGE_MAX_FILES = 9
 const maxFiles = computed<number>(() =>
   effectiveCategory.value === FILE_CATEGORY.IMAGE ? IMAGE_MAX_FILES : 1,
 )
 
-// 布局选择
 const layoutOptions = computed(() => [
   { label: String(t('editor.layoutWaterfall')), value: ImageLayout.WATERFALL },
   { label: String(t('editor.layoutGrid')), value: ImageLayout.GRID },
@@ -233,9 +212,6 @@ const layoutOptions = computed(() => [
   border-radius: var(--radius-xs);
 }
 
-/* 媒体类别分段控件：缩小到与下方存储图标按钮(h-7 ≈ 1.75rem)相近的高度，
-   并去掉组件自带的 margin-bottom（在 flex 行里多余）。用后代选择器提高特异性，
-   避免改动通用 BaseSegmented 组件本身（面板 tab 仍用原尺寸）。 */
 .editor-media-panel .media-type-seg {
   margin-bottom: 0;
   padding: 0.15rem;

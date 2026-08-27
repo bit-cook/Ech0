@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// Redeem verifies a challenge solution set and issues one redeem token.
 func (s *Service) Redeem(siteKey string, req RedeemRequest) (*RedeemResponse, error) {
 	if req.Token == "" || len(req.Solutions) == 0 {
 		return nil, NewBadRequest("Missing required fields")

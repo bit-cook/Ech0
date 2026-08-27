@@ -3,7 +3,6 @@
 
 import { request } from '../request'
 
-// 获取 Embedding 向量设置
 export function fetchGetEmbeddingSettings() {
   return request<App.Api.Embedding.EmbeddingSetting>({
     url: '/embedding/settings',
@@ -11,7 +10,6 @@ export function fetchGetEmbeddingSettings() {
   })
 }
 
-// 更新 Embedding 向量设置
 export function fetchUpdateEmbeddingSettings(data: App.Api.Embedding.EmbeddingSettingDto) {
   return request<null>({
     url: '/embedding/settings',
@@ -20,7 +18,6 @@ export function fetchUpdateEmbeddingSettings(data: App.Api.Embedding.EmbeddingSe
   })
 }
 
-// 提交全量重建向量索引作业（异步：起即返回作业状态，前端轮询进度）
 export function fetchReindexEmbeddings() {
   return request<App.Api.Embedding.ReindexStatus>({
     url: '/embedding/reindex',
@@ -28,7 +25,6 @@ export function fetchReindexEmbeddings() {
   })
 }
 
-// 查询重建索引作业状态（按 type 轮询，无需 id）
 export function fetchReindexStatus() {
   return request<App.Api.Embedding.ReindexStatus>({
     url: '/embedding/reindex/status',
@@ -36,7 +32,6 @@ export function fetchReindexStatus() {
   })
 }
 
-// 取消进行中的重建索引作业
 export function fetchCancelReindex() {
   return request<App.Api.Embedding.ReindexStatus>({
     url: '/embedding/reindex/cancel',

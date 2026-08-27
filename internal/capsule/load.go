@@ -17,18 +17,13 @@ import (
 	vizip "github.com/lin-snow/ech0/pkg/virefs/plugin/zip"
 )
 
-// Source 是一个已打开的胶囊：目录形态与 .zip 形态在这里被抹平成同一个
-// virefs.FS 视图，check / import / build 三个消费者共用。
 type Source struct {
-	// Path 是用户给出的胶囊位置，仅用于报告。
 	Path string
-	// FS 以胶囊根为根，键即 spec §2 的相对路径。
-	FS virefs.FS
+	FS   virefs.FS
 
 	closer io.Closer
 }
 
-// Open 打开目录或 zip 形态的胶囊。调用方必须 Close。
 func Open(location string) (*Source, error) {
 	info, err := os.Stat(location)
 	if err != nil {
@@ -48,7 +43,6 @@ func Open(location string) (*Source, error) {
 	return &Source{Path: location, FS: zfs, closer: zfs}, nil
 }
 
-// Close 释放底层句柄（zip 形态才有）。
 func (s *Source) Close() error {
 	if s.closer == nil {
 		return nil
@@ -56,7 +50,6 @@ func (s *Source) Close() error {
 	return s.closer.Close()
 }
 
-// ReadFile 读取胶囊内一个相对路径的全部字节。
 func (s *Source) ReadFile(ctx context.Context, key string) ([]byte, error) {
 	rc, err := s.FS.Get(ctx, key)
 	if err != nil {
@@ -66,8 +59,6 @@ func (s *Source) ReadFile(ctx context.Context, key string) ([]byte, error) {
 	return io.ReadAll(rc)
 }
 
-// LoadedEcho 是一个 Echo 内容文件的解析结果。Err 非空表示该文件自身解析失败，
-// 其余字段无意义——加载不因单文件失败而中断，好让 check 一次报全。
 type LoadedEcho struct {
 	Path    string
 	Doc     *EchoDoc
@@ -75,7 +66,6 @@ type LoadedEcho struct {
 	Err     error
 }
 
-// Loaded 是一个胶囊的完整解析结果（不含媒体字节）。
 type Loaded struct {
 	Source *Source
 
@@ -91,14 +81,10 @@ type Loaded struct {
 	CommentsErr     error
 	HasComments     bool
 
-	// MediaPaths 是 files/ 下实际存在的相对路径集合（含 files/ 前缀）。
-	MediaPaths map[string]int64
-	// UnknownPaths 是规格未定义的顶层条目——消费者必须忽略，check 告警。
+	MediaPaths   map[string]int64
 	UnknownPaths []string
 }
 
-// Load 解析整个胶囊。除「胶囊根不可读」外不返回 error：单点失败记录在对应
-// 字段里，由 check 统一分级上报。
 func Load(ctx context.Context, src *Source) (*Loaded, error) {
 	l := &Loaded{Source: src, MediaPaths: make(map[string]int64)}
 
@@ -139,11 +125,9 @@ func Load(ctx context.Context, src *Source) (*Loaded, error) {
 	return l, nil
 }
 
-// scanTree 遍历胶囊，收集 Echo 文件、媒体文件与未知路径。
 func (l *Loaded) scanTree(ctx context.Context, src *Source) error {
 	return virefs.Walk(ctx, src.FS, "", func(key string, info virefs.FileInfo, err error) error {
 		if err != nil {
-			// 根不可读才致命；子目录读失败降级成未知路径。
 			if key == "" {
 				return err
 			}
@@ -181,8 +165,6 @@ func loadEcho(ctx context.Context, src *Source, key string) LoadedEcho {
 	return LoadedEcho{Path: key, Doc: doc, Unknown: unknown}
 }
 
-// RawComments 解析 comments.yaml 的原始键，用于检出 spec §5 的禁止字段。
-// 单独走一遍宽松解码，避免把「禁止字段」和「未知字段」混为一谈。
 func RawComments(data []byte) ([]map[string]any, error) {
 	var raw struct {
 		Comments []map[string]any `yaml:"comments"`
@@ -194,5 +176,4 @@ func RawComments(data []byte) ([]map[string]any, error) {
 	return raw.Comments, nil
 }
 
-// EchoDir 返回某个 Echo 文件所属的年份目录，供报告使用。
 func EchoDir(p string) string { return path.Dir(p) }

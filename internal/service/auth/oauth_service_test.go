@@ -14,8 +14,6 @@ import (
 	settingModel "github.com/lin-snow/ech0/internal/model/setting"
 )
 
-// oauthKVWithRedirect 构造一个内存 KV，预置一份仅设了 redirect_uri 的 OAuth2 设置，
-// 供隐式放行（/panel、/auth）相关用例使用。
 func oauthKVWithRedirect(t *testing.T, redirectURI string) kvstore.Store {
 	t.Helper()
 	kv := kvstore.NewMemory()
@@ -54,9 +52,6 @@ func TestParseAndValidateClientRedirect_Denied(t *testing.T) {
 	}
 }
 
-// 防 GHSA-p64j-f4x9-wq66：scheme+host 相同但 path 不在白名单内必须拒绝，否则
-// 攻击者可借助同源任意路径上的 Referer/分析脚本/open-redirect 截获一次性
-// exchange code。
 func TestParseAndValidateClientRedirect_PathMismatchDenied(t *testing.T) {
 	cfg := config.Config()
 	cfg.Auth.Redirect.AllowedReturnURLs = []string{"https://app.example.com/auth"}
@@ -70,8 +65,6 @@ func TestParseAndValidateClientRedirect_PathMismatchDenied(t *testing.T) {
 	}
 }
 
-// 隐式放行：SPA 写死的本站回跳落点（/panel、/auth）从 OAuth2 回调地址推导的 origin 得到，
-// 即便用户未配置任何白名单也应放行，使单域名自托管绑定/登录开箱即用。
 func TestParseAndValidateClientRedirect_ImplicitSelfAllowed(t *testing.T) {
 	cfg := config.Config()
 	cfg.Auth.Redirect.AllowedReturnURLs = nil
@@ -88,8 +81,6 @@ func TestParseAndValidateClientRedirect_ImplicitSelfAllowed(t *testing.T) {
 	}
 }
 
-// 隐式放行只覆盖 /panel、/auth 两条固定路径：同源其它路径在白名单为空时仍须拒绝，
-// 不得把整个 origin 放开（守住 GHSA-p64j-f4x9-wq66 的精确比对意图）。
 func TestParseAndValidateClientRedirect_ImplicitSelfOnlyFixedPaths(t *testing.T) {
 	cfg := config.Config()
 	cfg.Auth.Redirect.AllowedReturnURLs = nil

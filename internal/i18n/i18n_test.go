@@ -39,12 +39,8 @@ func TestResolveLocaleLegit(t *testing.T) {
 	}
 }
 
-// TestResolveLocaleDefangsQuadraticParse guards every untrusted entry point
-// (Accept-Language, X-Locale header, ?lang query) — they all funnel through
-// ResolveLocale. A malicious all-underscore value must fall back instantly
-// instead of driving language.ParseAcceptLanguage into its O(N^2) path.
 func TestResolveLocaleDefangsQuadraticParse(t *testing.T) {
-	malicious := strings.Repeat("_", 1<<20) // 1 MiB, ~seconds of CPU unguarded
+	malicious := strings.Repeat("_", 1<<20)
 
 	start := time.Now()
 	got := ResolveLocale(malicious)

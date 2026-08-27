@@ -13,8 +13,6 @@ import (
 	settingModel "github.com/lin-snow/ech0/internal/model/setting"
 )
 
-// KV miss 时统一加载器报 AGENT_SETTING_NOT_FOUND，且不写默认行（best-effort 只读）。
-// 用 kvstore.Memory（空）即可制造 miss，无需手搓替身。
 func TestAgentSetting_MissReturnsNotFound(t *testing.T) {
 	s := &CopilotService{durableKV: kvstore.NewMemory()}
 	_, err := s.agentSetting(context.Background())
@@ -23,7 +21,6 @@ func TestAgentSetting_MissReturnsNotFound(t *testing.T) {
 	}
 }
 
-// KV 命中合法 JSON 时正确反序列化。
 func TestAgentSetting_HappyPath(t *testing.T) {
 	want := settingModel.AgentSetting{Enable: true, Protocol: "openai", Model: "gpt-x", ApiKey: "k"}
 	raw, _ := json.Marshal(want)

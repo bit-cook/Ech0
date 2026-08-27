@@ -21,8 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// nilBus 满足 NewEchoService 的 busProvider 入参；被测方法（GetEchoById/LikeEcho/QueryEchos）
-// 都不向 bus 发事件，因此返回 nil 即可。
 func nilBus() *busen.Bus { return nil }
 
 const (
@@ -31,8 +29,6 @@ const (
 	echoID  = "echo-0001"
 )
 
-// TestGetEchoById_Visibility 覆盖私密 echo 的可见性规则：
-// 匿名/非作者非管理员看不到 private；管理员可见；公开 echo 任何人可见。
 func TestGetEchoById_Visibility(t *testing.T) {
 	t.Run("anonymous cannot read private echo", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
@@ -123,12 +119,10 @@ func TestGetEchoById_Visibility(t *testing.T) {
 	})
 }
 
-// runTx 让 MockTransactor.Run 真正执行内部回调，从而触发 repo.LikeEcho。
 func runTx(_ context.Context, fn func(ctx context.Context) error) error {
 	return fn(context.Background())
 }
 
-// TestLikeEcho_Visibility 覆盖点赞的私密可见性规则，应与 GetEchoById 一致。
 func TestLikeEcho_Visibility(t *testing.T) {
 	t.Run("anonymous cannot like private echo", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
@@ -206,8 +200,6 @@ func TestLikeEcho_Visibility(t *testing.T) {
 	})
 }
 
-// TestQueryEchos_PageSizeClamp 守护公开 /echo/query 端点的 DoS 护栏：
-// pageSize<1 回落 10，>100 钳到 100，区间内原样保留；page<1 钳到 1。
 func TestQueryEchos_PageSizeClamp(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -245,7 +237,6 @@ func TestQueryEchos_PageSizeClamp(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantPageSize, captured.PageSize, "pageSize clamp")
 			assert.Equal(t, tc.wantPage, captured.Page, "page clamp")
-			// 默认排序兜底也应生效
 			assert.Equal(t, "created_at", captured.SortBy)
 			assert.Equal(t, "desc", captured.SortOrder)
 		})

@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// recvWithin blocks until a value arrives on ch, failing the test if it does not
-// arrive within a generous safety window. It is a deterministic synchronization
-// point (not a fixed sleep) for asserting async delivery.
 func recvWithin[T any](t *testing.T, ch <-chan T) T {
 	t.Helper()
 	select {
@@ -83,7 +80,6 @@ func TestNew_DeliversSynchronously(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(unsub)
 
-	// Default subscription is synchronous: handler has run by the time Publish returns.
 	require.NoError(t, b.Publish(context.Background(), ping{n: 7}))
 	assert.Equal(t, 7, got)
 }
@@ -135,9 +131,6 @@ func TestAsyncSequential_EnablesAsyncDelivery(t *testing.T) {
 	assert.Equal(t, 99, recvWithin(t, done))
 }
 
-// TestNew_HooksHandleErrorPaths drives a handler error and a handler panic
-// through a New() bus so the wired OnHandlerError / OnPublishDone / OnHandlerPanic
-// hooks run; they must log only and never let a panic escape Publish.
 func TestNew_HooksHandleErrorPaths(t *testing.T) {
 	t.Run("handler error is surfaced and logged", func(t *testing.T) {
 		b := New()

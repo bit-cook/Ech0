@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestDeleteEchoById_Guards 覆盖删除前的快速失败：非管理员拒绝、用户解析错误。
 func TestDeleteEchoById_Guards(t *testing.T) {
 	t.Run("non-admin is denied", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
@@ -52,8 +51,6 @@ func TestDeleteEchoById_Guards(t *testing.T) {
 	})
 }
 
-// TestDeleteEchoById_NotFound 确认事务内回查 echo 为 nil 时返回 ECHO_NOT_FOUND，
-// 不触达缓存失效 / 事件。
 func TestDeleteEchoById_NotFound(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -69,7 +66,6 @@ func TestDeleteEchoById_NotFound(t *testing.T) {
 	require.EqualError(t, svc.DeleteEchoById(helpers.CtxAsUser(adminID), echoID), commonModel.ECHO_NOT_FOUND)
 }
 
-// TestDeleteEchoById_GetEchoError 确认事务内回查出错时上抛该错误。
 func TestDeleteEchoById_GetEchoError(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -86,11 +82,6 @@ func TestDeleteEchoById_GetEchoError(t *testing.T) {
 	require.ErrorIs(t, svc.DeleteEchoById(helpers.CtxAsUser(adminID), echoID), boom)
 }
 
-// TestDeleteEchoById_Success 覆盖完整删除路径：
-//   - 本地文件：登记进待删存储集合 + 删除文件记录；
-//   - 外部文件（external）：跳过存储删除（仅删记录）；
-//   - 仅删本地的物理对象，失败被吞（不影响返回）；
-//   - 缓存失效 + 发出 EchoDeleted。
 func TestDeleteEchoById_Success(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -112,12 +103,10 @@ func TestDeleteEchoById_Success(t *testing.T) {
 		}
 	})
 	repo.EXPECT().GetEchosById(mock.Anything, echoID).Return(&stored, nil).Once()
-	// 两个文件都有记录 ID -> 都删记录。
 	file.EXPECT().DeleteFileRecord(mock.Anything, "f-local").Return(nil).Once()
 	file.EXPECT().DeleteFileRecord(mock.Anything, "f-ext").Return(nil).Once()
 	repo.EXPECT().DeleteEchoById(mock.Anything, echoID).Return(nil).Once()
 	repo.EXPECT().InvalidateEchoCaches(echoID).Once()
-	// 仅本地对象进入物理删除（external 被排除）；删除失败被忽略。
 	file.EXPECT().DeleteStoredFile("local", "k-local").Return(errors.New("ignored")).Once()
 
 	var got event.EchoDeleted
@@ -138,8 +127,6 @@ func TestDeleteEchoById_Success(t *testing.T) {
 	assert.True(t, got.User.IsAdmin)
 }
 
-// TestDeleteEchoById_DeleteFileRecordError 确认事务内删除文件记录失败时整体回滚并上抛，
-// 不触达缓存失效 / 物理删除 / 事件。
 func TestDeleteEchoById_DeleteFileRecordError(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -163,7 +150,6 @@ func TestDeleteEchoById_DeleteFileRecordError(t *testing.T) {
 	require.ErrorIs(t, svc.DeleteEchoById(helpers.CtxAsUser(adminID), echoID), boom)
 }
 
-// TestUpdateEcho_Guards 覆盖更新前的快速失败分支。
 func TestUpdateEcho_Guards(t *testing.T) {
 	t.Run("non-admin is denied", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
@@ -192,7 +178,7 @@ func TestUpdateEcho_Guards(t *testing.T) {
 		err := svc.UpdateEcho(helpers.CtxAsUser(adminID), &echoModel.Echo{
 			ID:        echoID,
 			Content:   "hi",
-			Extension: &echoModel.EchoExtension{Type: echoModel.Extension_MUSIC}, // Payload nil -> error
+			Extension: &echoModel.EchoExtension{Type: echoModel.Extension_MUSIC},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "extension payload")
@@ -214,8 +200,6 @@ func TestUpdateEcho_Guards(t *testing.T) {
 	})
 }
 
-// TestUpdateEcho_Success 覆盖完整更新路径：非法布局归一化为 waterfall、回填 EchoFiles.EchoID、
-// 事务内处理标签并更新、缓存失效、发出 EchoUpdated、确认临时文件。
 func TestUpdateEcho_Success(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -227,7 +211,6 @@ func TestUpdateEcho_Success(t *testing.T) {
 		CommonGetUserByUserId(mock.Anything, adminID).
 		Return(helpers.NewUser(helpers.AsAdmin), nil).
 		Once()
-	// 单文件 echo 通过单类别校验（一次批量读类别）。
 	file.EXPECT().
 		GetFilesByIDs(mock.Anything, []string{"file-1"}).
 		Return([]commonModel.FileDto{{ID: "file-1", Category: "image"}}, nil).
@@ -265,12 +248,11 @@ func TestUpdateEcho_Success(t *testing.T) {
 
 	assert.Equal(t, echoModel.LayoutWaterfall, updated.Layout)
 	require.Len(t, updated.EchoFiles, 1)
-	assert.Equal(t, echoID, updated.EchoFiles[0].EchoID) // EchoID 被回填
+	assert.Equal(t, echoID, updated.EchoFiles[0].EchoID)
 	require.Equal(t, 1, fired)
 	assert.Equal(t, echoID, got.Echo.ID)
 }
 
-// TestUpdateEcho_TransactionError 确认事务失败时上抛错误且不触达缓存失效 / 事件。
 func TestUpdateEcho_TransactionError(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)

@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// tagNames 把处理后的 echo.Tags 提取成名字切片，便于断言顺序/内容。
 func tagNames(tags []echoModel.Tag) []string {
 	t := make([]string, 0, len(tags))
 	for _, tag := range tags {
@@ -27,13 +26,10 @@ func tagNames(tags []echoModel.Tag) []string {
 	return t
 }
 
-// TestProcessEchoTags 覆盖标签处理流水线：trim/#-strip、跳过空名、isSafeTagName 拒绝、
-// 以 GetTagsByNames 结果区分「已存在→IncrementTagUsageCount」与「新标签→CreateTag」。
 func TestProcessEchoTags(t *testing.T) {
 	t.Run("trims whitespace strips hash and routes existing vs new", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
 
-		// "#golang" -> "golang"（已存在，走 Increment）；"  vue  " -> "vue"（新建）。
 		repo.EXPECT().
 			GetTagsByNames(mock.Anything, []string{"golang", "vue"}).
 			Return([]*echoModel.Tag{{ID: "tag-go", Name: "golang", UsageCount: 3}}, nil).
@@ -52,17 +48,14 @@ func TestProcessEchoTags(t *testing.T) {
 
 		require.NoError(t, svc.ProcessEchoTags(helpers.CtxAnonymous(), echo))
 
-		// 新标签以 UsageCount=1 落库。
 		assert.Equal(t, "vue", created.Name)
 		assert.Equal(t, 1, created.UsageCount)
-		// processedTags 保持 names 顺序：先 golang(existing) 后 vue(new)。
 		assert.Equal(t, []string{"golang", "vue"}, tagNames(echo.Tags))
 	})
 
 	t.Run("skips empty and hash-only names", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
 
-		// "#" -> ""、"   " -> "" 都被跳过，只剩 "kept"。
 		repo.EXPECT().
 			GetTagsByNames(mock.Anything, []string{"kept"}).
 			Return([]*echoModel.Tag{}, nil).
@@ -77,7 +70,7 @@ func TestProcessEchoTags(t *testing.T) {
 	})
 
 	t.Run("rejects unsafe tag name before touching repo", func(t *testing.T) {
-		repo := echomock.NewMockRepository(t) // 不设任何 EXPECT：拒绝必须发生在 GetTagsByNames 之前。
+		repo := echomock.NewMockRepository(t)
 
 		svc := echoService.NewEchoService(nil, nil, nil, repo, nilBus)
 		echo := &echoModel.Echo{Tags: []echoModel.Tag{{Name: "<script>"}}}
@@ -142,7 +135,6 @@ func TestProcessEchoTags(t *testing.T) {
 
 	t.Run("no tags is a no-op create-wise", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
-		// names 为 nil，仍会查询一次（返回空），随后无 Increment/Create。
 		repo.EXPECT().GetTagsByNames(mock.Anything, mock.Anything).Return([]*echoModel.Tag{}, nil).Once()
 
 		svc := echoService.NewEchoService(nil, nil, nil, repo, nilBus)

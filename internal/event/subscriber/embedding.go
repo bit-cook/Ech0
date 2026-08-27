@@ -13,9 +13,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// EmbeddingProcessor 订阅 Echo 增删改事件，维护向量索引（增量）。
-// 未配置/未启用 Embedding 时索引为 no-op；失败有限次重试，最终失败仅记录日志，
-// 不阻塞 Echo 主流程，存量由回填命令兜底。
 type EmbeddingProcessor struct {
 	indexer embeddingService.Indexer
 }
@@ -36,7 +33,6 @@ func (ep *EmbeddingProcessor) HandleEchoDeleted(ctx context.Context, e event.Ech
 	return ep.indexer.RemoveEcho(ctx, e.Echo.ID)
 }
 
-// withRetry 简单有限次退避重试（应对 embedding API 偶发失败）。
 func (ep *EmbeddingProcessor) withRetry(fn func() error) error {
 	var err error
 	for attempt := range 3 {

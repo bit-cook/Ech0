@@ -11,9 +11,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// registerCommon 注册通用 JSON 路由。
-// 注意：RSS / robots.txt / sitemap.xml / healthz 是非 JSON（XML/纯文本）输出，
-// 仍由 setupResourceRoutes 走裸 gin，不在此迁移。
 func registerCommon(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, public(), huma.Operation{
 		OperationID: "common-heatmap",

@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// runGuard 把若干 chunk 依次喂进守卫，返回累计放行文本与是否触发泄漏。
 func runGuard(chunks ...string) (emitted string, tripped bool) {
 	g := &toolCallLeakGuard{}
 	var b strings.Builder
@@ -23,7 +22,6 @@ func runGuard(chunks ...string) (emitted string, tripped bool) {
 	return b.String(), false
 }
 
-// 正常回答文本零损放行，不误触发。
 func TestLeakGuard_NormalTextPassesThrough(t *testing.T) {
 	in := []string{"根据你的 Echo，", "你最近在读《", "三体》，", "状态不错 🙂"}
 	emitted, tripped := runGuard(in...)
@@ -35,7 +33,6 @@ func TestLeakGuard_NormalTextPassesThrough(t *testing.T) {
 	}
 }
 
-// 单 chunk 内出现完整标记即触发。
 func TestLeakGuard_FullMarkerInOneChunk(t *testing.T) {
 	if _, tripped := runGuard("好的<tool_call> <function=search_echos>"); !tripped {
 		t.Fatalf("a full <tool_call> marker should trip the guard")
@@ -45,21 +42,18 @@ func TestLeakGuard_FullMarkerInOneChunk(t *testing.T) {
 	}
 }
 
-// 标记被拆到两个 chunk 也要拼出来并触发（holdback 防漏）。
 func TestLeakGuard_MarkerSplitAcrossChunks(t *testing.T) {
 	emitted, tripped := runGuard("前文abc<tool", "_call>技术")
 	if !tripped {
 		t.Fatalf("a marker split across chunks should still trip")
 	}
-	// 触发前已放行的安全前缀不应包含任何标记片段。
 	if strings.Contains(emitted, "<tool") {
 		t.Fatalf("held partial marker must not leak before tripping, got %q", emitted)
 	}
 }
 
-// 末尾「半个标记」但后续证明不是标记 → 暂留后照常放行，且零损。
 func TestLeakGuard_PartialPrefixReleasedWhenNotMarker(t *testing.T) {
-	in := []string{"完成<fun", "ny 想法"} // "<fun" 是 <function= 的前缀，但最终是 "<funny"
+	in := []string{"完成<fun", "ny 想法"}
 	emitted, tripped := runGuard(in...)
 	if tripped {
 		t.Fatalf("a partial prefix that resolves to non-marker should not trip")
@@ -69,7 +63,6 @@ func TestLeakGuard_PartialPrefixReleasedWhenNotMarker(t *testing.T) {
 	}
 }
 
-// 含多字节中文且夹杂 '<' 的正常文本不应被错误截断或误触发。
 func TestLeakGuard_MultibyteSafe(t *testing.T) {
 	in := []string{"a < b 且 c < d，", "继续写想法"}
 	emitted, tripped := runGuard(in...)

@@ -15,12 +15,10 @@
       :aria-label="resolvedAriaLabel"
       @click="onClick"
     >
-      <!-- 内容（图标 / 文字）始终保留在流中：loading 时仅置为 invisible，撑住按钮原尺寸，避免布局抖动 -->
       <span v-if="icon" class="flex items-center justify-center" :class="{ invisible: loading }">
         <component :is="icon" class="w-full h-full" />
       </span>
       <span v-if="$slots.default" :class="{ invisible: loading }"><slot /></span>
-      <!-- 菊花绝对定位覆盖在按钮正中，不占流，故不影响宽高 -->
       <span v-if="loading" class="absolute inset-0 flex items-center justify-center">
         <TheLoadingIndicator size="sm" :center="false" />
       </span>
@@ -38,7 +36,7 @@ const props = defineProps<{
   icon?: Component
   disabled?: boolean
   loading?: boolean
-  class?: string // 接收父组件传递的 class
+  class?: string
   tooltip?: string
   title?: string
   ariaLabel?: string
@@ -48,10 +46,8 @@ const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void
 }>()
 
-// const customClass = props.class
 const hasBg = computed(() => props.class?.includes('bg-') || props.class?.includes('!bg-'))
 
-// loading 等同于不可点击：合并进禁用态，避免重复传 disabled
 const isDisabled = computed(() => props.disabled || props.loading)
 
 const resolvedTooltip = computed(() => props.tooltip ?? props.title ?? '')

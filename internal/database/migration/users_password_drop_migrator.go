@@ -11,13 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// usersPasswordDropMigrator 删除 users 表遗留的 password 列。
-//
-// 本地密码已迁入 user_local_auth（见 userLocalAuthBackfillMigrator，务必排在其之后），
-// 保留旧列意味着历史裸 MD5 仍残留在 users 表里 —— 删列才是安全升级的收口。
-//
-// SQLite 3.35+ 支持 ALTER TABLE ... DROP COLUMN；password 是无索引的普通列，可直接删。
-// HasColumn 守卫使之天然幂等：列不存在（新库或已删）即跳过。
 type usersPasswordDropMigrator struct{}
 
 func NewUsersPasswordDropMigrator() Migrator {

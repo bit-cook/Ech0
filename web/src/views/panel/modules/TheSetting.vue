@@ -2,12 +2,9 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2">
-    <!-- 分段控件：系统设置 / 访问令牌 -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- 系统设置 -->
     <TheSystemSetting v-if="tab === 'system'" />
-    <!-- 访问令牌 -->
     <TheAccessTokenSetting v-else />
   </div>
 </template>

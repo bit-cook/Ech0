@@ -33,8 +33,6 @@ func TestIsValid(t *testing.T) {
 	}
 }
 
-// TestNewV7 pins the three properties every persisted primary key relies on:
-// canonical form, RFC 9562 version 7 + variant bits, and uniqueness.
 func TestNewV7(t *testing.T) {
 	const n = 1000
 	seen := make(map[string]struct{}, n)

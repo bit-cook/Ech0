@@ -16,7 +16,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// newKVRepo 构造一个绑定到测试内存库 + 确定性内存缓存的 KeyValueRepository。
 func newKVRepo(t *testing.T) (*KeyValueRepository, *gorm.DB, cache.ICache[string, any]) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
@@ -24,7 +23,6 @@ func newKVRepo(t *testing.T) (*KeyValueRepository, *gorm.DB, cache.ICache[string
 	return NewKeyValueRepository(func() *gorm.DB { return db }, c), db, c
 }
 
-// cacheGetKV 读缓存并断言无错误，返回值与命中标记。
 func cacheGetKV(t *testing.T, c cache.ICache[string, any], key string) (any, bool) {
 	t.Helper()
 	v, ok, err := c.Get(key)
@@ -32,7 +30,6 @@ func cacheGetKV(t *testing.T, c cache.ICache[string, any], key string) (any, boo
 	return v, ok
 }
 
-// countKV 统计某个 key 在 DB 中的行数。
 func countKV(t *testing.T, db *gorm.DB, key string) int64 {
 	t.Helper()
 	var n int64
@@ -43,7 +40,6 @@ func countKV(t *testing.T, db *gorm.DB, key string) int64 {
 func TestKeyValueRepository_AddOrUpdateKeyValue(t *testing.T) {
 	t.Run("creates row when key is absent (RowsAffected==0 path)", func(t *testing.T) {
 		repo, db, c := newKVRepo(t)
-		// 预置一个陈旧缓存项，验证 upsert 最终会把它刷新成新值。
 		c.Set(GetKeyValueCacheKey("k"), "stale", 1)
 
 		require.NoError(t, repo.AddOrUpdateKeyValue(context.Background(), "k", "v1"))
@@ -79,7 +75,6 @@ func TestKeyValueRepository_AddOrUpdateKeyValue(t *testing.T) {
 func TestKeyValueRepository_GetKeyValue(t *testing.T) {
 	t.Run("cache hit returns cached value without touching db", func(t *testing.T) {
 		repo, _, c := newKVRepo(t)
-		// DB 中没有该行；命中缓存证明没有回落到 loader。
 		c.Set(GetKeyValueCacheKey("k"), "cached", 1)
 
 		got, err := repo.GetKeyValue(context.Background(), "k")
@@ -110,7 +105,6 @@ func TestKeyValueRepository_GetKeyValue(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "dbval", got, "tx loader must ignore the stale cache")
 
-		// tx 路径不应回写缓存：陈旧值保持不变。
 		cached, ok := cacheGetKV(t, c, GetKeyValueCacheKey("k"))
 		require.True(t, ok)
 		assert.Equal(t, "stale", cached, "tx read must not mutate the cache")
@@ -149,7 +143,6 @@ func TestKeyValueRepository_AddKeyValue(t *testing.T) {
 		err := repo.AddKeyValue(context.Background(), "k", "v")
 		require.Error(t, err, "creating a duplicate primary key must fail")
 
-		// 失败发生在 Set 之前：缓存被失效但未回填。
 		_, ok := cacheGetKV(t, c, GetKeyValueCacheKey("k"))
 		assert.False(t, ok, "failed create must not leave a backfilled value")
 
@@ -191,7 +184,6 @@ func TestKeyValueRepository_DeleteKeyValue(t *testing.T) {
 	})
 }
 
-// TestKeyValueRepository_CacheConsistencyFlow 跨 Add/Update/Delete 验证缓存与读穿透始终一致。
 func TestKeyValueRepository_CacheConsistencyFlow(t *testing.T) {
 	repo, _, c := newKVRepo(t)
 	ctx := context.Background()

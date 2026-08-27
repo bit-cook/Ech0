@@ -53,7 +53,6 @@ func TestRepo_UpsertOverwritesByType(t *testing.T) {
 	if got.Status != jobModel.StatusSuccess || got.Payload != `{"indexed":3}` {
 		t.Fatalf("expected single overwritten row, got %+v", got)
 	}
-	// 主键即 type → 同 type 仅一行。
 	var count int64
 	if err := db.Model(&jobModel.Job{}).Where("type = ?", "reindex").Count(&count).Error; err != nil {
 		t.Fatalf("count failed: %v", err)

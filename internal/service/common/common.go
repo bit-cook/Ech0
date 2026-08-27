@@ -115,23 +115,18 @@ func (s *CommonService) GenerateRSS(ctx *gin.Context) (string, error) {
 						if ef.File.URL == "" {
 							continue
 						}
-						// URL 进属性、文件名进链接文本都是可能来自 external 的用户可控字段，进入
-						// <summary type="html"> 前必须做 HTML 实体转义，阻断订阅器二次解码触发的
-						// stored XSS（与下方标签转义同一注入类，GHSA-3v85-fqvh-7rxf）。
 						url := stdhtml.EscapeString(ef.File.URL)
 						switch storage.NormalizeCategory(ef.File.Category) {
 						case storage.CategoryImage:
 							mediaContent = fmt.Appendf(mediaContent,
 								"<img src=\"%s\" alt=\"Image\" style=\"max-width:100%%;height:auto;\" />", url)
 						case storage.CategoryVideo:
-							// 内嵌 <a> 兜底：RSS 阅读器若剥离 <video> 标签，仍退化成可点链接，不丢内容。
 							mediaContent = fmt.Appendf(mediaContent,
 								"<video controls src=\"%s\" style=\"max-width:100%%;\"><a href=\"%s\">打开视频</a></video>", url, url)
 						case storage.CategoryAudio:
 							mediaContent = fmt.Appendf(mediaContent,
 								"<audio controls src=\"%s\"><a href=\"%s\">打开音频</a></audio>", url, url)
 						default:
-							// pdf / document / file / markdown：给一个可点的下载链接。
 							name := stdhtml.EscapeString(ef.File.Name)
 							if name == "" {
 								name = "下载文件"
@@ -144,8 +139,6 @@ func (s *CommonService) GenerateRSS(ctx *gin.Context) (string, error) {
 
 				if len(msg.Tags) > 0 {
 					for _, tag := range msg.Tags {
-						// 标签名进入 RSS Atom <summary type="html"> 后会被订阅器二次解码并渲染成 HTML，
-						// 必须先做 HTML 实体转义阻断 stored XSS（GHSA-3v85-fqvh-7rxf）。
 						renderedContent = fmt.Appendf(
 							renderedContent,
 							"<br /><span class=\"tag\">#%s</span>",
@@ -168,8 +161,6 @@ func (s *CommonService) GenerateRSS(ctx *gin.Context) (string, error) {
 				return "", err
 			}
 
-			// 给 Atom XML 注入 XSLT 样式表声明：浏览器打开 /rss 时会用 /rss.xsl 渲染为
-			// 美化页面，而 RSS 阅读器仍按原始 XML 解析，订阅契约不变。
 			const xmlDecl = `<?xml version="1.0" encoding="UTF-8"?>`
 			const stylesheetPI = `<?xml-stylesheet type="text/xsl" href="/rss.xsl"?>`
 			atom = strings.Replace(atom, xmlDecl, xmlDecl+"\n"+stylesheetPI, 1)

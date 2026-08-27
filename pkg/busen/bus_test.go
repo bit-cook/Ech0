@@ -1205,10 +1205,6 @@ func TestShutdownDrainReturnsStructuredStats(t *testing.T) {
 		t.Fatalf("third publish error = %v, want ErrDropped", err)
 	}
 
-	// Shutdown 与 handler 放行的顺序必须受控：先让 Shutdown 拍下 before 快照，再放行
-	// handler，两条在途事件的执行才保证落在快照之后、计入 Processed 增量（反之 worker
-	// 会抢在快照前处理完，增量恒为 0）。同步依据：Publish 返回 ErrClosed 发生在快照
-	// 之后（见 Shutdown 实现），轮询到 ErrClosed 即可安全放行。
 	var (
 		result      ShutdownResult
 		shutdownErr error

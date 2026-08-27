@@ -47,7 +47,6 @@ describe('renderMarkdown renderer behaviors', () => {
     expect(htmlB).not.toContain('展开A')
   })
 
-  // markdown-it 15（linkify-it v6）只对带协议的地址自动成链，裸域名一律当纯文本。
   it('自动成链只覆盖带协议的地址，裸域名保持纯文本', async () => {
     const html = await renderMarkdown('看 https://ech0.cc 和 ech0.cc 与 [站点](https://ech0.cc)')
 

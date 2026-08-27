@@ -1,10 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Copyright (C) 2025-2026 lin-snow -->
-<!--
-  视频灯箱：与图片画廊(PhotoSwipe)一致的「缩略图 → 暗色浮层」体感，但为视频量身做的轻量实现——
-  暗背景、居中大屏、原生控件（音量/进度/全屏/画中画由浏览器提供）+ 打开即自动播放，并从内联封面的进度接续播放。
-  ESC 或点击背景关闭；打开期间锁定 body 滚动。用 v-if 卸载 <video>，关闭时音频自然停止。
--->
 <template>
   <Teleport to="body">
     <Transition name="video-lightbox">
@@ -56,7 +51,6 @@ const props = withDefaults(
   { startTime: 0 },
 )
 
-// 元数据就绪即定位到内联封面走到的进度，实现「点全屏接续播放」而非从头开始。
 function onLoadedMetadata(event: Event) {
   const el = event.target as HTMLVideoElement
   if (props.startTime > 0 && Number.isFinite(el.duration)) {
@@ -175,7 +169,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 48px rgb(0 0 0 / 45%);
 }
 
-/* 进出：背景淡入 + 舞台轻微放大，呼应图片灯箱的 zoom 体感 */
 .video-lightbox-enter-active,
 .video-lightbox-leave-active {
   transition: opacity 0.2s ease;

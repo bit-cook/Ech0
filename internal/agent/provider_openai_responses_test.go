@@ -382,8 +382,6 @@ func TestRespStreamErrorMessage(t *testing.T) {
 	}
 }
 
-// 端到端：协议选 openai-responses 时，agent.Run 的 ReAct 循环能跑通一轮「检索→作答」，
-// 且第二轮请求体里的 function_call / function_call_output 按 call_id 配对回灌给模型。
 func TestResponsesRun_ToolResultFedBackToModel(t *testing.T) {
 	var mu sync.Mutex
 	var bodies []map[string]any
@@ -397,7 +395,7 @@ func TestResponsesRun_ToolResultFedBackToModel(t *testing.T) {
 		round := len(bodies)
 		mu.Unlock()
 
-		if round == 1 { // 第一轮：模型决定调工具
+		if round == 1 {
 			writeSSE(w,
 				`{"type":"response.output_item.done","sequence_number":1,"output_index":0,"item":`+
 					`{"id":"fc_1","type":"function_call","call_id":"call_1","name":"search_echos",`+
@@ -406,7 +404,7 @@ func TestResponsesRun_ToolResultFedBackToModel(t *testing.T) {
 			)
 			return
 		}
-		writeSSE(w, // 第二轮：拿到工具结果后作答
+		writeSSE(w,
 			`{"type":"response.output_text.delta","sequence_number":1,"delta":"你在读《三体》"}`,
 			`{"type":"response.completed","sequence_number":2,"response":{"id":"resp_2","status":"completed","output":[]}}`,
 		)
@@ -458,7 +456,6 @@ func TestResponsesRun_ToolResultFedBackToModel(t *testing.T) {
 		t.Fatalf("got %d requests, want 2 (tool round + answer round)", len(bodies))
 	}
 	items := bodies[1]["input"].([]any)
-	// user 提问 / assistant 的 function_call / function_call_output
 	if len(items) != 3 {
 		t.Fatalf("second round input = %v, want user + function_call + function_call_output", items)
 	}

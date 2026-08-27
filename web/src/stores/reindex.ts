@@ -5,7 +5,6 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { fetchCancelReindex, fetchReindexEmbeddings, fetchReindexStatus } from '@/service/api'
 
-// 复用 migration 的轮询范式：起作业后每 2s 轮询状态，非进行中即停。
 const POLL_INTERVAL_MS = 2000
 
 type ReindexStatusValue = App.Api.Embedding.ReindexStatus['status']
@@ -69,8 +68,6 @@ export const useReindexStore = defineStore('reindexStore', () => {
     const res = await fetchCancelReindex()
     if (res.code === 1) {
       applyState(res.data as App.Api.Embedding.ReindexStatus)
-      // 取消是协作式的：作业可能尚未落到 cancelled，需继续轮询直到后端确认终态，
-      // 否则会停在 running 不再刷新。
       if (isRunning.value) {
         startPolling()
       } else {
@@ -80,7 +77,6 @@ export const useReindexStore = defineStore('reindexStore', () => {
     return res
   }
 
-  // 页面挂载时拉取一次：若重建在跑（含刷新后续显），恢复轮询。
   async function init() {
     const ok = await fetchStatus()
     if (ok && isRunning.value) {

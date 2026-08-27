@@ -51,7 +51,6 @@
       </div>
     </div>
 
-    <!-- 手动创建一次：与定时快照同一产出（落本地产物，配了 S3 会额外上传），不下载到浏览器 -->
     <div class="schedule-row">
       <h2 class="schedule-row__label">
         {{ t('snapshotScheduleSetting.manualLabel') }}
@@ -106,13 +105,10 @@ const { SnapshotSchedule, snapshotStatus, snapshotError, snapshotPhase } = store
 const scheduleEditMode = ref<boolean>(false)
 const humanizedCron = computed(() => humanizeCron(SnapshotSchedule.value.cron_expression, t))
 
-// 手动创建 = 复用导出作业（POST /migration/export，job.Manager 驱动），与定时快照同一产出；
-// 但定位是「服务器侧补一次备份」，故成功后只提示、不像导出页那样自动下载。
 const isCreating = computed(
   () => snapshotStatus.value === 'pending' || snapshotStatus.value === 'running',
 )
 
-// 步进器对齐后端真实阶段：排队(pending) → 打包(packing) → 完成(completed)。
 const exportSteps = computed(() => [
   { key: 'pending', label: String(t('jobProgress.exportPhasePending')) },
   { key: 'packing', label: String(t('jobProgress.exportPhasePacking')) },
@@ -142,7 +138,6 @@ const handleCreateNow = async () => {
     if (res.code !== 1) {
       theToast.error(res.msg || String(t('snapshotScheduleSetting.createFailed')))
     }
-    // 终态提示交给下方 watch(snapshotStatus) 统一处理。
   } catch (error) {
     console.error(String(t('snapshotScheduleSetting.createFailed')), error)
     theToast.error(String(t('snapshotScheduleSetting.createFailed')))
@@ -173,7 +168,6 @@ const handleUpdateSnapshotSchedule = async () => {
 
 onMounted(async () => {
   await getSnapshotSchedule()
-  // 若已有进行中的快照作业（如从导出页触发后切到此页），接管轮询以展示进度。
   void restoreSnapshotTask()
 })
 </script>

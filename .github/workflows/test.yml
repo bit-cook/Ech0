@@ -1,10 +1,5 @@
-# Backend unit tests + coverage (report-only, non-blocking gate).
-# 这是仓库首个在 PR 上运行 go test 的 workflow。覆盖率只写进 job summary，不设硬阈值。
 name: Backend Tests
 
-# 触发：PR 与 push 到 main 时自动跑，外加手动 workflow_dispatch。
-# 用 paths 过滤只在后端相关文件变更时触发（后端测试不依赖前端，template/dist 用占位即可），
-# 避免纯前端/文档改动空耗 GitHub Actions 额度。concurrency 取消同分支旧跑。
 on:
   pull_request:
     paths: &backend-paths
@@ -43,30 +38,23 @@ jobs:
       - name: Set Go proxy
         run: go env -w GOPROXY=https://proxy.golang.org,direct
 
-      # 仓库的任务入口是 justfile（不再有 Makefile），mock 校验走 `just mocks-check`。
       - name: Setup just
         uses: extractions/setup-just@v4
 
-      # template/dist 是前端构建产物（gitignore，不入库）。后端测试不需要真实前端，
       # 但 template 包用 //go:embed all:dist，dist 为空会编译失败；故放一个最小占位 index.html，
-      # 既让 embed 通过，也满足 handler/web 的 SPA 回退测试（GET /app/* → 返回 index.html）。
       - name: Provide placeholder embedded frontend
         run: |
           mkdir -p template/dist
           [ -f template/dist/index.html ] || printf '<!doctype html><title>ech0 test</title>' > template/dist/index.html
 
-      # 校验提交的 mock 与接口一致（mockery 用 go run 固定版本，无需预装）。
       - name: Verify generated mocks are up-to-date
         run: just mocks-check
 
-      # CGO 必须开启：mattn/go-sqlite3、sqlite-vec 与 -race 都依赖它；ubuntu-latest 自带 gcc，无需 musl/zig。
       - name: Run tests (race + coverage)
         env:
           CGO_ENABLED: "1"
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      # 与本地 `make test-cover` 同口径：RAW 含生成代码；CALIBRATED 滤掉 mockery 生成的 mock
-      # 与 Wire 生成的 wire_gen.go（这两类永不需测、纯稀释分母），是衡量人写代码覆盖率的诚实口径。
       - name: Coverage summary
         if: always()
         run: |

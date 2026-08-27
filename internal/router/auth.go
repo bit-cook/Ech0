@@ -13,15 +13,10 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// setupAuthRoutes 保留**留在裸 gin** 的认证端点：OAuth2 重定向、cookie/token 签发流程、
-// WebAuthn 注册/登录仪式。这些依赖 302 重定向、HttpOnly cookie 读写、或 WebAuthn 协议 blob，
-// 不是干净的 JSON-REST，强行迁 Huma 既别扭又有安全回归风险，故保留现状。
 func setupAuthRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
-	// OAuth2/OIDC 重定向（统一 provider 路由）
 	appRouterGroup.ResourceGroup.GET("/oauth/:provider/login", middleware.NoCache(), h.AuthHandler.OAuthLogin())
 	appRouterGroup.ResourceGroup.GET("/oauth/:provider/callback", middleware.NoCache(), h.AuthHandler.OAuthCallback())
 
-	// 公开：登录 / WebAuthn 登录仪式 / token 生命周期（均读写 cookie）
 	appRouterGroup.PublicRouterGroup.POST("/login", middleware.NoCache(), h.AuthHandler.Login())
 	appRouterGroup.PublicRouterGroup.POST("/passkey/login/begin", middleware.NoCache(), h.AuthHandler.PasskeyLoginBeginV2())
 	appRouterGroup.PublicRouterGroup.POST("/passkey/login/finish", middleware.NoCache(), h.AuthHandler.PasskeyLoginFinishV2())
@@ -29,7 +24,6 @@ func setupAuthRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	appRouterGroup.PublicRouterGroup.POST("/auth/logout", middleware.NoCache(), h.AuthHandler.Logout())
 	appRouterGroup.PublicRouterGroup.POST("/auth/exchange", middleware.NoCache(), h.AuthHandler.Exchange())
 
-	// 鉴权：WebAuthn 注册仪式（profile:write）
 	appRouterGroup.AuthRouterGroup.POST(
 		"/passkey/register/begin",
 		middleware.RequireScopes(authModel.ScopeProfileWrite),
@@ -42,7 +36,6 @@ func setupAuthRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	)
 }
 
-// registerAuth 注册**干净 JSON** 的认证端点（无 cookie / 无重定向 / 无 WebAuthn blob）。
 func registerAuth(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, secured(revoker, authModel.ScopeProfileWrite), huma.Operation{
 		OperationID: "oauth-bind",

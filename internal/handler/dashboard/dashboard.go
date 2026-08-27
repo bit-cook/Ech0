@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露仪表盘相关的 HTTP 接口。
 package handler
 
 import (
@@ -56,8 +55,6 @@ type (
 func (dashboardHandler *DashboardHandler) CheckUpdate(ctx context.Context, _ *CheckUpdateInput) (CheckUpdateOutput, error) {
 	latestVersion, err := githubUtil.GetLatestVersion()
 	if err != nil {
-		// 包成带 message_key 的 BizError：用户看到本地化的「检查更新失败」而非底层网络错误串，
-		// 同时保留 Err 供 HandleError 记录底层原因。
 		return CheckUpdateOutput{}, &commonModel.BizError{
 			Code:       commonModel.ErrCodeInternal,
 			Msg:        commonModel.CHECK_UPDATE_FAILED,
@@ -77,7 +74,6 @@ func (dashboardHandler *DashboardHandler) CheckUpdate(ctx context.Context, _ *Ch
 	}), nil
 }
 
-// GetSystemLogs 获取系统历史日志（admin:settings）。成功响应预设显式 message_key（localizeResult 不覆盖）。
 func (dashboardHandler *DashboardHandler) GetSystemLogs(ctx context.Context, in *GetSystemLogsInput) (LogsOutput, error) {
 	tail := 200
 	if rawTail := strings.TrimSpace(in.Tail); rawTail != "" {
@@ -103,7 +99,6 @@ func (dashboardHandler *DashboardHandler) GetSystemLogs(ctx context.Context, in 
 	return result, nil
 }
 
-// GetVisitorStats 获取近七天访客统计（admin:settings）。service 无 error 返回，故补 nil。
 func (dashboardHandler *DashboardHandler) GetVisitorStats(ctx context.Context, _ *GetVisitorStatsInput) (VisitorStatsOutput, error) {
 	return commonModel.OK(dashboardHandler.dashboardService.GetVisitorStats()), nil
 }

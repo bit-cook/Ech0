@@ -26,7 +26,6 @@ func TestAuthRepository_GetLocalAuthByUserID(t *testing.T) {
 	assert.Equal(t, "hash", got.PasswordHash)
 	assert.Equal(t, "md5", got.PasswordAlgo)
 
-	// 无行时返回 ErrRecordNotFound，供登录侧统一按凭证错误处理。
 	_, err = repo.GetLocalAuthByUserID(ctx, "ghost")
 	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }

@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// buildContextBlock 须注入一行**任务中性**的身份信息：交代「跟谁对话 + 检索到的是谁的 Echo」，
-// 但不带「回顾」等具体任务动词（Chat 不一定是回顾，也可能是查找/延伸/找灵感）。
 func TestBuildContextBlock_IdentityLine(t *testing.T) {
 	zh := buildContextBlock("zh-CN", "2026-06-02", nil, "Alice")
 	if !strings.Contains(zh, "Alice") {
@@ -27,13 +25,11 @@ func TestBuildContextBlock_IdentityLine(t *testing.T) {
 		t.Fatalf("en context block should mention name + scope: %q", en)
 	}
 
-	// 空展示名 → 省略身份行（仍保留日期块），不输出空名。
 	if got := buildContextBlock("zh-CN", "2026-06-02", nil, ""); strings.Contains(got, "当前与你对话的是") {
 		t.Fatalf("empty display name should omit identity line: %q", got)
 	}
 }
 
-// 系统提示词应是通用「私人助手」定位，而非写死的「回顾助手」，但工具仍齐备。
 func TestChatSystemPrompt_GeneralFraming(t *testing.T) {
 	zh := chatSystemPromptFor("zh-CN")
 	if strings.Contains(zh, "回顾助手") {

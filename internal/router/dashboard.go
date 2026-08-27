@@ -13,7 +13,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// setupDashboardRoutes 仅保留实时日志订阅走裸 gin：SSE 流 + WebSocket。
 func setupDashboardRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	appRouterGroup.AuthRouterGroup.GET(
 		"/system/logs/stream",
@@ -23,7 +22,6 @@ func setupDashboardRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	appRouterGroup.WSRouterGroup.GET("/system/logs", h.DashboardHandler.WSSubscribeSystemLogs())
 }
 
-// registerDashboard 注册仪表盘的 JSON 端点（admin:settings）。
 func registerDashboard(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, secured(revoker, authModel.ScopeAdminSettings), huma.Operation{
 		OperationID: "dashboard-check-update",

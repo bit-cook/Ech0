@@ -120,9 +120,6 @@ const onTrackPointerDown = (event: PointerEvent) => {
   const thumbWidthPx = Math.max(rect.width * ratio, rect.width * 0.12)
   const travel = Math.max(1, rect.width - thumbWidthPx)
 
-  // Distinguish thumb-drag vs track-click: if the press lands inside the
-  // current thumb, keep the cursor's offset within the thumb so it doesn't
-  // snap; otherwise center the thumb under the cursor.
   const thumbLeftPx = max <= 0 ? 0 : (scrollLeft.value / max) * travel
   const localX = event.clientX - rect.left
   const insideThumb = localX >= thumbLeftPx && localX <= thumbLeftPx + thumbWidthPx
@@ -136,8 +133,6 @@ const onTrackPointerDown = (event: PointerEvent) => {
     const x = pendingX - rect.left - grabOffset
     pendingX = null
     const pct = Math.min(1, Math.max(0, x / travel))
-    // Force instant scroll so the thumb tracks the pointer exactly during
-    // drag, regardless of any inherited `scroll-behavior: smooth`.
     el.scrollTo({ left: pct * max, behavior: 'instant' as ScrollBehavior })
   }
   const seek = (clientX: number) => {

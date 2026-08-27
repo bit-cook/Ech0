@@ -16,8 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// swapOIDCClient 临时把包级 egress 客户端换成测试客户端，并在用例结束后还原。
-// 因为这是全局可变状态，使用它的用例严禁 t.Parallel。
 func swapOIDCClient(t *testing.T, c *http.Client) {
 	t.Helper()
 	old := oidcHTTPClient
@@ -25,8 +23,6 @@ func swapOIDCClient(t *testing.T, c *http.Client) {
 	t.Cleanup(func() { oidcHTTPClient = old })
 }
 
-// rtFunc 是函数式 http.RoundTripper：用于给 URL 写死（无法经 setting 注入）的请求
-// （如 fetchQQUserInfo 的 graph.qq.com）返回 canned 响应。
 type rtFunc func(*http.Request) (*http.Response, error)
 
 func (f rtFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
@@ -44,10 +40,6 @@ func writeJSON(w http.ResponseWriter, status int, body string) {
 	w.WriteHeader(status)
 	_, _ = io.WriteString(w, body)
 }
-
-// ---------------------------------------------------------------------------
-// exchangeOAuthCode：oauth2 token 交换走包级注入的客户端
-// ---------------------------------------------------------------------------
 
 func TestExchangeOAuthCode_Direct(t *testing.T) {
 	t.Run("success returns token", func(t *testing.T) {
@@ -77,10 +69,6 @@ func TestExchangeOAuthCode_Direct(t *testing.T) {
 		require.Error(t, err)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// GitHub：token 交换 + 用户信息
-// ---------------------------------------------------------------------------
 
 func TestGitHubProvider(t *testing.T) {
 	mux := http.NewServeMux()
@@ -123,10 +111,6 @@ func TestFetchGitHubUserInfo_Non200(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "GitHub")
 }
-
-// ---------------------------------------------------------------------------
-// Google：token 交换（含 id_token / expires_in）+ 用户信息
-// ---------------------------------------------------------------------------
 
 func TestGoogleProvider(t *testing.T) {
 	mux := http.NewServeMux()
@@ -185,18 +169,12 @@ func TestFetchGoogleUserInfo_Errors(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// QQ：token 交换的 JSONP / query 两种解析路径 + 错误 + openid 查询
-// ---------------------------------------------------------------------------
-
 func TestExchangeQQCodeForToken(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/jsonp", func(w http.ResponseWriter, _ *http.Request) {
-		// callback(...) 包裹的 JSON 形态。
 		_, _ = io.WriteString(w, `callback({"access_token":"qq-tok","expires_in":7776000,"openid":"qq-open"});`)
 	})
 	mux.HandleFunc("/query", func(w http.ResponseWriter, _ *http.Request) {
-		// x-www-form-urlencoded 形态。
 		_, _ = io.WriteString(w, `access_token=qq-tok2&expires_in=100&refresh_token=rt&openid=qq-open2`)
 	})
 	mux.HandleFunc("/error", func(w http.ResponseWriter, _ *http.Request) {
@@ -250,7 +228,6 @@ func TestExchangeQQCodeForToken(t *testing.T) {
 
 func TestFetchQQUserInfo(t *testing.T) {
 	t.Run("success parses openid", func(t *testing.T) {
-		// URL 写死为 graph.qq.com，无法经 setting 注入，改用 transport 级 canned 响应。
 		swapOIDCClient(t, &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
 			assert.Equal(t, "graph.qq.com", r.URL.Host)
 			return cannedResponse(http.StatusOK, `{"client_id":"appid","openid":"qq-openid-xyz"}`), nil
@@ -271,10 +248,6 @@ func TestFetchQQUserInfo(t *testing.T) {
 		assert.Contains(t, err.Error(), "QQ openid")
 	})
 }
-
-// ---------------------------------------------------------------------------
-// Custom：token 交换（OIDC / 非 OIDC）+ 非 OIDC userinfo 提取唯一标识
-// ---------------------------------------------------------------------------
 
 func TestExchangeCustomCodeForToken(t *testing.T) {
 	t.Run("non-oidc returns access token only", func(t *testing.T) {
@@ -388,7 +361,6 @@ func TestFetchCustomUserInfo_NonOIDC(t *testing.T) {
 	})
 
 	t.Run("oidc with empty id token errors", func(t *testing.T) {
-		// OIDC 分支：id_token 为空时在触达 JWKS 验签前即返回错误，无需真实网络。
 		setting := fullOAuth2Setting(string(commonModel.OAuth2CUSTOM))
 		setting.IsOIDC = true
 		_, err := fetchCustomUserInfo(&setting, "acc-tok", "", "nonce")

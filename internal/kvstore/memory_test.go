@@ -27,7 +27,6 @@ func TestMemorySetGetDelete(t *testing.T) {
 		t.Fatalf("get after set: got %q err %v", got, err)
 	}
 
-	// Set 为 upsert：再次写入覆盖旧值。
 	if err := m.Set(ctx, "k", "v2"); err != nil {
 		t.Fatalf("set upsert: %v", err)
 	}

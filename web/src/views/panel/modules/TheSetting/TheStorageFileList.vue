@@ -12,11 +12,9 @@ import ViewIcon from '@/components/icons/view.vue'
 import { useSettingStore } from '@/stores'
 import { storeToRefs } from 'pinia'
 
-// GSAP 缓动的等价 CSS cubic-bezier：power2.out ≈ easeOutCubic，power2.inOut ≈ easeInOutCubic。
 const EASE_OUT = 'cubic-bezier(0.33, 1, 0.68, 1)'
 const EASE_IN_OUT = 'cubic-bezier(0.65, 0, 0.35, 1)'
 
-// 跟踪每个元素当前正在运行的高度动画，替代 gsap.killTweensOf：开始新动画前取消旧的。
 const runningAnims = new WeakMap<HTMLElement, Animation>()
 
 const cancelAnim = (el: HTMLElement) => {
@@ -24,7 +22,6 @@ const cancelAnim = (el: HTMLElement) => {
   runningAnims.delete(el)
 }
 
-// 用 Web Animations API 播放一段动画，并在结束（或被取消）时清理跟踪表。
 const playAnim = (
   el: HTMLElement,
   keyframes: Keyframe[],

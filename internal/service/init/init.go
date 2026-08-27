@@ -53,9 +53,6 @@ func (s *InitService) InitOwner(registerDto *authModel.RegisterDto) error {
 		return err
 	}
 
-	// 把部署者语言作为站点默认语言落库（首次建站，仅当仍为内置默认时生效；BootstrapDefaultLocale
-	// 内部自行解析/判断）。写仍走 SettingService（写走域），此处「首次建站编排」是其天然归属。
-	// best-effort：失败不阻断初始化，仅告警。
 	if err := s.settingService.BootstrapDefaultLocale(context.Background(), registerDto.Locale); err != nil {
 		logUtil.GetLogger().Warn("Failed to bootstrap default locale on init owner", logUtil.Err(err))
 	}

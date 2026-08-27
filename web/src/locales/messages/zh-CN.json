@@ -367,8 +367,7 @@
     "localeSyncFailed": "语言偏好同步失败",
     "themeLight": "浅色",
     "themeDark": "深色",
-    "themeSunny": "晴日",
-    "githubAction": "Github"
+    "themeSunny": "晴日"
   },
   "homeTop": {
     "searchTitle": "搜索",

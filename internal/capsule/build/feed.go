@@ -15,13 +15,10 @@ import (
 	mdUtil "github.com/lin-snow/ech0/internal/util/md"
 )
 
-// links 是站点的链接基址。静态站可能被部署到任意域名下，胶囊里唯一的线索
-// 是 site.server_url；它缺席时只能退化成相对链接（RSS/sitemap 里的相对
-// 链接不理想，但比编造一个错误的域名强）。
 type links struct {
-	home       string // 首页链接，恒以 / 结尾
-	echoPrefix string // Echo 详情页前缀，恒以 / 结尾
-	absolute   bool   // 是否拿到了真实 origin
+	home       string
+	echoPrefix string
+	absolute   bool
 }
 
 func newLinks(serverURL, baseURL string) links {
@@ -32,8 +29,6 @@ func newLinks(serverURL, baseURL string) links {
 	return links{home: origin + "/", echoPrefix: origin + "/echo/", absolute: true}
 }
 
-// resolve 把站内绝对根路径（/api/files/…）补成完整 URL。RSS 阅读器不在本站
-// 上下文里渲染，相对 src 会直接变成死链。
 func (l links) resolve(u string) string {
 	if !l.absolute || !strings.HasPrefix(u, "/") || strings.HasPrefix(u, "//") {
 		return u
@@ -41,7 +36,6 @@ func (l links) resolve(u string) string {
 	return strings.TrimSuffix(l.home, "/") + u
 }
 
-// renderAtom 生成 rss.xml（Atom 格式，与活实例 GET /rss 同形）。
 func renderAtom(ds *dataset, l links, generatedAt time.Time) (string, error) {
 	title := ds.Settings.SiteTitle
 	if title == "" {
@@ -73,23 +67,18 @@ func renderAtom(ds *dataset, l links, generatedAt time.Time) (string, error) {
 				if ef.File.URL == "" {
 					continue
 				}
-				// URL 进属性、文件名进链接文本都是可能来自 external 的用户可控字段，进入
-				// <summary type="html"> 前必须做 HTML 实体转义，阻断订阅器二次解码触发的
-				// stored XSS（与下方标签转义同一注入类，GHSA-3v85-fqvh-7rxf）。
 				url := stdhtml.EscapeString(l.resolve(ef.File.URL))
 				switch storage.NormalizeCategory(ef.File.Category) {
 				case storage.CategoryImage:
 					mediaContent = fmt.Appendf(mediaContent,
 						"<img src=\"%s\" alt=\"Image\" style=\"max-width:100%%;height:auto;\" />", url)
 				case storage.CategoryVideo:
-					// 内嵌 <a> 兜底：RSS 阅读器若剥离 <video> 标签，仍退化成可点链接，不丢内容。
 					mediaContent = fmt.Appendf(mediaContent,
 						"<video controls src=\"%s\" style=\"max-width:100%%;\"><a href=\"%s\">打开视频</a></video>", url, url)
 				case storage.CategoryAudio:
 					mediaContent = fmt.Appendf(mediaContent,
 						"<audio controls src=\"%s\"><a href=\"%s\">打开音频</a></audio>", url, url)
 				default:
-					// pdf / document / file / markdown：给一个可点的下载链接。
 					name := stdhtml.EscapeString(ef.File.Name)
 					if name == "" {
 						name = "下载文件"
@@ -101,8 +90,6 @@ func renderAtom(ds *dataset, l links, generatedAt time.Time) (string, error) {
 		}
 
 		for _, t := range e.Tags {
-			// 标签名进入 RSS Atom <summary type="html"> 后会被订阅器二次解码并渲染成 HTML，
-			// 必须先做 HTML 实体转义阻断 stored XSS（GHSA-3v85-fqvh-7rxf）。
 			renderedContent = fmt.Appendf(
 				renderedContent,
 				"<br /><span class=\"tag\">#%s</span>",
@@ -135,7 +122,6 @@ type sitemapURL struct {
 	Priority   string `xml:"priority,omitempty"`
 }
 
-// renderSitemap 生成 sitemap.xml：首页 + 每条 Echo 详情页。
 func renderSitemap(ds *dataset, l links, generatedAt time.Time) ([]byte, error) {
 	set := sitemapURLSet{
 		XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9",
@@ -150,9 +136,8 @@ func renderSitemap(ds *dataset, l links, generatedAt time.Time) ([]byte, error) 
 	for i := range ds.Echos {
 		e := &ds.Echos[i]
 		set.URLs = append(set.URLs, sitemapURL{
-			Loc:     l.echoPrefix + e.ID,
-			LastMod: time.Unix(e.CreatedAt, 0).UTC().Format(time.DateOnly),
-			// 静态站是冻结快照，单条内容此后不会再变。
+			Loc:        l.echoPrefix + e.ID,
+			LastMod:    time.Unix(e.CreatedAt, 0).UTC().Format(time.DateOnly),
 			ChangeFreq: "never",
 			Priority:   "0.8",
 		})

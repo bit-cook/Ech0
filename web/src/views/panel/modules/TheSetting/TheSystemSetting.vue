@@ -2,7 +2,6 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <PanelCard>
-    <!-- 系统设置 -->
     <div class="w-full">
       <div class="flex flex-row items-center justify-between mb-3">
         <h1 class="text-[var(--color-text-primary)] font-bold text-lg">
@@ -19,7 +18,6 @@
           />
         </div>
       </div>
-      <!-- 服务器&站点图标 -->
       <div class="flex justify-start items-center mb-4">
         <div class="w-28 sm:w-23">
           <img
@@ -31,7 +29,6 @@
           />
         </div>
         <div>
-          <!-- 点击上传头像 -->
           <input
             id="file-input"
             class="hidden"
@@ -50,7 +47,6 @@
         </div>
       </div>
 
-      <!-- 站点标题 -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -73,7 +69,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 服务名称 -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -96,7 +91,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 服务地址 -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -119,7 +113,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 自定义页脚内容 -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -146,7 +139,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 自定义页脚链接 -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -171,7 +163,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- Meting API -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -196,7 +187,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 自定义 CSS -->
       <div class="flex flex-row justify-start text-[var(--color-text-secondary)] gap-2 mb-1">
         <h2 class="font-semibold min-w-28 md:min-w-32 shrink-0 break-words leading-5">
           {{ t('systemSetting.customCss') }}:
@@ -216,7 +206,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 自定义 Script -->
       <div class="flex flex-row justify-start text-[var(--color-text-secondary)] gap-2 mb-1">
         <h2 class="font-semibold min-w-28 md:min-w-32 shrink-0 break-words leading-5">
           {{ t('systemSetting.customJs') }}:
@@ -236,7 +225,6 @@
           class="w-full py-1!"
         />
       </div>
-      <!-- 默认语言 -->
       <div
         class="flex flex-row items-center justify-start text-[var(--color-text-secondary)] gap-2 mb-1"
       >
@@ -253,7 +241,6 @@
           class="w-fit h-8"
         />
       </div>
-      <!-- 允许注册 -->
       <div class="flex flex-row items-center justify-start text-[var(--color-text-secondary)]">
         <h2 class="font-semibold min-w-28 md:min-w-32 shrink-0 break-words leading-5">
           {{ t('systemSetting.allowRegister') }}:
@@ -290,7 +277,6 @@ const { SystemSetting } = storeToRefs(settingStore)
 
 const editMode = ref<boolean>(false)
 const systemLogoSrc = computed(() => resolveAvatarUrl(SystemSetting.value?.server_logo))
-// 站点默认语言统一用 endonym 选项（与头部切换器、用户界面语言一致）。
 const localeOptions = LOCALE_OPTIONS
 const defaultLocaleLabel = computed(
   () =>
@@ -307,7 +293,6 @@ const handleUpdateSystemSetting = async () => {
     })
     .finally(() => {
       editMode.value = false
-      // 重新获取设置
       getSystemSetting()
     })
 }
@@ -344,7 +329,6 @@ const handleUploadImage = async (event: Event) => {
     }
   } catch (err) {
     console.error('上传异常', err)
-    // 注意：这里只有抛出异常时才会进入，正常 res.code ≠ 1 是不会进来的
   } finally {
     clearFinishedUploads()
     target.value = ''

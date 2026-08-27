@@ -114,7 +114,6 @@ func TestSettingHandler_GetPasskeyStatus(t *testing.T) {
 	})
 }
 
-// GetAgentInfo 是公开接口，必须把敏感字段（ApiKey/Prompt/BaseURL）脱敏为空。
 func TestSettingHandler_GetAgentInfo_Scrubs(t *testing.T) {
 	t.Run("success scrubs sensitive fields", func(t *testing.T) {
 		svc := settingmock.NewMockService(t)
@@ -507,7 +506,6 @@ func TestSettingHandler_AgentSettings(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, commonModel.GET_SETTINGS_SUCCESS, out.Message)
-		// 管理端读取不脱敏（区别于公开的 GetAgentInfo）。
 		assert.Equal(t, "sk-admin", out.Data.ApiKey)
 		assert.Equal(t, "gpt-4o", out.Data.Model)
 	})

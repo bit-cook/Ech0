@@ -22,21 +22,18 @@ import (
 	versionPkg "github.com/lin-snow/ech0/internal/version"
 )
 
-// 默认路径与 spec §9 的命令语法一致。
 const (
 	DefaultCapsuleDir = "./capsule"
 	DefaultDistDir    = "./dist"
 	DefaultBaseURL    = "/"
 )
 
-// ExportCapsuleOptions 对应 `ech0 export capsule` 的 flag 集合。
 type ExportCapsuleOptions struct {
 	Output         string
 	IncludePrivate bool
 	Zip            bool
 }
 
-// DoExportCapsule 把当前实例导出为一个胶囊。
 func DoExportCapsule(opts ExportCapsuleOptions) error {
 	rt, err := newCapsuleRuntime()
 	if err != nil {
@@ -77,7 +74,6 @@ func DoExportCapsule(opts ExportCapsuleOptions) error {
 	return nil
 }
 
-// DoCheck 校验一个胶囊并按 spec §7 分级报告。存在错误级问题时返回 error（退出码 1）。
 func DoCheck(path string, fix bool) error {
 	src, err := capsule.Open(path)
 	if err != nil {
@@ -96,14 +92,11 @@ func DoCheck(path string, fix bool) error {
 	return nil
 }
 
-// ImportCapsuleOptions 对应 `ech0 import capsule` 的 flag 集合。
 type ImportCapsuleOptions struct {
 	IncludePrivate bool
 	DryRun         bool
 }
 
-// DoImportCapsule 把一个胶囊导入当前实例。校验在此前置（spec §7：import 隐式执行同一套校验），
-// 有错误级问题就拒绝落库。
 func DoImportCapsule(path string, opts ImportCapsuleOptions) error {
 	src, err := capsule.Open(path)
 	if err != nil {
@@ -135,9 +128,6 @@ func DoImportCapsule(path string, opts ImportCapsuleOptions) error {
 		DryRun:         opts.DryRun,
 	})
 	if err != nil {
-		// 裸抛 "record not found" 会让人以为胶囊坏了。真正要做的是先把站主建出来，
-		// 而最常见的诱因是在没有 data/ 的目录里执行——ech0 会就地新建一个空库，
-		// 所以这里报绝对路径：走错目录的人一眼就能看出来。
 		if errors.Is(err, capsuleImporter.ErrNoOwner) {
 			dbPath := config.Config().Database.Path
 			if abs, absErr := filepath.Abs(dbPath); absErr == nil {
@@ -184,14 +174,12 @@ Database in use: %s
 	}
 	tuiUtil.PrintCLIWithBox(header, items...)
 
-	// 导入不发布事件（spec §11.3）：向量索引不会自动跟进，明说一句免得用户以为坏了。
 	if !opts.DryRun && result.EchoesCreated > 0 {
 		tuiUtil.PrintCLIInfo("ℹ️  Note", "no events were emitted; rebuild the embedding index from the dashboard to cover imported content")
 	}
 	return nil
 }
 
-// DoBuild 从胶囊编译出可静态部署的只读站点。
 func DoBuild(path, output, baseURL string) error {
 	src, err := capsule.Open(path)
 	if err != nil {
@@ -225,7 +213,6 @@ func DoBuild(path, output, baseURL string) error {
 	return nil
 }
 
-// printCheckReport 把校验结果写到 stderr（stdout 留给产物摘要，便于管道消费）。
 func printCheckReport(path string, report *capsuleCheck.Report) {
 	for _, fixed := range report.Fixed {
 		fmt.Fprintf(os.Stderr, "fixed   %s\n", fixed)

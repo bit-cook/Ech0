@@ -22,9 +22,6 @@ import (
 
 const validAgentJSON = `{"enable":true,"protocol":"openai","model":"gpt-4o-mini"}`
 
-// TestAgentProcessor_Handlers verifies that all three event handlers
-// (EchoCreated / EchoUpdated / UserDeleted) funnel through handle(): they read
-// the agent setting and, when it parses, evict the generation cache key.
 func TestAgentProcessor_Handlers(t *testing.T) {
 	invoke := map[string]func(*subscriber.AgentProcessor, context.Context) error{
 		"echo.created": func(ap *subscriber.AgentProcessor, ctx context.Context) error {
@@ -55,9 +52,6 @@ func TestAgentProcessor_Handlers(t *testing.T) {
 	}
 }
 
-// TestAgentProcessor_GetError proves a real backend failure (non-ErrNotFound)
-// from the setting read is propagated and the cache is NOT evicted: the absence
-// of a Delete expectation makes any Delete call fail the mock.
 func TestAgentProcessor_GetError(t *testing.T) {
 	kv := kvmock.NewMockStore(t)
 	kv.EXPECT().Get(mock.Anything, commonModel.AgentSettingKey).Return("", errBoom).Once()
@@ -67,9 +61,6 @@ func TestAgentProcessor_GetError(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
-// TestAgentProcessor_InvalidJSON proves an unparseable stored agent setting is
-// treated as a backend fault by setting.Get (returns the unmarshal error), so
-// handle bails before clearing the cache (no Delete expectation registered).
 func TestAgentProcessor_InvalidJSON(t *testing.T) {
 	kv := kvmock.NewMockStore(t)
 	kv.EXPECT().Get(mock.Anything, commonModel.AgentSettingKey).Return("{not-json", nil).Once()
@@ -79,9 +70,6 @@ func TestAgentProcessor_InvalidJSON(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestAgentProcessor_NotFoundStillClears documents the edge that ErrNotFound is
-// NOT a fault: setting.Get falls back to the default and returns nil, so handle
-// proceeds to evict the cache as usual.
 func TestAgentProcessor_NotFoundStillClears(t *testing.T) {
 	kv := kvmock.NewMockStore(t)
 	kv.EXPECT().Get(mock.Anything, commonModel.AgentSettingKey).Return("", kvstore.ErrNotFound).Once()
@@ -91,8 +79,6 @@ func TestAgentProcessor_NotFoundStillClears(t *testing.T) {
 	require.NoError(t, ap.HandleUserDeleted(helpers.CtxAnonymous(), event.UserDeleted{User: helpers.NewUser()}))
 }
 
-// TestAgentProcessor_Registrations checks the processor advertises its three
-// subscriptions (build-only; not bound to a live bus here).
 func TestAgentProcessor_Registrations(t *testing.T) {
 	kv := kvmock.NewMockStore(t)
 	ap := subscriber.NewAgentProcessor(kv)
@@ -103,8 +89,6 @@ func TestAgentProcessor_Registrations(t *testing.T) {
 	}
 }
 
-// TestAgentProcessor_DeleteError proves a cache-eviction failure surfaces to the
-// caller (handle returns the Delete error).
 func TestAgentProcessor_DeleteError(t *testing.T) {
 	delErr := errors.New("delete failed")
 	kv := kvmock.NewMockStore(t)

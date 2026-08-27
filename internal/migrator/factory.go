@@ -14,7 +14,6 @@ import (
 	migratorModel "github.com/lin-snow/ech0/internal/model/migrator"
 )
 
-// BuildImporter 按来源选导入适配器(ech0 / memos),与 BuildExporter 对称。
 func BuildImporter(source string) (spec.Importer, error) {
 	switch source {
 	case migratorModel.MigrationSourceEch0:
@@ -26,7 +25,6 @@ func BuildImporter(source string) (spec.Importer, error) {
 	}
 }
 
-// BuildExporter 按目的地选导出适配器(fs / s3),与 BuildImporter 对称。s3 需 storageManager 取配置。
 func BuildExporter(dest string, storageManager StorageManager) (spec.Exporter, error) {
 	switch dest {
 	case migratorModel.ExportDestFS:

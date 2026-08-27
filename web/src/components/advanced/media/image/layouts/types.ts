@@ -10,7 +10,6 @@ export type GalleryImageHelperProps = {
   isLoaded: (image: App.Api.Ech0.FileObject, idx: number) => boolean
   markLoaded: (image: App.Api.Ech0.FileObject, idx: number) => void
   open: GalleryOpenHandler
-  /** 标记本组的第一张图为 LCP 候选：eager 加载 + fetchpriority=high。 */
   priority?: boolean
 }
 

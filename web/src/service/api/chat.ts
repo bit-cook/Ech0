@@ -4,7 +4,6 @@
 import { request } from '@/service/request'
 import { sseStream } from '@/service/request/sse'
 
-/** 获取当前用户的持久化 Chat 会话（重载页面恢复展示用） */
 export function getChatSession() {
   return request<App.Api.Chat.ChatMessage[]>({
     url: `/chat/session`,
@@ -12,7 +11,6 @@ export function getChatSession() {
   })
 }
 
-/** 清除当前用户的持久化 Chat 会话（不可恢复） */
 export function clearChatSession() {
   return request({
     url: `/chat/session`,
@@ -21,26 +19,16 @@ export function clearChatSession() {
 }
 
 interface ChatStreamHandlers {
-  /** 模型决定检索时触发（Agent 形态，可多次），携带本次检索关键词 */
   onSearching?: (query: string) => void
-  /** 命中来源到达（可多次增量），调用方需累积去重 */
   onSources?: (sources: App.Api.Chat.ChatSource[]) => void
-  /** 区间聚合总结的覆盖度到达（summarize_echos） */
   onCoverage?: (coverage: App.Api.Chat.ChatCoverage) => void
-  /** 推理模型的思考增量（reasoning，可多次），调用方累积到折叠块 */
   onReasoning?: (text: string) => void
-  /** 推理阶段结束，携带后端权威耗时（毫秒），供展示「已思考（用时 X 秒）」 */
   onReasoningDone?: (durationMs: number) => void
   onDelta?: (text: string) => void
   onError?: (message: string) => void
   onDone?: () => void
 }
 
-/**
- * 发起 Chat 流式问答（SSE）。传输细节（fetch + ReadableStream、公共头、abort、帧解析）
- * 收口在 service/request/sse.ts；此处仅把语义事件映射为类型化 handler。
- * 返回一个 abort 函数用于中断。
- */
 export function chatStream(question: string, handlers: ChatStreamHandlers): () => void {
   let done = false
   const finish = () => {

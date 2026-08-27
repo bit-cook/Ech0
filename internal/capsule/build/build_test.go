@@ -31,8 +31,6 @@ var (
 
 var imageBytes = []byte("\x89PNG\r\n\x1a\nfake-image-bytes")
 
-// writeCapsule 在临时目录里手搭一个最小但完整的胶囊：清单 + 两条 Echo
-// （新的带媒体与标签）+ 一个媒体字节 + 一条评论 + 一条被剔除的 private Echo。
 func writeCapsule(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -115,7 +113,6 @@ func writeCapsule(t *testing.T) string {
 				CreatedAt: capsule.FormatUnix(newCreated.Unix() + 10),
 			},
 			{
-				// 宿主是被剔除的 private Echo，必须不进 dataset。
 				ID:        "c2",
 				EchoID:    "33333333-3333-4333-8333-333333333333",
 				Nickname:  "guest",
@@ -130,7 +127,6 @@ func writeCapsule(t *testing.T) string {
 	return root
 }
 
-// runBuild 打开临时胶囊并烘焙到一个全新目录。
 func runBuild(t *testing.T, baseURL string) (string, *Result) {
 	t.Helper()
 	ctx := context.Background()
@@ -148,12 +144,6 @@ func runBuild(t *testing.T, baseURL string) (string, *Result) {
 	return out, res
 }
 
-// fixtureSPA 复刻真实 SPA 入口里 build 会改写的那几处（模块入口、favicon、
-// webmanifest、RSS 备用链接），外加一个 assets 条目验证整棵树都被拷走。
-//
-// 刻意不读 template.WebFS：那份产物由 `pnpm build` 生成且不进版本库，CI 只写
-// 一个占位 index.html。断言真产物的测试会在 CI 上失败、在本地「恰好构建过」
-// 时通过——测试结果取决于工作区状态，等于没有断言。
 func fixtureSPA() fs.FS {
 	const index = `<!doctype html>
 <html>
@@ -196,7 +186,6 @@ func TestRunBakesDataset(t *testing.T) {
 	assert.Equal(t, datasetSchemaVersion, ds.SchemaVersion)
 	assert.Equal(t, "/", ds.BaseURL)
 
-	// ① created_at 是 Unix 秒，且按降序排好。
 	require.Len(t, ds.Echos, 2)
 	assert.Equal(t, newEchoID, ds.Echos[0].ID)
 	assert.Equal(t, newCreated.Unix(), ds.Echos[0].CreatedAt)
@@ -204,12 +193,10 @@ func TestRunBakesDataset(t *testing.T) {
 	assert.Equal(t, oldCreated.Unix(), ds.Echos[1].CreatedAt)
 	assert.Greater(t, ds.Echos[0].CreatedAt, ds.Echos[1].CreatedAt)
 
-	// 缺省 layout 回落到 waterfall，显式 layout 原样保留。
 	assert.Equal(t, "grid", ds.Echos[0].Layout)
 	assert.Equal(t, capsule.DefaultLayout, ds.Echos[1].Layout)
 	assert.False(t, ds.Echos[0].Private)
 
-	// ② 托管媒体的 URL 由 baseURL + 路由表现算。
 	require.Len(t, ds.Echos[0].EchoFiles, 1)
 	ef := ds.Echos[0].EchoFiles[0]
 	assert.Equal(t, "/api/files/images/"+imageKey, ef.File.URL)
@@ -220,12 +207,10 @@ func TestRunBakesDataset(t *testing.T) {
 	assert.NotEmpty(t, ef.ID)
 	assert.Equal(t, ef.File.ID, ef.FileID)
 
-	// ③ 字节确实铺到了 api/files/ 下且与胶囊一致。
 	got, err := os.ReadFile(filepath.Join(dir, "api", "files", "images", imageKey))
 	require.NoError(t, err)
 	assert.Equal(t, imageBytes, got)
 
-	// ④ 入口 HTML 注入了静态开关，404.html 是它的副本。
 	index, err := os.ReadFile(filepath.Join(dir, "index.html"))
 	require.NoError(t, err)
 	assert.Contains(t, string(index), "window.__ECH0_STATIC__=true")
@@ -235,7 +220,6 @@ func TestRunBakesDataset(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, index, notFound)
 
-	// ⑤ api/connect 与活实例响应体同形，统计值是冻结快照。
 	envRaw, err := os.ReadFile(filepath.Join(dir, "api", "connect"))
 	require.NoError(t, err)
 	env := resultEnvelope{}
@@ -245,8 +229,6 @@ func TestRunBakesDataset(t *testing.T) {
 	assert.Equal(t, "tester", env.Data.SysUsername)
 	assert.Equal(t, env.Data, ds.Connect)
 
-	// api/connect 是给远端实例消费的名片：相对 logo 在对方页面上必然解析错，
-	// 故必须按 server_url 绝对化，分支与活实例 ConnectService.GetConnect 同形。
 	assert.Equal(t, "/api/files/images/logo.png", ds.Settings.ServerLogo,
 		"站内渲染仍用相对路径")
 	for _, tc := range []struct{ logo, serverURL, want string }{
@@ -260,7 +242,6 @@ func TestRunBakesDataset(t *testing.T) {
 			"logo=%q server_url=%q", tc.logo, tc.serverURL)
 	}
 
-	// settings / hello / 冻结开关。
 	assert.False(t, ds.Settings.AllowRegister)
 	assert.Equal(t, "Test Site", ds.Settings.SiteTitle)
 	assert.Equal(t, "Test Site", ds.Hello.Hello)
@@ -271,7 +252,6 @@ func TestRunBakesDataset(t *testing.T) {
 	require.Len(t, ds.Connects, 1)
 	assert.Equal(t, "https://peer.example.com", ds.Connects[0].ConnectURL)
 
-	// 标签：全站聚合，usage_count 按引用次数，Echo 内引用同一套 id。
 	require.Len(t, ds.Tags, 2)
 	assert.Equal(t, "life", ds.Tags[0].Name)
 	assert.Equal(t, 2, ds.Tags[0].UsageCount)
@@ -285,7 +265,6 @@ func TestRunBakesDataset(t *testing.T) {
 		assert.Equal(t, byName[tg.Name], tg.ID, "echo tag id must match dataset.tags")
 	}
 
-	// 评论：只留宿主还在的那条，email 恒空，parent_id / user_id 为 null。
 	require.Len(t, ds.Comments, 1)
 	assert.Equal(t, "c1", ds.Comments[0].ID)
 	assert.Empty(t, ds.Comments[0].Email)
@@ -293,11 +272,9 @@ func TestRunBakesDataset(t *testing.T) {
 	assert.Nil(t, ds.Comments[0].UserID)
 	assert.Contains(t, string(mustRead(t, filepath.Join(dir, "dataset.json"))), `"parent_id":null`)
 
-	// 热力图：最近 30 天，末端是构建当天（UTC）。
 	require.Len(t, ds.Heatmap, heatmapDays)
 	assert.Equal(t, time.Now().UTC().Format(time.DateOnly), ds.Heatmap[heatmapDays-1].Date)
 
-	// rss / sitemap 产出且包含每条 Echo。
 	rss := string(mustRead(t, filepath.Join(dir, "rss.xml")))
 	assert.Contains(t, rss, "/echo/"+newEchoID)
 	sitemap := string(mustRead(t, filepath.Join(dir, "sitemap.xml")))
@@ -305,7 +282,6 @@ func TestRunBakesDataset(t *testing.T) {
 	assert.Contains(t, sitemap, oldCreated.Format(time.DateOnly))
 }
 
-// ⑥ 子路径部署时所有站内 URL 都要带上前缀。
 func TestRunWithBaseURL(t *testing.T) {
 	dir, _ := runBuild(t, "/blog/")
 
@@ -321,11 +297,9 @@ func TestRunWithBaseURL(t *testing.T) {
 	assert.Contains(t, index, `href="/blog/favicon.ico"`)
 	assert.Contains(t, index, `href="/blog/rss.xml"`)
 	assert.NotContains(t, index, `href="/favicon.ico"`)
-	// 资源真的躺在拷贝出来的位置（前缀只改 HTML 引用，不改产物布局）。
 	assert.FileExists(t, filepath.Join(dir, "favicon.ico"))
 }
 
-// 派生 id 必须跨构建稳定：前端按 tagIds 过滤，id 一漂移收藏的过滤链接就全断。
 func TestDerivedIDsAreStable(t *testing.T) {
 	first, _ := runBuild(t, "")
 	second, _ := runBuild(t, "")

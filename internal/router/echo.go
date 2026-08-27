@@ -17,9 +17,7 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// registerEcho 注册 Echo / Tag 路由（全部 JSON，已无裸 gin 端点）。
 func registerEcho(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
-	// 点赞：匿名可访问，叠加 IP 限速 + (IP, echoID) 去重窗口；窗口内重复请求按幂等返回成功形状。
 	route(api, public(), huma.Operation{
 		OperationID: "echo-like",
 		Method:      http.MethodPut,
@@ -39,7 +37,6 @@ func registerEcho(api huma.API, h *handler.Bundle, revoker authService.TokenRevo
 		Tags:        []string{"Tag"},
 	}, h.EchoHandler.GetAllTags)
 
-	// 可匿名降级读接口
 	route(api, optional(revoker), huma.Operation{
 		OperationID: "echo-query",
 		Method:      http.MethodPost,
@@ -112,7 +109,6 @@ func registerEcho(api huma.API, h *handler.Bundle, revoker authService.TokenRevo
 		Tags:        []string{"Echo"},
 	}, h.EchoHandler.GetEchoById)
 
-	// 写接口（echo:write）
 	route(api, secured(revoker, authModel.ScopeEchoWrite), huma.Operation{
 		OperationID: "echo-create",
 		Method:      http.MethodPost,

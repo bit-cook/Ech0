@@ -10,18 +10,15 @@
         <span class="sources__text" :class="{ 'sources__text--empty': src.empty }">{{
           src.text
         }}</span>
-        <!-- 扩展分享：仅展示类型图标 + 标签（音乐/网站/位置…） -->
         <span v-if="src.ext" class="sources__ext">
           <span aria-hidden="true">{{ src.ext.icon }}</span>
           {{ src.ext.label }}
         </span>
-        <!-- 媒体类型标志：视频/音频附件用图标 + 类型标签展示（图片走下方缩略图） -->
         <span v-for="badge in src.mediaBadges" :key="badge.label" class="sources__ext">
           <span aria-hidden="true">{{ badge.icon }}</span>
           {{ badge.label }}
         </span>
       </button>
-      <!-- 命中 Echo 的配图缩略图：复用 getImageUrl 解析 local/S3/external 直链 -->
       <div v-if="src.images.length" class="sources__thumbs">
         <button
           v-for="(img, i) in src.images"
@@ -61,7 +58,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const LIMIT = 3
-// 每条来源最多展示的缩略图数（多余的不显示，避免来源区过高）
 const THUMB_LIMIT = 4
 const showAll = ref<boolean>(false)
 
@@ -75,13 +71,11 @@ type DisplaySource = {
   mediaBadges: { icon: string; label: string }[]
 }
 
-// 媒体类型 → 图标 emoji + i18n 标签 key（视频/音频；图片走缩略图不进这里）
 const MEDIA_META: Record<string, { icon: string; labelKey: string }> = {
   video: { icon: '🎬', labelKey: 'editor.mediaTypeVideo' },
   audio: { icon: '🎵', labelKey: 'editor.mediaTypeAudio' },
 }
 
-// Extension 类型 → 图标 emoji + i18n 标签 key（复用编辑器里既有的扩展类型文案）
 const EXT_META: Record<string, { icon: string; labelKey: string }> = {
   MUSIC: { icon: '🎵', labelKey: 'editor.extMusic' },
   VIDEO: { icon: '🎬', labelKey: 'editor.extVideo' },
@@ -91,7 +85,6 @@ const EXT_META: Record<string, { icon: string; labelKey: string }> = {
   TWEET: { icon: '🐦', labelKey: 'editor.extTweet' },
 }
 
-// 预处理每条来源：无正文的 Echo 不留悬空分隔符，改用淡化占位文案；图片附件映射成 FileObject 供 getImageUrl 解析
 const displaySources = computed<DisplaySource[]>(() =>
   props.sources.map((src) => {
     const day = new Date(src.echo_created * 1000).toISOString().slice(0, 10)
@@ -108,7 +101,6 @@ const displaySources = computed<DisplaySource[]>(() =>
       .map((f) => ({ ...f, echo_id: src.echo_id }))
     const meta = src.extension ? EXT_META[src.extension.type] : undefined
     const ext = meta ? { icon: meta.icon, label: t(meta.labelKey) } : undefined
-    // 视频/音频类型标志：按类型去重（每条 Echo 至多各一个），图片不进这里
     const mediaTypes = new Set<string>()
     for (const f of src.files ?? []) {
       if (f.category && f.category in MEDIA_META) mediaTypes.add(f.category)
@@ -145,7 +137,6 @@ const hiddenCount = computed(() => displaySources.value.length - LIMIT)
   max-width: 100%;
 }
 
-/* 缩略图行：紧贴来源文字下方，一排小图 */
 .sources__thumbs {
   display: flex;
   flex-wrap: wrap;
@@ -184,7 +175,6 @@ const hiddenCount = computed(() => displaySources.value.length - LIMIT)
   align-items: baseline;
   gap: 0.3rem;
 
-  /* 用 100% 而非固定 32rem，避免在移动端窄屏下撑破容器导致整页横向滚动 */
   max-width: 100%;
   min-width: 0;
   border: none;
@@ -226,13 +216,11 @@ const hiddenCount = computed(() => displaySources.value.length - LIMIT)
   text-overflow: ellipsis;
 }
 
-/* 无正文：斜体淡化，和真实内容区分开 */
 .sources__text--empty {
   font-style: italic;
   opacity: 0.7;
 }
 
-/* 扩展分享类型标签：紧随来源文字的小 chip */
 .sources__ext {
   flex: none;
   display: inline-flex;

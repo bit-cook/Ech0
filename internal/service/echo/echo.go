@@ -112,7 +112,6 @@ func (echoService *EchoService) PostEcho(ctx context.Context, newEcho *model.Ech
 	return nil
 }
 
-// GetEchosByPage Deprecated: use QueryEchos instead. Kept for backward compatibility.
 func (echoService *EchoService) GetEchosByPage(
 	ctx context.Context,
 	pageQueryDto commonModel.PageQueryDto,
@@ -305,8 +304,6 @@ func (echoService *EchoService) LikeEcho(ctx context.Context, id string) error {
 	if echo == nil {
 		return errors.New(commonModel.ECHO_NOT_FOUND)
 	}
-	// 与 GetEchoById 的可见性规则保持一致：匿名调用方禁止点赞私密 echo，
-	// 已认证非管理员同样禁止；管理员（含 MCP 路径）允许。
 	if echo.Private {
 		userID := viewer.MustFromContext(ctx).UserID()
 		if userID == "" {
@@ -457,7 +454,6 @@ func (echoService *EchoService) ProcessEchoTags(ctx context.Context, echo *model
 	return nil
 }
 
-// GetEchosByTagId Deprecated: use QueryEchos instead. Kept for backward compatibility.
 func (echoService *EchoService) GetEchosByTagId(
 	ctx context.Context,
 	tagId string,
@@ -478,9 +474,6 @@ func (echoService *EchoService) QueryEchos(
 	if queryDto.Page < 1 {
 		queryDto.Page = 1
 	}
-	// PageSize 守卫：缺省（<1）回落到 10；过大则钳到上限 100（DoS 护栏，公开 /echo/query 端点用）。
-	// 注意是「钳到 100」而非「重置为 10」——后者会让请求 200 的调用方莫名只拿到 10 条，
-	// 是个对所有调用方都埋雷的反直觉行为（曾导致区间聚合严重漏数据）。
 	if queryDto.PageSize < 1 {
 		queryDto.PageSize = 10
 	}
@@ -517,8 +510,6 @@ func (echoService *EchoService) QueryEchos(
 	}, nil
 }
 
-// isSafeTagName 拒绝包含 HTML 元字符的标签名，配合 RSS 渲染端的 HTML 转义形成纵深防御
-// （GHSA-3v85-fqvh-7rxf）。即使后续新增其他出口忘记转义，含 <>"'& 的标签也无法落库。
 func isSafeTagName(name string) bool {
 	return !strings.ContainsAny(name, "<>\"'&")
 }
@@ -615,8 +606,6 @@ func getPayloadString(payload map[string]any, key string) string {
 	return value
 }
 
-// getPayloadFloat extracts a float64 from a JSON-decoded payload.
-// JSON numbers land as float64 by default; accept int and string-encoded numbers as fallbacks.
 func getPayloadFloat(payload map[string]any, key string) (float64, bool) {
 	raw, ok := payload[key]
 	if !ok || raw == nil {
@@ -651,12 +640,6 @@ func isEchoEmpty(echo *model.Echo) bool {
 	return content == "" && len(echo.EchoFiles) == 0 && echo.Extension == nil
 }
 
-// validateSingleFileCategory enforces that all files attached to an echo share
-// a single category (image | audio | video), and that audio/video echoes carry
-// at most one clip. Mixing categories — or attaching more than one audio/video
-// file — is rejected. An echo with no attachments is always allowed. Categories
-// are read from the persisted File records (the request-carried EchoFile.File is
-// zero-valued), so a client cannot bypass the rule by lying about categories.
 func (echoService *EchoService) validateSingleFileCategory(ctx context.Context, echo *model.Echo) error {
 	ids := collectEchoFileIDs(echo)
 	if len(ids) == 0 {

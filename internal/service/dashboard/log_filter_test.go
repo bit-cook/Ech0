@@ -9,10 +9,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// TestMatchesSystemLogFilter 白盒覆盖 matchesSystemLogFilter 的纯过滤逻辑：
-// level 为空/"all" 跳过级别判断，否则按 lower(entry.Level)==level 比较；
-// keyword 为空直接放行，否则对 lower(Msg+" "+Raw) 做子串匹配。
-// 注意：生产调用方已对 level/keyword 做 ToLower+TrimSpace，故用例传入的均为小写。
 func TestMatchesSystemLogFilter(t *testing.T) {
 	t.Parallel()
 

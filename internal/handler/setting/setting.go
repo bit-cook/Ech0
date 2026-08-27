@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露系统设置相关的 HTTP 接口（Huma type-first，全部 JSON）。
 package handler
 
 import (
@@ -83,7 +82,6 @@ func (h *SettingHandler) GetPasskeyStatus(ctx context.Context, _ *EmptyInput) (P
 	return commonModel.OK(status, commonModel.GET_PASSKEY_STATUS_SUCCESS), nil
 }
 
-// GetAgentInfo 获取 Agent 公开信息（公开，敏感字段已脱敏）。
 func (h *SettingHandler) GetAgentInfo(ctx context.Context, _ *EmptyInput) (AgentSettingOutput, error) {
 	var settings model.AgentSetting
 	if err := h.settingService.GetAgentInfo(&settings); err != nil {
@@ -117,7 +115,6 @@ func (h *SettingHandler) UpdateS3Settings(ctx context.Context, in *S3SettingInpu
 	return commonModel.OK[any](nil, commonModel.UPDATE_S3_SETTINGS_SUCCESS), nil
 }
 
-// TestS3Connection 用提交的 S3 配置做一次连通性探测（不保存）。
 func (h *SettingHandler) TestS3Connection(ctx context.Context, in *S3SettingInput) (EmptyOutput, error) {
 	if err := h.settingService.TestS3Connection(ctx, &in.Body); err != nil {
 		return EmptyOutput{}, err
@@ -221,7 +218,6 @@ func (h *SettingHandler) UpdateAgentSettings(ctx context.Context, in *AgentSetti
 	return commonModel.OK[any](nil, commonModel.UPDATE_SETTINGS_SUCCESS), nil
 }
 
-// TestAgentConnection 用提交的 Agent 配置做一次最小探活（不保存）。
 func (h *SettingHandler) TestAgentConnection(ctx context.Context, in *AgentSettingInput) (EmptyOutput, error) {
 	if err := h.settingService.TestAgentConnection(ctx, &in.Body); err != nil {
 		return EmptyOutput{}, err
@@ -252,7 +248,6 @@ func (h *SettingHandler) ListAccessTokens(ctx context.Context, _ *EmptyInput) (A
 	return commonModel.OK(result, commonModel.LIST_ACCESS_TOKENS_SUCCESS), nil
 }
 
-// CreateAccessToken 为当前用户创建一个新的访问令牌（返回值即明文 token，仅此一次可见）。
 func (h *SettingHandler) CreateAccessToken(ctx context.Context, in *AccessTokenInput) (StringOutput, error) {
 	createdToken, err := h.settingService.CreateAccessToken(ctx, &in.Body)
 	if err != nil {

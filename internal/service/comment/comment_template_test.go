@@ -14,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// --- shouldNotify -----------------------------------------------------------
-
 func TestShouldNotify(t *testing.T) {
 	enabled := func() model.SystemSetting {
 		return model.SystemSetting{EmailNotify: model.EmailNotifySetting{Enabled: true}}
@@ -47,8 +45,6 @@ func TestShouldNotify(t *testing.T) {
 		})
 	}
 }
-
-// --- buildNotifyContent (and its private helpers) ---------------------------
 
 func TestBuildNotifyContent(t *testing.T) {
 	const server = "https://ech0.example.com"
@@ -182,9 +178,7 @@ func TestFallbackText(t *testing.T) {
 }
 
 func TestNotifyTime(t *testing.T) {
-	// ts==0 -> now (just assert it parses to a non-empty formatted string).
 	assert.NotEmpty(t, notifyTime(0))
-	// fixed ts -> deterministic local format length (yyyy-MM-dd HH:mm:ss).
 	got := notifyTime(1700000000)
 	assert.Len(t, got, len("2006-01-02 15:04:05"))
 }
@@ -215,11 +209,9 @@ func TestNotifyStatusStyle(t *testing.T) {
 	}
 }
 
-// --- applySettingDefaults ---------------------------------------------------
-
 func TestApplySettingDefaults(t *testing.T) {
 	t.Run("nil is a no-op", func(t *testing.T) {
-		applySettingDefaults(nil) // must not panic
+		applySettingDefaults(nil)
 	})
 	t.Run("zero port defaults to 587", func(t *testing.T) {
 		s := &model.SystemSetting{}
@@ -233,9 +225,6 @@ func TestApplySettingDefaults(t *testing.T) {
 	})
 }
 
-// --- sendOwnerMail ----------------------------------------------------------
-
-// stubMailer 是一个最小 Mailer 替身，记录调用并返回预置错误（白盒：可直接访问包内类型）。
 type stubMailer struct {
 	called bool
 	err    error

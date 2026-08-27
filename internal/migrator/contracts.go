@@ -5,7 +5,6 @@ package migrator
 
 import "github.com/lin-snow/ech0/internal/migrator/spec"
 
-// 引擎对外复用的契约别名(import / export 对称)。
 type (
 	ImportRequest  = spec.ImportRequest
 	ImportProgress = spec.ImportProgress

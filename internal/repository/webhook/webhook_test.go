@@ -19,7 +19,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// closedDB 返回一个底层连接已关闭的 *gorm.DB，用于驱动仓储里的 DB 错误返回分支。
 func closedDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:closed?mode=memory&cache=shared"), &gorm.Config{
@@ -38,7 +37,6 @@ func newWebhookRepo(t *testing.T) (*webhookRepository.WebhookRepository, *gorm.D
 	return webhookRepository.NewWebhookRepository(func() *gorm.DB { return db }), db
 }
 
-// makeWebhook 通过仓储创建一个 webhook（BeforeCreate 自动补 ID），返回其 ID。
 func makeWebhook(t *testing.T, repo *webhookRepository.WebhookRepository, name string) string {
 	t.Helper()
 	wh := &webhookModel.Webhook{Name: name, URL: "https://example.com/" + name, Secret: "s-" + name}
@@ -59,7 +57,6 @@ func TestWebhookRepository_CreateAndGet(t *testing.T) {
 	assert.Equal(t, "alpha", got.Name)
 	assert.True(t, got.IsActive, "model default:true 应使新建 webhook 默认激活")
 
-	// 行确实落库。
 	var count int64
 	require.NoError(t, db.Model(&webhookModel.Webhook{}).Where("id = ?", id).Count(&count).Error)
 	assert.Equal(t, int64(1), count)
@@ -86,7 +83,6 @@ func TestWebhookRepository_ListActiveWebhooks(t *testing.T) {
 		assert.Empty(t, got)
 	})
 
-	// 两个保持激活，一个翻转为禁用（用 UpdateWebhookByID 写 map，绕开 GORM default 陷阱）。
 	active1 := makeWebhook(t, repo, "active1")
 	active2 := makeWebhook(t, repo, "active2")
 	inactive := makeWebhook(t, repo, "inactive")
@@ -148,7 +144,6 @@ func TestWebhookRepository_UpdateWebhookDeliveryStatus(t *testing.T) {
 		assert.Equal(t, "success", got.LastStatus)
 		assert.Equal(t, int64(1717000000), got.LastTrigger)
 
-		// 覆盖更新为失败状态。
 		require.NoError(t, repo.UpdateWebhookDeliveryStatus(ctx, id, "failed", 1717000999))
 		got, err = repo.GetWebhookByID(ctx, id)
 		require.NoError(t, err)
@@ -168,7 +163,6 @@ func TestWebhookRepository_UpdateWebhookDeliveryStatus(t *testing.T) {
 	})
 
 	t.Run("nonexistent id is a no-op without error", func(t *testing.T) {
-		// 该方法不检查 RowsAffected，目标不存在时返回 nil。
 		err := repo.UpdateWebhookDeliveryStatus(ctx, "missing", "success", 99)
 		require.NoError(t, err)
 
@@ -188,7 +182,6 @@ func TestWebhookRepository_DeleteWebhookByID(t *testing.T) {
 	_, err := repo.GetWebhookByID(ctx, id)
 	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 
-	// 删除不存在的 ID 也不报错（Delete 不校验 RowsAffected）。
 	require.NoError(t, repo.DeleteWebhookByID(ctx, "missing"))
 }
 

@@ -1,11 +1,7 @@
-# 每天定时探活 hub/public/hub.json 中的实例（复用前端 healthz 口径：/healthz + 版本 ≥ 4.4.0）。
-# 连续不健康超过 72h 的实例会被直接移除并提交到 main（触发 deploy-hub 重新部署）。
-# 健康状态记录在 .github/hub-health.json（位于 hub/ 之外，日常标记不会触发 deploy-hub）。
 name: Hub health cleanup
 
 on:
   schedule:
-    # 每天 UTC 00:00 跑一次
     - cron: '0 0 * * *'
   workflow_dispatch:
 
@@ -18,7 +14,6 @@ concurrency:
 
 jobs:
   health-cleanup:
-    # 只在上游仓库跑，避免 fork 的定时任务误触发
     if: github.repository_owner == 'lin-snow'
     runs-on: ubuntu-latest
 

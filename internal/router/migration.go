@@ -13,7 +13,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// setupMigrationRoutes 仅保留非 JSON 端点走裸 gin：multipart 上传源 zip + 二进制快照下载。
 func setupMigrationRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	appRouterGroup.AuthRouterGroup.POST(
 		"/migration/upload",
@@ -27,7 +26,6 @@ func setupMigrationRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	)
 }
 
-// registerMigration 注册数据迁移控制面的 JSON 端点（admin:settings）。
 func registerMigration(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	admin := secured(revoker, authModel.ScopeAdminSettings)
 

@@ -21,9 +21,6 @@ const (
 	testBackoff       = 300 * time.Millisecond
 )
 
-// Sender 是 webhook 的唯一出网出口：持有出网 HTTP client，负责签名构造 + 重试发送。
-// 正式投递（Dispatcher）与连通性测试（设置页 TestWebhook）共用它，避免 client 构造、
-// 超时、重试参数在两处各写一份而漂移。
 type Sender struct {
 	client *http.Client
 }
@@ -34,12 +31,10 @@ func NewSender() *Sender {
 	}
 }
 
-// Deliver 投递一次正式事件观察。即时重试仍失败则由调用方（Dispatcher）记录失败状态，不再补投。
 func (s *Sender) Deliver(wh *webhookModel.Webhook, obs event.WebhookObservation) error {
 	return sendWithRetry(s.client, wh, obs, deliverMaxRetries, deliverBackoff)
 }
 
-// SendTest 构造一次连通性测试观察并发送，供设置页 TestWebhook 复用。
 func (s *Sender) SendTest(wh *webhookModel.Webhook) error {
 	obs, err := event.NewWebhookObservation("webhook.test", map[string]any{
 		"message": "webhook connectivity test from ech0",

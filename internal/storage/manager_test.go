@@ -11,8 +11,6 @@ import (
 )
 
 func TestStorageConfigFromSetting(t *testing.T) {
-	// defaultCfg carries the local-only field (DataRoot). Its S3 fields are set
-	// here only to prove they are NOT used as a fallback anymore.
 	defaultCfg := config.StorageConfig{
 		DataRoot:  "data/files",
 		Endpoint:  "env.example.com",
@@ -29,7 +27,6 @@ func TestStorageConfigFromSetting(t *testing.T) {
 		CDNURL:       "https://cdn.example.com/",
 		PathPrefix:   "uploads/",
 		UsePathStyle: true,
-		// AccessKey / SecretKey intentionally empty.
 	}
 
 	cfg := storageConfigFromSetting(s3, defaultCfg)
@@ -58,8 +55,6 @@ func TestStorageConfigFromSetting(t *testing.T) {
 	if !cfg.UsePathStyle {
 		t.Fatalf("expected UsePathStyle carried from setting")
 	}
-	// Core behavior change: S3 fields come from the setting only. Empty setting
-	// fields stay empty — config/env is no longer a per-field fallback.
 	if cfg.AccessKey != "" || cfg.SecretKey != "" {
 		t.Fatalf("S3 fields must come from setting only (no env fallback), got ak=%q sk=%q", cfg.AccessKey, cfg.SecretKey)
 	}

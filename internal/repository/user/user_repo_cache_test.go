@@ -17,7 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// newUserRepo 构造一个绑定到测试内存库 + 确定性内存缓存的 UserRepository。
 func newUserRepo(t *testing.T) (*UserRepository, *gorm.DB, cache.ICache[string, any]) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
@@ -25,7 +24,6 @@ func newUserRepo(t *testing.T) (*UserRepository, *gorm.DB, cache.ICache[string, 
 	return NewUserRepository(func() *gorm.DB { return db }, c), db, c
 }
 
-// cacheGetUser 读缓存并断言无错误，返回值与命中标记。
 func cacheGetUser(t *testing.T, c cache.ICache[string, any], key string) (any, bool) {
 	t.Helper()
 	v, ok, err := c.Get(key)
@@ -33,7 +31,6 @@ func cacheGetUser(t *testing.T, c cache.ICache[string, any], key string) (any, b
 	return v, ok
 }
 
-// seedUser 写入一条用户记录并把回读到的（含 DB 默认值的）记录返回，便于精确断言。
 func seedUser(t *testing.T, db *gorm.DB, u userModel.User) userModel.User {
 	t.Helper()
 	require.NoError(t, db.Create(&u).Error)
@@ -204,7 +201,6 @@ func TestUserRepository_DeleteUser_KeyFanout(t *testing.T) {
 		u := seedUser(t, db, userModel.User{ID: "u1", Username: "bob"})
 		c.Set(GetUserIDKey("u1"), u, 1)
 		c.Set(GetUsernameKey("bob"), u, 1)
-		// 这两个键不属于该用户的清理范围，必须保留。
 		c.Set(GetAdminKey("u1"), u, 1)
 		c.Set(GetOwnerKey(), u, 1)
 
@@ -237,7 +233,6 @@ func TestUserRepository_MarkInitialized_Idempotent(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, got, "fresh db should not be initialized")
 
-	// 首次：无行 -> Update 影响 0 行 -> Create。
 	require.NoError(t, repo.MarkInitialized(ctx))
 
 	var kv commonModel.KeyValue
@@ -248,7 +243,6 @@ func TestUserRepository_MarkInitialized_Idempotent(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, got)
 
-	// 再次：有行 -> Update 影响 1 行 -> 直接返回，不重复 Create。
 	require.NoError(t, repo.MarkInitialized(ctx))
 
 	var n int64
@@ -392,7 +386,6 @@ func TestUserRepository_GetOwner_ReadThrough(t *testing.T) {
 
 	t.Run("cache miss reads db and backfills", func(t *testing.T) {
 		repo, db, c := newUserRepo(t)
-		// 写一个非站长用户，确保查询条件 is_owner=true 命中的是正确那条。
 		seedUser(t, db, userModel.User{ID: "u2", Username: "plain"})
 		want := seedUser(t, db, userModel.User{ID: "u1", Username: "owner", IsAdmin: true, IsOwner: true})
 

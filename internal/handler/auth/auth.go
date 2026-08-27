@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 提供认证相关的 HTTP 端点：token 刷新、登出、OAuth code 交换。
 package handler
 
 import (
@@ -33,8 +32,6 @@ func NewAuthHandler(authService authService.Service, userService userService.Ser
 	}
 }
 
-// 前端在页面加载和 401 响应时自动调用此端点，使用 credentials:'include'
-// 让浏览器自动携带 HttpOnly Cookie。
 func (h *AuthHandler) Refresh() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		localizer := i18nUtil.LocalizerFromGin(ctx)
@@ -135,9 +132,6 @@ func (h *AuthHandler) Logout() gin.HandlerFunc {
 	}
 }
 
-// 兼容历史"永不过期"访问令牌（升级前签发，无 exp claim 即 ExpiresAt == nil）。
-// 直接 .Time 解引用会 nil-deref panic 让 logout 返回 500、JTI 进不了黑名单
-// (GHSA-fpw6-hrg5-q5x5)。新版本签发的 token 始终带 exp，本兜底只为吃掉旧 token。
 func remainingTTLFromClaims(expiresAt *jwt.NumericDate) time.Duration {
 	const legacyNeverFallback = 100 * 365 * 24 * time.Hour
 	if expiresAt == nil {
@@ -146,10 +140,6 @@ func remainingTTLFromClaims(expiresAt *jwt.NumericDate) time.Duration {
 	return time.Until(expiresAt.Time)
 }
 
-// OAuth 回调流程：IdP callback → 后端签发 TokenPair 并存入缓存（key=随机 code, TTL=60s）
-// → 302 重定向到前端 /auth?code=xxx → 前端调用本端点用 code 换取 token。
-//
-// code 为一次性使用：取出后立即从缓存中删除，过期也会自动淘汰。
 func (h *AuthHandler) Exchange() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		localizer := i18nUtil.LocalizerFromGin(ctx)

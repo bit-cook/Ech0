@@ -276,11 +276,6 @@
 </template>
 
 <script lang="ts">
-// @cap.js/widget 在用户交互后会在后台「投机求解」验证码（Web Worker 池）。当 widget 在
-// 求解途中被移除（离开详情页、收起评论框、切换语言重建）时，其 disconnectedCallback 会把
-// 内部 worker 池置空，已在途的求解循环恢复后访问空引用，抛出 TypeError 并冒泡成
-// unhandledrejection（Chrome 文案为 "reading '_ensureSize'"）。这是该库自身的析构竞态、
-// 对功能无影响。此处装一次全局守卫，只静默这一类 rejection，其它异常照常抛出。
 // TODO: cap.js 修复析构竞态后可移除（issue: #speculativePool 未在 cleanup 后守空）。
 let capRejectionGuardInstalled = false
 const installCapRejectionGuard = () => {
@@ -344,10 +339,6 @@ const commentFormExpanded = ref(false)
 const submitNotice = ref<SubmitNotice | null>(null)
 let capWidgetLoadPromise: Promise<unknown> | null = null
 
-// 静态站（`ech0 build` 产物）没有后端可收评论：按冻结展示处理——沿用「评论已
-// 关闭」这句既有文案，但**同时**保留只读的评论列表，发布/回复入口整体隐藏。
-// 不能只靠 formMeta.enable_comment=false：那条分支会连列表一起藏掉，等于把
-// 内容史也一并抹了，而存档站的价值恰恰在于留住它。
 const readOnly = isStaticMode()
 const commentsClosed = computed(() => !!formMeta.value && !formMeta.value.enable_comment)
 
@@ -363,17 +354,14 @@ const form = reactive<App.Api.Comment.CreateCommentDto>({
   captcha_token: '',
 })
 
-// 当前正在回复的目标评论（null=发表顶层评论）
 const replyTarget = ref<App.Api.Comment.CommentItem | null>(null)
 
-// 盖楼渲染：保留每条回复的真实父级，按祖先链归到「楼」（顶层评论）之下。
 const commentMap = computed(() => {
   const map = new Map<string, App.Api.Comment.CommentItem>()
   for (const c of comments.value) map.set(c.id, c)
   return map
 })
 
-// 沿 parent_id 上溯到顶层评论（父级缺失则就地视作楼顶，避免孤儿丢失）。
 const rootIdOf = (item: App.Api.Comment.CommentItem) => {
   const map = commentMap.value
   let cur = item
@@ -385,18 +373,15 @@ const rootIdOf = (item: App.Api.Comment.CommentItem) => {
   return cur.id
 }
 
-// 顶层评论：没有父级，或父级已不存在（被删/未过审）的孤儿也提升为楼顶。
 const topLevelComments = computed(() =>
   comments.value.filter((c) => !c.parent_id || !commentMap.value.has(c.parent_id)),
 )
 
-// 某楼下的全部回复（任意层级压成一层），按时间顺序。
 const repliesOf = (rootId: string) =>
   comments.value.filter(
     (c) => c.parent_id && commentMap.value.has(c.parent_id) && rootIdOf(c) === rootId,
   )
 
-// 楼层编号：按发表时间（created_at）全局升序，给每条评论一个稳定的 #N 锚点。
 const commentNumbers = computed(() => {
   const ordered = [...comments.value].sort((a, b) => {
     if (a.created_at !== b.created_at) return a.created_at - b.created_at
@@ -409,14 +394,12 @@ const commentNumbers = computed(() => {
 
 const numberOf = (item: App.Api.Comment.CommentItem) => commentNumbers.value.get(item.id) ?? 0
 
-// 回复所指向父级的楼层编号与昵称（repliesOf 已保证父级存在于 commentMap）。
 const parentNumberOf = (reply: App.Api.Comment.CommentItem) =>
   reply.parent_id ? (commentNumbers.value.get(reply.parent_id) ?? 0) : 0
 
 const parentNicknameOf = (reply: App.Api.Comment.CommentItem) =>
   reply.parent_id ? (commentMap.value.get(reply.parent_id)?.nickname ?? '') : ''
 
-// 点击「回复 #M」滚动到目标评论并短暂高亮。
 const commentAnchorId = (id: string) => `comment-anchor-${id}`
 const highlightedId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | null = null
@@ -427,8 +410,6 @@ const jumpToComment = async (id?: string | null) => {
   if (!el) return
   el.scrollIntoView({ behavior: 'smooth', block: 'center' })
   if (highlightTimer) clearTimeout(highlightTimer)
-  // 先清空并等 DOM 落地，再赋值，强制 CSS 高亮动画重播——
-  // 否则连续点同一目标时 highlightedId 值未变，Vue 不重渲染，动画不会重新触发。
   highlightedId.value = null
   await nextTick()
   highlightedId.value = id
@@ -440,7 +421,6 @@ const jumpToComment = async (id?: string | null) => {
 
 const startReply = (item: App.Api.Comment.CommentItem) => {
   replyTarget.value = item
-  // 存真实回复目标；前端再按祖先链归并到「楼」展示
   form.parent_id = item.id
   commentFormExpanded.value = true
   nextTick(() => {
@@ -593,7 +573,6 @@ const ensureCaptchaToken = async () => {
   }
 }
 
-// 游客资料默认记住到本地，下次自动回填，免重复输入（特权用户用账号，无需记忆）。
 const GUEST_PROFILE_KEY = 'ech0:comment-guest-profile'
 
 const loadGuestProfile = () => {
@@ -607,9 +586,7 @@ const loadGuestProfile = () => {
     if (saved.nickname) form.nickname = saved.nickname
     if (saved.email) form.email = saved.email
     if (saved.website) form.website = saved.website
-  } catch {
-    // 忽略损坏或不可用的本地存储
-  }
+  } catch {}
 }
 
 const saveGuestProfile = () => {
@@ -623,9 +600,7 @@ const saveGuestProfile = () => {
         website: form.website,
       }),
     )
-  } catch {
-    // 忽略不可用的本地存储
-  }
+  } catch {}
 }
 
 const loadData = async () => {
@@ -763,7 +738,6 @@ onBeforeUnmount(() => {
   min-height: 100vh;
 }
 
-/* ---------- comment list ---------- */
 .comment-thread {
   display: flex;
   flex-direction: column;
@@ -874,7 +848,6 @@ onBeforeUnmount(() => {
   color: #ef4444;
 }
 
-/* 点击「回复 #M」后，目标评论短暂高亮（环形描边，与背景无关，明暗主题通用）。 */
 .comment-anchor-flash {
   border-radius: 7px;
   animation: comment-anchor-flash 1.6s ease-out;
@@ -891,7 +864,6 @@ onBeforeUnmount(() => {
   }
 }
 
-/* ---------- replies thread ---------- */
 .comment-replies {
   margin-top: 0.55rem;
   margin-left: 0.35rem;
@@ -918,7 +890,6 @@ onBeforeUnmount(() => {
   color: #0ea5e9;
 }
 
-/* ---------- content ---------- */
 .comment-md-content {
   margin-top: 0.2rem;
   color: var(--color-text-primary);
@@ -932,7 +903,6 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
 }
 
-/* ---------- toggle / count ---------- */
 .comment-pill-btn {
   display: inline-flex;
   align-items: center;
@@ -964,7 +934,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 3px var(--color-bg-muted);
 }
 
-/* 统一焦点：去掉浏览器默认的黑色 outline，仅键盘聚焦时显示细灰描边 */
 .comment-reply-btn:focus,
 .comment-reply-ref:focus,
 .comment-reply-cancel:focus,
@@ -995,7 +964,6 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-/* ---------- form ---------- */
 .comment-form-panel {
   display: flex;
   flex-direction: column;

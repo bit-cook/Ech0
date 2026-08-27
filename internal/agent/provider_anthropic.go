@@ -15,21 +15,12 @@ import (
 	model "github.com/lin-snow/ech0/internal/model/setting"
 )
 
-// anthropicDefaultMaxTokens 是 Anthropic API 必填字段 max_tokens 的默认值
 const anthropicDefaultMaxTokens = 4096
 
-// anthropicProvider 适配 Anthropic（Claude）协议。
-//
-// Stream 是真流式：走 Messages.NewStreaming 逐事件消费 SSE，text_delta 实时
-// 上浮为多个 EventTextDelta；工具调用的 input_json_delta 分片借 SDK 自带的
-// Message.Accumulate 累积出完整 input，流结束后从累积好的 Message.Content 里逐个
-// 上浮 EventToolCall。与 OpenAI provider 行为对齐，二者共用同一套 Run 循环与 SSE。
-// Complete（非流式）仍走 generate，单次请求拿整段文本即可。
 type anthropicProvider struct {
 	setting model.AgentSetting
 }
 
-// newClient 构造带鉴权 / 自定义 BaseURL 的 Anthropic client（流式与非流式共用）。
 func (p *anthropicProvider) newClient() anthropic.Client {
 	opts := []option.RequestOption{option.WithAPIKey(p.setting.ApiKey)}
 	if p.setting.BaseURL != "" {
@@ -38,8 +29,6 @@ func (p *anthropicProvider) newClient() anthropic.Client {
 	return anthropic.NewClient(opts...)
 }
 
-// buildParams 把 Request 映射为 MessageNewParams。流式与非流式共用同一套
-// model / max_tokens / system / tools / temperature 逻辑，避免两路实现漂移。
 func (p *anthropicProvider) buildParams(req Request) anthropic.MessageNewParams {
 	systemBlocks, msgs := p.buildMessages(req.Messages)
 
@@ -53,9 +42,6 @@ func (p *anthropicProvider) buildParams(req Request) anthropic.MessageNewParams 
 		Messages:  msgs,
 	}
 	if len(systemBlocks) > 0 {
-		// Prompt cache：在最后一个 system 块打 ephemeral 断点。Anthropic 缓存顺序为
-		// tools → system → messages，故此断点会把 tool 定义 + system 整段静态前缀一并缓存，
-		// 工具循环里 round 2/3 与短时连续请求即命中缓存，抵消 ReAct 多轮的 token 成本。
 		systemBlocks[len(systemBlocks)-1].CacheControl = anthropic.NewCacheControlEphemeralParam()
 		params.System = systemBlocks
 	}
@@ -68,9 +54,8 @@ func (p *anthropicProvider) buildParams(req Request) anthropic.MessageNewParams 
 	return params
 }
 
-// generate 发起一次（非流式）Anthropic 请求，返回拼好的文本与解析出的工具调用。
 func (p *anthropicProvider) generate(ctx context.Context, req Request) (string, []ToolCall, error) {
-	client := p.newClient() // Messages.New 是指针方法，需绑定到可寻址的局部变量
+	client := p.newClient()
 	resp, err := client.Messages.New(ctx, p.buildParams(req))
 	if err != nil {
 		return "", nil, err
@@ -85,8 +70,6 @@ func (p *anthropicProvider) generate(ctx context.Context, req Request) (string, 
 	return text.String(), toolCallsFromContent(resp.Content), nil
 }
 
-// toolCallsFromContent 从 Message.Content（流式 Accumulate 后或一次性返回）里提取所有
-// tool_use 调用。Args 为空时兜底成 "{}"，与 OpenAI accumulator.finish() 的约定一致。
 func toolCallsFromContent(content []anthropic.ContentBlockUnion) []ToolCall {
 	var calls []ToolCall
 	for _, block := range content {
@@ -106,9 +89,6 @@ func toolCallsFromContent(content []anthropic.ContentBlockUnion) []ToolCall {
 	return calls
 }
 
-// buildMessages 把内部 tool-aware Message 映射为 Anthropic 的 system 块与消息序列。
-// 连续的 RoleTool（同一 assistant 轮的多个工具结果）合并进单个 user 消息，
-// 以满足 Anthropic「tool_result 必须与前一条 assistant 的 tool_use 一一对应且同处一条 user 消息」的约束。
 func (p *anthropicProvider) buildMessages(in []Message) ([]anthropic.TextBlockParam, []anthropic.MessageParam) {
 	var (
 		systemBlocks []anthropic.TextBlockParam
@@ -142,7 +122,7 @@ func (p *anthropicProvider) buildMessages(in []Message) ([]anthropic.TextBlockPa
 			}
 		case RoleTool:
 			pendingTools = append(pendingTools, anthropic.NewToolResultBlock(m.ToolCallID, m.Content, false))
-		default: // RoleUser
+		default:
 			flush()
 			msgs = append(msgs, anthropic.NewUserMessage(userBlocks(m)...))
 		}
@@ -151,8 +131,6 @@ func (p *anthropicProvider) buildMessages(in []Message) ([]anthropic.TextBlockPa
 	return systemBlocks, msgs
 }
 
-// userBlocks 把一条 RoleUser 消息拼成 Anthropic content 块：文本块（非空）+ 每张图一块
-// image（Base64 用 base64 source，否则用 URL source）。无任何块时兜底成一个文本块，避免空消息。
 func userBlocks(m Message) []anthropic.ContentBlockParamUnion {
 	var blocks []anthropic.ContentBlockParamUnion
 	if m.Content != "" {
@@ -172,7 +150,6 @@ func userBlocks(m Message) []anthropic.ContentBlockParamUnion {
 	return blocks
 }
 
-// buildTools 把内部 ToolDef 映射为 Anthropic ToolUnionParam。
 func (p *anthropicProvider) buildTools(defs []ToolDef) []anthropic.ToolUnionParam {
 	if len(defs) == 0 {
 		return nil
@@ -217,17 +194,10 @@ func (p *anthropicProvider) Stream(ctx context.Context, req Request) (<-chan Eve
 	return ch, nil
 }
 
-// stream 真流式消费 Anthropic SSE：text_delta 增量实时 emit；tool_use 的
-// input_json_delta 分片借 SDK 自带的 Message.Accumulate 累积出完整 input，
-// 流结束后从累积好的 Message.Content 里逐个上浮 EventToolCall。
-//
-// 用 Accumulate 而非手动按 content block index 拼分片：SDK 内部已正确处理
-// content_block_start / delta / stop 的状态机与 input 拼接，复用最稳，也免去一份
-// 易错的手写累积逻辑。
 func (p *anthropicProvider) stream(ctx context.Context, req Request, ch chan<- Event) {
 	defer close(ch)
 
-	client := p.newClient() // Messages.NewStreaming 是指针方法，需绑定到可寻址的局部变量
+	client := p.newClient()
 	stream := client.Messages.NewStreaming(ctx, p.buildParams(req))
 
 	var acc anthropic.Message
@@ -238,7 +208,6 @@ func (p *anthropicProvider) stream(ctx context.Context, req Request, ch chan<- E
 			return
 		}
 
-		// 只有文本增量需要实时上浮；tool_use 分片交给 Accumulate，流结束后再统一吐出。
 		if delta, ok := event.AsAny().(anthropic.ContentBlockDeltaEvent); ok {
 			if td, ok := delta.Delta.AsAny().(anthropic.TextDelta); ok && td.Text != "" {
 				if !send(ctx, ch, Event{Kind: EventTextDelta, Text: td.Text}) {
@@ -248,7 +217,6 @@ func (p *anthropicProvider) stream(ctx context.Context, req Request, ch chan<- E
 		}
 	}
 
-	// 流结束：先看传输 / 协议错误（不静默吞错），再上浮累积好的工具调用，最后收尾。
 	if err := stream.Err(); err != nil {
 		send(ctx, ch, Event{Kind: EventError, Err: err})
 		return

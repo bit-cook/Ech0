@@ -33,21 +33,15 @@ import (
 
 const adminID = "user-test-0001"
 
-// TestMain pins a file-free, error-level logger so the job.Manager's goroutine
-// logging never lazily initializes the default logger (which would create a
-// data/app.log under the package dir). It also keeps test output quiet.
 func TestMain(m *testing.M) {
 	logUtil.InitLoggerWithConfig(logUtil.LogConfig{Level: "error", File: logUtil.FileConfig{Enable: false}})
 	os.Exit(m.Run())
 }
 
-// fakeJobRepo is a tiny in-memory, concurrency-safe job.JobRepository. The real
-// job.Manager spins a goroutine on Submit success that calls Upsert, so the map
-// is guarded by a mutex to stay race-clean.
 type fakeJobRepo struct {
 	mu     sync.Mutex
 	jobs   map[string]jobModel.Job
-	getErr error // forced (non-NotFound) error for GetByType, when set
+	getErr error
 }
 
 func newFakeJobRepo() *fakeJobRepo {
@@ -89,15 +83,10 @@ func (r *fakeJobRepo) seed(j jobModel.Job) {
 	r.jobs[j.Type] = j
 }
 
-// noopRunner immediately succeeds; used only so Submit's happy path can return a
-// pending row. The async transition to success is irrelevant to the assertions.
 type noopRunner struct{}
 
 func (noopRunner) Run(context.Context, []byte, job.ReportFunc) (any, error) { return nil, nil }
 
-// newService wires a MigratorService over a mocked CommonService and a real
-// job.Manager backed by an in-memory repo. busProvider may be nil-returning for
-// methods that don't touch the bus.
 func newService(common CommonService, repo *fakeJobRepo, bus *busen.Bus) *MigratorService {
 	return NewMigratorService(common, job.NewManager(repo), func() *busen.Bus { return bus })
 }
@@ -110,10 +99,6 @@ func expectUser(t *testing.T, common *commonmock.MockService, u userModel.User, 
 func adminUser() userModel.User  { return helpers.NewUser(helpers.AsAdmin) }
 func normalUser() userModel.User { return helpers.NewUser() }
 
-// ---------------------------------------------------------------------------
-// StartGlobalMigration
-// ---------------------------------------------------------------------------
-
 func TestStartGlobalMigration(t *testing.T) {
 	validReq := func() migratorModel.StartGlobalMigrationRequest {
 		return migratorModel.StartGlobalMigrationRequest{
@@ -123,7 +108,7 @@ func TestStartGlobalMigration(t *testing.T) {
 	}
 
 	t.Run("invalid request rejected before auth", func(t *testing.T) {
-		common := commonmock.NewMockService(t) // no auth call expected
+		common := commonmock.NewMockService(t)
 		s := newService(common, newFakeJobRepo(), nil)
 		_, err := s.StartGlobalMigration(helpers.CtxAsUser(adminID), migratorModel.StartGlobalMigrationRequest{
 			SourceType:    "bogus",
@@ -154,10 +139,9 @@ func TestStartGlobalMigration(t *testing.T) {
 	t.Run("no runner registered surfaces submit error and cleans tmp", func(t *testing.T) {
 		common := commonmock.NewMockService(t)
 		expectUser(t, common, adminUser(), nil)
-		s := newService(common, newFakeJobRepo(), nil) // no Register => ErrNoRunner
+		s := newService(common, newFakeJobRepo(), nil)
 		_, err := s.StartGlobalMigration(helpers.CtxAsUser(adminID), validReq())
 		require.Error(t, err)
-		// Not the already-running message; the raw ErrNoRunner is returned.
 		assert.NotEqual(t, "请先结束/清理当前迁移", err.Error())
 		assert.ErrorIs(t, err, job.ErrNoRunner)
 	})
@@ -191,10 +175,6 @@ func TestStartGlobalMigration(t *testing.T) {
 		assert.Equal(t, adminID, dto.SourcePayload["created_by"])
 	})
 }
-
-// ---------------------------------------------------------------------------
-// GetGlobalMigrationStatus
-// ---------------------------------------------------------------------------
 
 func TestGetGlobalMigrationStatus(t *testing.T) {
 	t.Run("non-admin denied", func(t *testing.T) {
@@ -238,10 +218,6 @@ func TestGetGlobalMigrationStatus(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// CancelGlobalMigration
-// ---------------------------------------------------------------------------
-
 func TestCancelGlobalMigration(t *testing.T) {
 	t.Run("non-admin denied", func(t *testing.T) {
 		common := commonmock.NewMockService(t)
@@ -281,10 +257,6 @@ func TestCancelGlobalMigration(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// CleanupGlobalMigration
-// ---------------------------------------------------------------------------
-
 func TestCleanupGlobalMigration(t *testing.T) {
 	t.Run("non-admin denied", func(t *testing.T) {
 		common := commonmock.NewMockService(t)
@@ -323,7 +295,6 @@ func TestCleanupGlobalMigration(t *testing.T) {
 		})
 		s := newService(common, repo, nil)
 		require.NoError(t, s.CleanupGlobalMigration(helpers.CtxAsUser(adminID)))
-		// row removed
 		_, err := repo.GetByType(context.Background(), jobModel.TypeMigration)
 		assert.ErrorIs(t, err, job.ErrNotFound)
 	})
@@ -338,10 +309,6 @@ func TestCleanupGlobalMigration(t *testing.T) {
 		assert.ErrorIs(t, s.CleanupGlobalMigration(helpers.CtxAsUser(adminID)), boom)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// StartExport
-// ---------------------------------------------------------------------------
 
 func TestStartExport(t *testing.T) {
 	t.Run("non-admin denied", func(t *testing.T) {
@@ -386,10 +353,6 @@ func TestStartExport(t *testing.T) {
 		assert.Equal(t, string(jobModel.StatusPending), dto.Status)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// GetExportStatus
-// ---------------------------------------------------------------------------
 
 func TestGetExportStatus(t *testing.T) {
 	t.Run("non-admin denied", func(t *testing.T) {
@@ -437,10 +400,6 @@ func TestGetExportStatus(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// CancelExport
-// ---------------------------------------------------------------------------
-
 func TestCancelExport(t *testing.T) {
 	t.Run("non-admin denied", func(t *testing.T) {
 		common := commonmock.NewMockService(t)
@@ -480,10 +439,6 @@ func TestCancelExport(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// DownloadExport
-// ---------------------------------------------------------------------------
-
 func newGinCtx(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -493,8 +448,6 @@ func newGinCtx(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
 	return c, w
 }
 
-// chdirTemp moves cwd into a throwaway dir so snapshot.LatestPath()'s relative
-// "data/files/snapshots" lookup is deterministic and any writes are auto-cleaned.
 func chdirTemp(t *testing.T) string {
 	t.Helper()
 	orig, err := os.Getwd()
@@ -517,7 +470,7 @@ func TestDownloadExport(t *testing.T) {
 	})
 
 	t.Run("no snapshot returns guidance error", func(t *testing.T) {
-		chdirTemp(t) // empty cwd => no data/files/snapshots
+		chdirTemp(t)
 		common := commonmock.NewMockService(t)
 		expectUser(t, common, adminUser(), nil)
 		s := newService(common, newFakeJobRepo(), nil)
@@ -547,8 +500,6 @@ func TestDownloadExport(t *testing.T) {
 		assert.Equal(t, content, w.Body.Bytes())
 	})
 
-	// 快照与胶囊各占一个槽位。取错槽位的后果是用户拿到另一种格式的产物——想备份的拿到不含
-	// 账号的胶囊，是最坏的一类静默错误，故对两个方向都断言。
 	t.Run("format selects the matching artifact slot", func(t *testing.T) {
 		chdirTemp(t)
 		snapshotBytes := []byte("PK-snapshot")
@@ -566,7 +517,6 @@ func TestDownloadExport(t *testing.T) {
 		}{
 			{format: "capsule", want: capsuleBytes},
 			{format: "snapshot", want: snapshotBytes},
-			// 空 format 是加入格式选择之前的客户端行为，必须仍然拿到快照。
 			{format: "", want: snapshotBytes},
 		} {
 			common := commonmock.NewMockService(t)
@@ -579,7 +529,6 @@ func TestDownloadExport(t *testing.T) {
 		}
 	})
 
-	// 未知格式必须报错而不是静默回落成快照：悄悄给出另一种产物，用户会拿错东西。
 	t.Run("unknown format rejected", func(t *testing.T) {
 		chdirTemp(t)
 		common := commonmock.NewMockService(t)
@@ -589,10 +538,6 @@ func TestDownloadExport(t *testing.T) {
 		require.Error(t, s.DownloadExport(c, helpers.CtxAsUser(adminID), "tarball"))
 	})
 }
-
-// ---------------------------------------------------------------------------
-// UploadSourceZip
-// ---------------------------------------------------------------------------
 
 func zipFileHeader(t *testing.T, filename string, payload []byte) *multipart.FileHeader {
 	t.Helper()
@@ -625,7 +570,7 @@ func minimalZip(t *testing.T) []byte {
 
 func TestUploadSourceZip(t *testing.T) {
 	t.Run("invalid source type rejected first", func(t *testing.T) {
-		common := commonmock.NewMockService(t) // no auth call expected
+		common := commonmock.NewMockService(t)
 		s := newService(common, newFakeJobRepo(), nil)
 		_, err := s.UploadSourceZip(helpers.CtxAsUser(adminID), "bogus", nil)
 		require.Error(t, err)
@@ -694,7 +639,6 @@ func TestUploadSourceZip(t *testing.T) {
 		assert.Contains(t, resp.TmpDir, "files/tmp/ech0_")
 		require.NotNil(t, resp.SourcePayload)
 		assert.Equal(t, resp.TmpDir, resp.SourcePayload["tmp_dir"])
-		// extract dir was created
 		_, statErr := os.Stat(filepath.Join("data", filepath.FromSlash(resp.TmpDir)))
 		assert.NoError(t, statErr)
 	})

@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// deps 聚合 SettingService 的协作者 mock，便于按需设置期望后 build。
 type deps struct {
 	tx          *txmock.MockTransactor
 	common      *commonmock.MockService
@@ -54,25 +53,23 @@ func (d *deps) build() *settingService.SettingService {
 	return settingService.NewSettingService(
 		d.tx,
 		d.common,
-		nil, // fileService：被测方法未触达
-		nil, // storageManager：被测路径走 nil 分支
+		nil,
+		nil,
 		d.kv,
 		d.settingRepo,
 		d.webhookRepo,
-		nil, // webhookSender：仅 TestWebhook 成功路径需要，不在此测
+		nil,
 		d.revoker,
 		func() *busen.Bus { return d.bus },
 	)
 }
 
-// runTx 让事务 mock 真正执行内部闭包，从而触发其中的仓储/KV 调用。
 func runTxExec() func(context.Context, func(context.Context) error) error {
 	return func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 }
 
 const testUserID = "user-1"
 
-// expectAdmin 让 commonService 对该 ctx 的用户解析返回管理员一次。
 func (d *deps) expectAdmin() {
 	d.common.EXPECT().
 		CommonGetUserByUserId(mock.Anything, mock.Anything).
@@ -80,8 +77,6 @@ func (d *deps) expectAdmin() {
 		Once()
 }
 
-// TestSettingService_NonAdminDenied 覆盖各管理写/读方法的越权路径：
-// 非管理员一律拿到 NO_PERMISSION_DENIED，且不触达事务/仓储。
 func TestSettingService_NonAdminDenied(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
@@ -153,7 +148,7 @@ func TestSettingService_NonAdminDenied(t *testing.T) {
 			d := newDeps(t)
 			d.common.EXPECT().
 				CommonGetUserByUserId(mock.Anything, mock.Anything).
-				Return(helpers.NewUser(), nil). // 普通用户，非管理员
+				Return(helpers.NewUser(), nil).
 				Once()
 
 			err := call(d.build())
@@ -163,7 +158,6 @@ func TestSettingService_NonAdminDenied(t *testing.T) {
 	}
 }
 
-// TestSettingService_PropagatesUserLookupError 用户解析失败时原样上抛。
 func TestSettingService_PropagatesUserLookupError(t *testing.T) {
 	d := newDeps(t)
 	boom := errors.New("db down")
@@ -190,7 +184,6 @@ func TestCreateWebhook(t *testing.T) {
 	t.Run("unsafe url rejected", func(t *testing.T) {
 		d := newDeps(t)
 		d.expectAdmin()
-		// 127.0.0.1 命中 SSRF 私网拦截。
 		err := d.build().CreateWebhook(ctx, &settingModel.WebhookDto{Name: "hook", URL: "http://127.0.0.1/x"})
 		require.Error(t, err)
 		assert.Equal(t, commonModel.INVALID_WEBHOOK_URL, err.Error())
@@ -234,7 +227,6 @@ func TestUpdateWebhook_Valid(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestDeleteAccessToken_RevokesJTI 锁定「删除即拉黑 JTI」契约（GHSA-fpw6-hrg5-q5x5）。
 func TestDeleteAccessToken_RevokesJTI(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
@@ -262,7 +254,6 @@ func TestDeleteAccessToken_RevokesJTI(t *testing.T) {
 			GetAccessTokenByID(mock.Anything, "tok-2").
 			Return(settingModel.AccessTokenSetting{}, errors.New("not found")).
 			Once()
-		// revoker 不应被调用（无期望 => 调用即 panic）。
 		d.tx.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(runTxExec()).Once()
 		d.settingRepo.EXPECT().DeleteAccessTokenByID(mock.Anything, "tok-2").Return(nil).Once()
 
@@ -304,7 +295,6 @@ func TestListAccessTokens(t *testing.T) {
 				{ID: "expired", Expiry: &past},
 			}, nil).
 			Once()
-		// 过期 token 被异步清理。
 		d.tx.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(runTxExec()).Once()
 		d.settingRepo.EXPECT().DeleteAccessTokenByID(mock.Anything, "expired").Return(nil).Once()
 
@@ -350,7 +340,7 @@ func TestCreateAccessToken_Success(t *testing.T) {
 				tok.TokenType == authModel.TokenTypeAccess &&
 				tok.Audience == authModel.AudienceCLI &&
 				tok.JTI != "" &&
-				tok.Expiry != nil && // 8h 策略 => 非永久
+				tok.Expiry != nil &&
 				strings.Contains(tok.Scopes, authModel.ScopeEchoRead)
 		})).
 		Return(nil).
@@ -359,7 +349,7 @@ func TestCreateAccessToken_Success(t *testing.T) {
 	token, err := d.build().CreateAccessToken(helpers.CtxAsUser(testUserID), &settingModel.AccessTokenSettingDto{
 		Name:     "cli-token",
 		Expiry:   settingModel.EIGHT_HOUR_EXPIRY,
-		Scopes:   []string{authModel.ScopeEchoRead, authModel.ScopeEchoRead}, // 重复应被去重
+		Scopes:   []string{authModel.ScopeEchoRead, authModel.ScopeEchoRead},
 		Audience: authModel.AudienceCLI,
 	})
 	require.NoError(t, err)
@@ -399,7 +389,6 @@ func TestUpdateAgentSettings_NormalizesProtocol(t *testing.T) {
 	d.expectAdmin()
 	d.kv.EXPECT().
 		Set(mock.Anything, commonModel.AgentSettingKey, mock.MatchedBy(func(raw string) bool {
-			// 已下线的 gemini 应归一为 openai 后落库。
 			return strings.Contains(raw, `"openai"`) && !strings.Contains(raw, "gemini")
 		})).
 		Return(nil).
@@ -425,11 +414,9 @@ func TestUpdateEmbeddingSetting_Persists(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestUpdateS3Setting_PersistsWhenStorageNil 在 storageManager 为 nil 时跳过应用、仅落库。
 func TestUpdateS3Setting_PersistsWhenStorageNil(t *testing.T) {
 	d := newDeps(t)
 	d.expectAdmin()
-	// UpdateS3Setting 会先读旧值用于回滚（错误被忽略）。
 	d.kv.EXPECT().Get(mock.Anything, commonModel.S3SettingKey).Return("", nil).Once()
 	d.tx.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(runTxExec()).Once()
 	d.kv.EXPECT().

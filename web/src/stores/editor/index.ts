@@ -23,9 +23,6 @@ export const useEditorStore = defineStore('editorStore', () => {
   const echoStore = useEchoStore()
   const t: Translate = (key, params) => String(i18n.global.t(key, params || {}))
 
-  //================================================================
-  // 基础顶层状态
-  //================================================================
   const ShowEditor = ref<boolean>(true)
   const currentMode = ref<Mode>(Mode.ECH0)
   const currentExtensionType = ref<ExtensionType>()
@@ -43,9 +40,6 @@ export const useEditorStore = defineStore('editorStore', () => {
 
   const hasContent = computed(() => !!echoToAdd.value.content?.trim())
 
-  //================================================================
-  // 子模块组合
-  //================================================================
   const extension = useExtensionModule({ echoToAdd, t })
   const files = useFilesModule({ t })
   const draft = useDraftModule({
@@ -64,12 +58,8 @@ export const useEditorStore = defineStore('editorStore', () => {
     t,
   })
 
-  // 草稿自动保存监听：依赖所有子模块的 state，必须在全部装配完成后挂
   draft.initDraftWatchers()
 
-  //================================================================
-  // 跨域编排:编辑模式、清空、提交、Uppy 上传完成后的条件同步
-  //================================================================
   const resetHomeTimelineState = () => {
     echoStore.searchValue = ''
     echoStore.filteredTag = null
@@ -83,8 +73,6 @@ export const useEditorStore = defineStore('editorStore', () => {
     void router.push({ name: 'home' }).catch(() => undefined)
   }
 
-  // 编辑完成后返回时间线：仅去掉 ?tab，保留 ?page 等 query，
-  // 让时间线重挂载时按原页码重新拉取，停留在被编辑那条所在的页面。
   const backToTimelineTab = () => {
     const query = { ...router.currentRoute.value.query }
     delete query.tab
@@ -159,7 +147,7 @@ export const useEditorStore = defineStore('editorStore', () => {
     }
 
     if (isUpdateMode.value && echoStore.echoToUpdate) {
-      await handleAddOrUpdateEcho(true) // 仅同步文件
+      await handleAddOrUpdateEcho(true)
     }
   }
 
@@ -185,10 +173,8 @@ export const useEditorStore = defineStore('editorStore', () => {
         return
       }
 
-      // 处理扩展板块
       extension.checkEchoExtension()
 
-      // 回填图片板块（后端只认 echo_files）
       echoToAdd.value.echo_files = files.filesToAdd.value
         .filter((file) => file.id)
         .map((file, index) => ({
@@ -196,8 +182,6 @@ export const useEditorStore = defineStore('editorStore', () => {
           sort_order: index,
         }))
 
-      // 按媒体类别定 layout：视频/音频用各自枚举的默认（平铺，卡片走 media-first）；
-      // 图片/纯文本时清掉从音视频残留的非图片布局，回落到默认图片布局。
       const mediaCat = files.mediaCategory.value
       if (mediaCat === FILE_CATEGORY.VIDEO) {
         echoToAdd.value.layout = VideoLayout.DEFAULT
@@ -207,7 +191,6 @@ export const useEditorStore = defineStore('editorStore', () => {
         echoToAdd.value.layout = ImageLayout.WATERFALL
       }
 
-      // 回填标签板块
       echoToAdd.value.tags = (tagToAdd.value ?? [])
         .map((name) => name.trim())
         .filter((name) => name.length > 0)
@@ -219,7 +202,6 @@ export const useEditorStore = defineStore('editorStore', () => {
         return
       }
 
-      // ========= 添加模式 =========
       if (!isUpdateMode.value) {
         theToast.promise(fetchAddEcho(echoToAdd.value), {
           loading: t('editor.publishing'),
@@ -243,7 +225,6 @@ export const useEditorStore = defineStore('editorStore', () => {
         return
       }
 
-      // ======== 更新模式 =========
       if (isUpdateMode.value) {
         if (!echoStore.echoToUpdate) {
           theToast.error(t('editor.noEchoToUpdate'))
@@ -266,8 +247,6 @@ export const useEditorStore = defineStore('editorStore', () => {
               echoStore.echoToUpdate = null
               setMode(Mode.ECH0)
               echoStore.getTags()
-              // 不重置分页 / 不跳回顶部：返回当前页，时间线重挂载会按 ?page 重新拉取，
-              // 服务器返回的数据已含本次编辑结果，用户原地即可看到刚编辑的那条。
               backToTimelineTab()
               return t('editor.updateSuccess')
             } else if (res.code === 1 && justSyncFiles) {
@@ -301,7 +280,6 @@ export const useEditorStore = defineStore('editorStore', () => {
   }
 
   return {
-    // ===== 状态 =====
     ShowEditor,
 
     currentMode,
@@ -333,7 +311,6 @@ export const useEditorStore = defineStore('editorStore', () => {
     tweetToAdd: extension.tweetToAdd,
     tagToAdd,
 
-    // ===== 方法 =====
     init,
     setMode,
     toggleMode,

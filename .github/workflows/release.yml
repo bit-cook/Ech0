@@ -3,7 +3,7 @@ name: Release with Embedded Frontend
 on:
   push:
     tags:
-      - "v*" # 触发条件：打 Tag，比如 v1.0.0
+      - "v*"
 
 permissions:
   contents: write
@@ -11,16 +11,13 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  ARM64_TOOLCHAIN: "zigcc" # options: zigcc | musl
+  ARM64_TOOLCHAIN: "zigcc"
   ZIG_VERSION: "latest"
   MUSL_TOOLCHAIN_VERSION: "2025-6-20"
   MUSL_TOOLCHAIN_ARCHIVE: "aarch64-linux-musl-cross.tgz"
   MUSL_TOOLCHAIN_SHA256: ""
 
 jobs:
-  # Refuse to build a release when the tag (vX.Y.Z) and the Version constant
-  # in internal/version/version.go disagree. Otherwise the published artifacts
-  # would lie about their own version in /hello, /healthz, the About page, etc.
   verify-version:
     name: Verify tag matches internal/version.Version
     runs-on: ubuntu-latest
@@ -65,7 +62,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # --- Frontend Build Steps ---
       - name: Setup Node.js Environment
         uses: pnpm/action-setup@v6
         with:
@@ -79,7 +75,6 @@ jobs:
         working-directory: ./web
         run: pnpm install --frozen-lockfile && pnpm build --mode production
 
-      # --- Backend Build Steps ---
       - name: Setup Go Environment
         uses: actions/setup-go@v7
         with:
@@ -157,7 +152,6 @@ jobs:
       - name: List output files
         run: ls -lh .
 
-      # --- Artifact Uploading ---
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -189,7 +183,6 @@ jobs:
             tar -czf "${bin}.tar.gz" "$bin"
           done
 
-      # ✅ 创建 GitHub Release
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
@@ -211,7 +204,7 @@ jobs:
       - name: 📦 Download backend artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: ech0-* # 下载后端构建产物（裸二进制：ech0-linux-amd64 / ech0-linux-arm64）
+          pattern: ech0-*
           path: ./backend-artifacts
           merge-multiple: true
 

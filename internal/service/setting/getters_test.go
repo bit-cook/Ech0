@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// settingJSON 把配置模型序列化为 KV 里存放的 JSON 字符串，喂给 kv.Get 替身。
 func settingJSON(t *testing.T, v any) string {
 	t.Helper()
 	raw, err := json.Marshal(v)
@@ -28,7 +27,6 @@ func settingJSON(t *testing.T, v any) string {
 	return string(raw)
 }
 
-// TestGetSetting 覆盖系统设置读取：命中 JSON、KV 缺失回退默认（无错）、后端故障上抛。
 func TestGetSetting(t *testing.T) {
 	t.Run("returns stored value", func(t *testing.T) {
 		d := newDeps(t)
@@ -61,7 +59,6 @@ func TestGetSetting(t *testing.T) {
 	})
 }
 
-// TestGetAgentInfo 覆盖 Agent 信息公开读（命中 JSON + 后端故障上抛）。
 func TestGetAgentInfo(t *testing.T) {
 	t.Run("returns stored value", func(t *testing.T) {
 		d := newDeps(t)
@@ -86,7 +83,6 @@ func TestGetAgentInfo(t *testing.T) {
 	})
 }
 
-// TestGetOAuth2Status 覆盖 OAuth2 状态投影：OAuthReady 仅当 returnURL 与 CORS 白名单均非空。
 func TestGetOAuth2Status(t *testing.T) {
 	t.Run("ready when both allowlists present", func(t *testing.T) {
 		d := newDeps(t)
@@ -109,7 +105,6 @@ func TestGetOAuth2Status(t *testing.T) {
 
 	t.Run("not ready when allowlists empty", func(t *testing.T) {
 		d := newDeps(t)
-		// 空白名单 -> Normalize 用 config 默认填充（默认也为空）-> OAuthReady=false。
 		d.kv.EXPECT().
 			Get(mock.Anything, commonModel.OAuth2SettingKey).
 			Return(settingJSON(t, settingModel.OAuth2Setting{Enable: false, Provider: "github"}), nil).
@@ -130,7 +125,6 @@ func TestGetOAuth2Status(t *testing.T) {
 	})
 }
 
-// TestGetPasskeyStatus 覆盖 Passkey 状态投影：PasskeyReady 仅当 RPID 与 Origins 均非空。
 func TestGetPasskeyStatus(t *testing.T) {
 	t.Run("ready when rpid and origins present", func(t *testing.T) {
 		d := newDeps(t)
@@ -160,7 +154,6 @@ func TestGetPasskeyStatus(t *testing.T) {
 	})
 }
 
-// TestGetSnapshotScheduleSetting 覆盖快照计划公开读。
 func TestGetSnapshotScheduleSetting(t *testing.T) {
 	d := newDeps(t)
 	d.kv.EXPECT().
@@ -174,7 +167,6 @@ func TestGetSnapshotScheduleSetting(t *testing.T) {
 	assert.Equal(t, "0 3 * * *", s.CronExpression)
 }
 
-// TestGetEmbeddingSetting 覆盖 Embedding 设置读取（直接返回值）。
 func TestGetEmbeddingSetting(t *testing.T) {
 	t.Run("returns stored value", func(t *testing.T) {
 		d := newDeps(t)
@@ -200,8 +192,6 @@ func TestGetEmbeddingSetting(t *testing.T) {
 	})
 }
 
-// TestGetAdminGatedSettings 覆盖三个管理员可见读方法的成功路径与 coreSetting.Get 故障上抛。
-// 非管理员拒绝已由 TestSettingService_NonAdminDenied 覆盖。
 func TestGetAdminGatedSettings(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
@@ -255,8 +245,6 @@ func TestGetAdminGatedSettings(t *testing.T) {
 	})
 }
 
-// TestGetS3Setting 覆盖 S3 设置读取的脱敏分支：匿名/非管理员屏蔽敏感字段，管理员见明文；
-// coreSetting.Get 总在 viewer 解析后先执行（故障即上抛），认证态下用户解析失败也上抛。
 func TestGetS3Setting(t *testing.T) {
 	stored := func(t *testing.T) string {
 		return settingJSON(t, settingModel.S3Setting{
@@ -329,14 +317,11 @@ func TestGetS3Setting(t *testing.T) {
 	})
 }
 
-// TestUpdateSetting 覆盖系统设置更新：事务内管理员守卫、落库 + 派生 server_url 同步，
-// 以及 ServerLogo 变更时确认临时 logo 文件。
 func TestUpdateSetting(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
 	t.Run("non-admin denied inside transaction", func(t *testing.T) {
 		d := newDeps(t)
-		// 前置 GetSetting 读旧值用于检测 ServerLogo 变更。
 		d.kv.EXPECT().Get(mock.Anything, commonModel.SystemSettingsKey).Return("", kvstore.ErrNotFound).Once()
 		d.tx.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(runTxExec()).Once()
 		d.common.EXPECT().
@@ -372,7 +357,6 @@ func TestUpdateSetting(t *testing.T) {
 	t.Run("server logo change confirms temp file", func(t *testing.T) {
 		d := newDeps(t)
 		file := filemock.NewMockService(t)
-		// 旧值含 old-logo，新值不同 -> serverLogoChanged=true。
 		d.kv.EXPECT().
 			Get(mock.Anything, commonModel.SystemSettingsKey).
 			Return(settingJSON(t, settingModel.SystemSetting{ServerLogo: "old-logo.png"}), nil).
@@ -398,12 +382,11 @@ func TestUpdateSetting(t *testing.T) {
 	})
 }
 
-// TestBootstrapDefaultLocale 覆盖首次部署写入站点默认语言的各分支。
 func TestBootstrapDefaultLocale(t *testing.T) {
 	ctx := helpers.CtxAnonymous()
 
 	t.Run("blank locale is a no-op", func(t *testing.T) {
-		d := newDeps(t) // 无任何 KV/事务期望 -> 任何调用都会让 mock panic
+		d := newDeps(t)
 		require.NoError(t, d.build().BootstrapDefaultLocale(ctx, "   "))
 	})
 
@@ -424,7 +407,6 @@ func TestBootstrapDefaultLocale(t *testing.T) {
 	t.Run("not overwritten when admin already customized locale", func(t *testing.T) {
 		d := newDeps(t)
 		d.tx.EXPECT().Run(mock.Anything, mock.Anything).RunAndReturn(runTxExec()).Once()
-		// 当前已是非默认 locale -> 不覆盖，无 Set。
 		d.kv.EXPECT().
 			Get(mock.Anything, commonModel.SystemSettingsKey).
 			Return(settingJSON(t, settingModel.SystemSetting{DefaultLocale: "en-US"}), nil).

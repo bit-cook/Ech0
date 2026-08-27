@@ -6,9 +6,6 @@ import Verified from '@/components/icons/verified.vue'
 import GrayLike from '@/components/icons/graylike.vue'
 import LinkTo from '@/components/icons/linkto.vue'
 import BaseAvatar from '@/components/common/BaseAvatar.vue'
-// 直接点到 .vue 文件，绕开 md/index.ts 这个 barrel：barrel 同时再导出 TheMdEditor，
-// 而 TheMdEditor → @/stores → @/router 会把整个 web 入口拽回 hub 的 entry chunk，
-// 形成 index ↔ TheMdEditor 静态循环 → 运行时 `A is not a function`。
 import TheMdPreview from '@/components/advanced/md/TheMdPreview.vue'
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { ImageLayout } from '@/enums/enums'
@@ -17,10 +14,6 @@ import { useI18n } from 'vue-i18n'
 import { localStg } from '../utils/storage'
 import { formatHubDate } from '../utils/formatHubDate'
 
-// 必须保持 defineAsyncComponent。改回静态 import 会让媒体渲染器进入 entry chunk
-// 的静态依赖图，与 index 形成循环引用 → 运行时 `A is not a function`（Vue 的 isFunction
-// 在 var 提升后尚未赋值时被调用）。详见 commit 51630d20 之后的 hub.ech0.app 事故。
-// TheMediaPlayer 按类别分派图片/音频/视频，内部对画廊亦为 async import。
 const TheMediaPlayer = defineAsyncComponent({
   loader: () => import('@/components/advanced/media/TheMediaPlayer.vue'),
   onError(error, retry, fail, attempts) {

@@ -11,7 +11,6 @@ import (
 
 type EchoFile = fileModel.EchoFile
 
-// Echo 定义Echo实体
 type Echo struct {
 	ID        string         `gorm:"type:char(36);primaryKey"                      json:"id"`
 	Content   string         `gorm:"type:text;not null"                            json:"content"`
@@ -35,7 +34,6 @@ type EchoExtension struct {
 	UpdatedAt int64          `gorm:"autoUpdateTime"                         json:"updated_at"`
 }
 
-// Tag 定义Tag实体
 type Tag struct {
 	ID         string `gorm:"type:char(36);primaryKey"              json:"id"`
 	Name       string `gorm:"type:varchar(50);uniqueIndex;not null" json:"name"`
@@ -43,7 +41,6 @@ type Tag struct {
 	CreatedAt  int64  `gorm:"autoCreateTime"                        json:"created_at"`
 }
 
-// EchoTag 纯关系表，联合主键
 type EchoTag struct {
 	EchoID string `gorm:"type:char(36);primaryKey"`
 	TagID  string `gorm:"type:char(36);primaryKey;index"`
@@ -83,7 +80,5 @@ const (
 	LayoutHorizontal = "horizontal"
 	LayoutCarousel   = "carousel"
 	LayoutStack      = "stack"
-	// LayoutNone 表示"无图片布局"：音频/视频 Echo 使用，卡片对其走平铺(media-first)，
-	// 播放器本就忽略 layout。用于把 image 专属的多布局语义从音视频身上剥离。
-	LayoutNone = "none"
+	LayoutNone       = "none"
 )

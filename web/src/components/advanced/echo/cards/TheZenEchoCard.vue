@@ -102,7 +102,6 @@ const { SystemSetting } = storeToRefs(settingStore)
 
 const siteName = computed(() => String(SystemSetting.value?.server_name ?? 'Ech0'))
 const avatarUrl = computed(() => resolveAvatarUrl(SystemSetting.value?.server_logo))
-// 是否有任意媒体（图/音/视）——用于正文与媒体之间的间距。
 const hasMedia = computed(() => getEchoFilesBy(props.echo, { dedupeBy: 'id' }).length > 0)
 
 const goDetail = () => {
@@ -112,16 +111,13 @@ const goDetail = () => {
 
 <style scoped lang="css">
 .zen-echo-card {
-  /* 图片懒加载完成后高度变化触发 ResizeObserver 重排相邻 cell，contain 减少级联代价 */
   contain: layout paint;
 }
 
-/* 与 HubEcho 同款左侧 accent 竖条，紧贴头像水平中线 */
 .zen-echo-card::before {
   content: '';
   position: absolute;
 
-  /* card padding-top (p-3 = 0.75rem) + header mt-1 (0.25rem) + (avatar 1.5rem - bar 1rem) / 2 */
   top: 1.25rem;
   left: 0;
   width: 2px;
@@ -133,7 +129,6 @@ const goDetail = () => {
 
 @media (width >= 640px) {
   .zen-echo-card::before {
-    /* sm: padding-top 0.875rem + mt-1 0.25rem + (avatar 1.75rem - bar 1.125rem) / 2 */
     top: 1.4375rem;
     height: 1.125rem;
   }
@@ -153,8 +148,6 @@ const goDetail = () => {
   margin-bottom: 0;
 }
 
-/* Gallery 内部硬编码了 w-[88%] mx-auto + mb-4，
-   在 zen 卡片里需要拉满到与正文同宽，并去掉外层多余下边距 */
 .zen-echo-body :deep(.image-gallery-container) > div {
   width: 100%;
   margin-left: 0;

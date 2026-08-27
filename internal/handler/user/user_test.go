@@ -170,7 +170,6 @@ func TestUserHandler_DeleteUser(t *testing.T) {
 func TestUserHandler_GetUserInfo(t *testing.T) {
 	t.Run("success resolves viewer id", func(t *testing.T) {
 		svc := usermock.NewMockService(t)
-		// 用户实体已不含密码字段（密码存于 user_local_auth），handler 直接返回用户信息。
 		svc.EXPECT().
 			GetUserByID("viewer-1").
 			Return(userModel.User{ID: "viewer-1", Username: "alice"}, nil).

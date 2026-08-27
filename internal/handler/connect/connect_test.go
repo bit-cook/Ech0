@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// assertBizErr 断言 handler 原样透传了底层 *BizError（含错误码），坐实 i18n 契约。
 func assertBizErr(t *testing.T, err error, wantCode string) {
 	t.Helper()
 	require.Error(t, err)

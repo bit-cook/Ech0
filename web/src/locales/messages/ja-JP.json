@@ -367,8 +367,7 @@
     "localeSyncFailed": "言語設定の同期に失敗しました",
     "themeLight": "ライト",
     "themeDark": "ダーク",
-    "themeSunny": "サニー",
-    "githubAction": "GitHub"
+    "themeSunny": "サニー"
   },
   "homeTop": {
     "searchTitle": "検索",

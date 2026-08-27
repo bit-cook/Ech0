@@ -31,7 +31,7 @@ const (
 type Comment struct {
 	ID        string     `gorm:"type:char(36);primaryKey" json:"id"`
 	EchoID    string     `gorm:"type:char(36);not null;index" json:"echo_id"`
-	ParentID  *string    `gorm:"type:char(36);index" json:"parent_id,omitempty"` // NULL=顶层楼，非空=该楼的回复（两级盖楼）
+	ParentID  *string    `gorm:"type:char(36);index" json:"parent_id,omitempty"`
 	UserID    *string    `gorm:"type:char(36);index" json:"user_id,omitempty"`
 	Nickname  string     `gorm:"size:100;not null;index" json:"nickname"`
 	Email     string     `gorm:"size:255;not null;index" json:"email"`
@@ -46,9 +46,6 @@ type Comment struct {
 	UpdatedAt int64      `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
-// PublicComment 是面向匿名访问者的安全投影，剥离 Email/IPHash/UserAgent/UserID
-// 等可能用于关联或骚扰的字段。仅供 /api/comments、/api/comments/public 与 MCP
-// 公共资源等无鉴权出口使用。后台管理仍直接返回 Comment 以便审核。
 type PublicComment struct {
 	ID        string     `json:"id"`
 	EchoID    string     `json:"echo_id"`
@@ -96,7 +93,7 @@ func (c *Comment) BeforeCreate(_ *gorm.DB) error {
 
 type CreateCommentDto struct {
 	EchoID        string `json:"echo_id" binding:"required"`
-	ParentID      string `json:"parent_id"` // 可选：回复的目标评论 ID（空=顶层评论）
+	ParentID      string `json:"parent_id"`
 	Nickname      string `json:"nickname"`
 	Email         string `json:"email"`
 	Website       string `json:"website"`

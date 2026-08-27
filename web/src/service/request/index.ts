@@ -26,7 +26,6 @@ const ofetchInstance = ofetch.create({
   onRequest({ options }) {
     const isDirectUrl = options.headers.get('X-Direct-URL')
     if (!isDirectUrl) {
-      // 公共头单一真相源（与 SSE 传输共用），见 service/request/shared.ts
       for (const [key, value] of Object.entries(buildCommonHeaders())) {
         options.headers.set(key, value)
       }
@@ -49,8 +48,6 @@ const ofetchInstance = ofetch.create({
 })
 
 export const request = async <T>(requestOptions: RequestOptions): Promise<App.Api.Response<T>> => {
-  // 静态站（ech0 build 产物）：请求由本地 dataset 应答，跳过 token 重试与错误 toast。
-  // 动态 import 保证 adapter 只在静态模式下加载，非静态构建里它不进主 chunk。
   if (isStaticMode()) {
     const { handleStaticRequest } = await import('./static-adapter')
     return handleStaticRequest<T>(requestOptions.url, requestOptions.method, requestOptions.data)

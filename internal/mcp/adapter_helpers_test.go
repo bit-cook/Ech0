@@ -111,10 +111,6 @@ func TestBuildEchoFiles(t *testing.T) {
 		assert.Nil(t, buildEchoFiles(map[string]any{"echo_files": "nope"}))
 	})
 	t.Run("default sort_order uses index and skips invalid entries", func(t *testing.T) {
-		// index 0: valid, no sort_order -> default 0
-		// index 1: missing file_id -> skipped (continue), index still advances
-		// index 2: not a map -> skipped (continue)
-		// index 3: valid, no sort_order -> default 3 (index propagates through skips)
 		got := buildEchoFiles(map[string]any{"echo_files": []any{
 			map[string]any{"file_id": "f0"},
 			map[string]any{"sort_order": 9.0},

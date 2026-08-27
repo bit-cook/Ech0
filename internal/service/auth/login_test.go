@@ -25,17 +25,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// mustJSON 序列化任意值为 JSON 字符串，失败即终止用例。供本包多份测试文件共用。
 func mustJSON(t *testing.T, v any) string {
 	t.Helper()
 	raw, err := json.Marshal(v)
 	require.NoError(t, err)
 	return string(raw)
 }
-
-// ---------------------------------------------------------------------------
-// Login：空参短路 / 用户不存在 / 密码错 / 成功签发双 token
-// ---------------------------------------------------------------------------
 
 func TestLogin(t *testing.T) {
 	helpers.SetJWTSecret(t, "login-secret")
@@ -51,12 +46,12 @@ func TestLogin(t *testing.T) {
 		name      string
 		dto       authModel.LoginDto
 		setupRepo func(repo *authmock.MockRepository)
-		wantErr   string // 期望的 i18n 错误常量；空串表示期望成功
+		wantErr   string
 	}{
 		{
 			name:      "empty username short-circuits before repo",
 			dto:       authModel.LoginDto{Username: "", Password: plainPassword},
-			setupRepo: func(*authmock.MockRepository) {}, // 不应触达 repo
+			setupRepo: func(*authmock.MockRepository) {},
 			wantErr:   commonModel.USERNAME_OR_PASSWORD_NOT_BE_EMPTY,
 		},
 		{
@@ -92,8 +87,6 @@ func TestLogin(t *testing.T) {
 			wantErr: commonModel.PASSWORD_INCORRECT,
 		},
 		{
-			// 真实 DB 故障（非 ErrRecordNotFound）应 fail-closed 为 PASSWORD_INCORRECT，
-			// 不泄露内部错误（并在实现里记 Warn，此处只断言对外行为）。
 			name: "local auth lookup db error maps to PASSWORD_INCORRECT",
 			dto:  authModel.LoginDto{Username: username, Password: plainPassword},
 			setupRepo: func(repo *authmock.MockRepository) {
@@ -154,7 +147,6 @@ func TestLogin(t *testing.T) {
 				PasswordAlgo: cryptoUtil.AlgoBcrypt,
 			}, nil).
 			Once()
-		// 已是 bcrypt：不应触发惰性升级写入（未对 UpdateLocalAuthPassword 设期望）。
 
 		pair, err := svc.Login(&authModel.LoginDto{Username: username, Password: plainPassword})
 		require.NoError(t, err)
@@ -178,7 +170,6 @@ func TestLogin(t *testing.T) {
 				PasswordAlgo: cryptoUtil.AlgoMD5,
 			}, nil).
 			Once()
-		// 惰性升级：校验通过后就地换算为 bcrypt（bcrypt 哈希带随机盐、不确定，用 mock.Anything）。
 		repo.EXPECT().
 			UpdateLocalAuthPassword(mock.Anything, userID, mock.Anything, cryptoUtil.AlgoBcrypt).
 			Return(nil).
@@ -190,10 +181,6 @@ func TestLogin(t *testing.T) {
 		assert.NotEmpty(t, pair.AccessToken)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// RevokeToken / IsTokenRevoked：纯委派给 authRepo
-// ---------------------------------------------------------------------------
 
 func TestRevokeToken_Delegates(t *testing.T) {
 	svc, _, authRepo, _ := newSvc(t, kvstore.NewMemory())
@@ -219,10 +206,6 @@ func TestIsTokenRevoked_Delegates(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// ExchangeOAuthCode：一次性码命中 / 未命中，均纯委派给 authRepo
-// ---------------------------------------------------------------------------
-
 func TestExchangeOAuthCode(t *testing.T) {
 	t.Run("hit returns stored pair", func(t *testing.T) {
 		svc, _, authRepo, _ := newSvc(t, kvstore.NewMemory())
@@ -245,10 +228,6 @@ func TestExchangeOAuthCode(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// PasskeyBoundary：从 passkey_setting 读取 RPID/Origins；读取/解析失败回退空值
-// ---------------------------------------------------------------------------
-
 func TestPasskeyBoundary(t *testing.T) {
 	t.Run("returns configured rp id and origins", func(t *testing.T) {
 		kv := kvstore.NewMemory()
@@ -266,7 +245,6 @@ func TestPasskeyBoundary(t *testing.T) {
 
 	t.Run("corrupt setting falls back to empty boundary", func(t *testing.T) {
 		kv := kvstore.NewMemory()
-		// 写入无法反序列化的值，使 coreSetting.Get 返回错误 → PasskeyBoundary 走 err 分支。
 		require.NoError(t, kv.Set(context.Background(), commonModel.PasskeySettingKey, "not-valid-json"))
 
 		svc, _, _, _ := newSvc(t, kv)

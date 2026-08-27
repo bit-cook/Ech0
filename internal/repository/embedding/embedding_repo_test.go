@@ -15,18 +15,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// newEmbeddingRepo 构造一个挂在内存库（已注册 sqlite-vec）上的仓储。
-// 注意：vec_echo 是懒建虚表，不在 MigrateDB —— 用向量的用例须先自行 EnsureVecTable。
 func newEmbeddingRepo(t *testing.T) (*EmbeddingRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDBWithVec(t)
 	return NewEmbeddingRepository(func() *gorm.DB { return db }), db
 }
 
-// vec4 造一个落在第一维上的 4 维向量；与原点查询的 L2 距离即为 x，便于断言距离序。
 func vec4(x float32) []float32 { return []float32{x, 0, 0, 0} }
 
-// seed 通过 Upsert 落一行元数据 + 向量（同时顺带覆盖 Upsert 的写路径）。
 func seed(t *testing.T, repo *EmbeddingRepository, ctx context.Context, echoID, username string, x float32) {
 	t.Helper()
 	meta := &model.EchoEmbedding{
@@ -41,7 +37,6 @@ func seed(t *testing.T, repo *EmbeddingRepository, ctx context.Context, echoID, 
 	require.NoError(t, repo.Upsert(ctx, meta, vec4(x)))
 }
 
-// vecRowCount 直查 vec_echo 中某 echo_id 的行数（验证 delete-then-insert 幂等）。
 func vecRowCount(t *testing.T, db *gorm.DB, echoID string) int {
 	t.Helper()
 	var n int
@@ -49,7 +44,6 @@ func vecRowCount(t *testing.T, db *gorm.DB, echoID string) int {
 	return n
 }
 
-// vecTotal 直查 vec_echo 总行数。
 func vecTotal(t *testing.T, db *gorm.DB) int {
 	t.Helper()
 	var n int
@@ -79,9 +73,7 @@ func TestEmbeddingRepository_EnsureVecTable(t *testing.T) {
 
 	t.Run("valid dim is idempotent", func(t *testing.T) {
 		require.NoError(t, repo.EnsureVecTable(ctx, 4))
-		// IF NOT EXISTS：重复建表不报错。
 		require.NoError(t, repo.EnsureVecTable(ctx, 4))
-		// 建好后可写入向量。
 		seed(t, repo, ctx, "e-ensure", "u", 1)
 		assert.Equal(t, 1, vecRowCount(t, repo.db(), "e-ensure"))
 	})
@@ -100,12 +92,10 @@ func TestEmbeddingRepository_DropVecTable(t *testing.T) {
 		seed(t, repo, ctx, "e-drop", "u", 1)
 		require.NoError(t, repo.DropVecTable(ctx))
 
-		// 表已不存在：直查应报错。
 		var n int
 		err := db.Raw("SELECT count(*) FROM " + vecTable).Scan(&n).Error
 		require.Error(t, err)
 
-		// IF EXISTS：再次 drop 仍不报错。
 		require.NoError(t, repo.DropVecTable(ctx))
 	})
 }
@@ -128,7 +118,6 @@ func TestEmbeddingRepository_Upsert(t *testing.T) {
 	})
 
 	t.Run("re-upsert updates meta (OnConflict UpdateAll) and replaces vector idempotently", func(t *testing.T) {
-		// 第二次以不同内容 / 作者 / 向量写同一 echo_id。
 		meta := &model.EchoEmbedding{
 			EchoID:      "e-1",
 			ContentHash: "h-new",
@@ -147,12 +136,10 @@ func TestEmbeddingRepository_Upsert(t *testing.T) {
 		assert.Equal(t, "bob", got.Username)
 		assert.Equal(t, "h-new", got.ContentHash)
 
-		// 元数据仍只有一行（upsert 非二次插入）。
 		cnt, err := repo.Count(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), cnt)
 
-		// 向量 delete-then-insert：行数仍为 1，且向量已被替换（距离接近 9 而非 1）。
 		assert.Equal(t, 1, vecRowCount(t, db, "e-1"))
 		assert.Equal(t, 1, vecTotal(t, db))
 
@@ -166,38 +153,32 @@ func TestEmbeddingRepository_Upsert(t *testing.T) {
 	t.Run("propagates vec write error when vec table is absent", func(t *testing.T) {
 		repo2, _ := newEmbeddingRepo(t)
 		ctx2 := context.Background()
-		// 故意不建 vec 表：元数据写入成功，随后向 vec_echo 的 DELETE/INSERT 失败并冒泡。
 		meta := &model.EchoEmbedding{EchoID: "e-novec", Username: "u", Dim: 4}
 		err := repo2.Upsert(ctx2, meta, vec4(1))
 		require.Error(t, err)
 
-		// 元数据已落（OnConflict Create 在 vec 写之前发生）。
 		_, ok, gerr := repo2.GetMeta(ctx2, "e-novec")
 		require.NoError(t, gerr)
 		assert.True(t, ok)
 	})
 }
 
-// TestEmbeddingRepository_TxContext 验证 getDB 优先使用 ctx 内的事务句柄：
-// 在同一事务里 Upsert 后能读到，事务回滚后该写入应消失。
 func TestEmbeddingRepository_TxContext(t *testing.T) {
 	repo, db := newEmbeddingRepo(t)
 	require.NoError(t, repo.EnsureVecTable(context.Background(), 4))
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		txCtx := context.WithValue(context.Background(), transaction.TxKey, tx)
-		// getDB 命中 ctx 内事务句柄这一分支。
 		seed(t, repo, txCtx, "e-tx", "u", 1)
 
 		got, ok, err := repo.GetMeta(txCtx, "e-tx")
 		require.NoError(t, err)
 		require.True(t, ok)
 		assert.Equal(t, "u", got.Username)
-		return assert.AnError // 强制回滚
+		return assert.AnError
 	})
 	require.Error(t, err)
 
-	// 回滚后该行不应存在（用无事务的 ctx 读取全局 DB）。
 	_, ok, gerr := repo.GetMeta(context.Background(), "e-tx")
 	require.NoError(t, gerr)
 	assert.False(t, ok)
@@ -208,7 +189,6 @@ func TestEmbeddingRepository_GetMeta(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("missing returns ok=false without error and without vec table", func(t *testing.T) {
-		// 故意不建 vec 表：GetMeta 只走元数据路径。
 		got, ok, err := repo.GetMeta(ctx, "nope")
 		require.NoError(t, err)
 		assert.False(t, ok)
@@ -229,7 +209,6 @@ func TestEmbeddingRepository_Count(t *testing.T) {
 	repo, db := newEmbeddingRepo(t)
 	ctx := context.Background()
 
-	// Count 只读元数据表，无需 vec 表：直接落库。
 	got, err := repo.Count(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), got)
@@ -258,7 +237,6 @@ func TestEmbeddingRepository_Delete(t *testing.T) {
 		assert.False(t, ok)
 		assert.Equal(t, 0, vecRowCount(t, db, "e-del"))
 
-		// 未被删除的行仍在。
 		_, ok, err = repo.GetMeta(ctx, "e-keep")
 		require.NoError(t, err)
 		assert.True(t, ok)
@@ -267,7 +245,6 @@ func TestEmbeddingRepository_Delete(t *testing.T) {
 
 	t.Run("tolerates missing vec table (ignores vec delete error)", func(t *testing.T) {
 		repo, db := newEmbeddingRepo(t)
-		// 不建 vec 表：仅落元数据。
 		require.NoError(t, db.Create(&model.EchoEmbedding{EchoID: "e-nv", Username: "u", Dim: 4}).Error)
 
 		require.NoError(t, repo.Delete(ctx, "e-nv"))
@@ -341,8 +318,6 @@ func TestEmbeddingRepository_Search(t *testing.T) {
 		ctx := context.Background()
 		require.NoError(t, repo.EnsureVecTable(ctx, 4))
 
-		// 最近的命中都属于 bob，alice 的更远。k=2 时不超额取数则 top-2 全是 bob，
-		// 过滤 alice 后会是 0 条；能返回 alice 即证明 over-fetch(k*8) 生效。
 		seed(t, repo, ctx, "bob-1", "bob", 1)
 		seed(t, repo, ctx, "bob-2", "bob", 2)
 		seed(t, repo, ctx, "bob-3", "bob", 3)
@@ -352,7 +327,6 @@ func TestEmbeddingRepository_Search(t *testing.T) {
 
 		res, err := repo.Search(ctx, vec4(0), 2, "alice")
 		require.NoError(t, err)
-		// 截断到 k=2，且仍按距离序：alice-4, alice-5。
 		require.Len(t, res, 2)
 		assert.Equal(t, []string{"alice-4", "alice-5"}, ids(res))
 		for _, r := range res {

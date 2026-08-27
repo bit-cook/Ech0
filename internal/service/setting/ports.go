@@ -56,8 +56,6 @@ type SettingRepository interface {
 	DeleteAccessTokenByID(ctx context.Context, id string) error
 }
 
-// TokenRevoker 写入 JTI 黑名单。SettingService 在管理员删除访问令牌时调用，
-// 让 token 立刻失效而不是等到自然过期 (GHSA-fpw6-hrg5-q5x5)。
 type TokenRevoker interface {
 	RevokeToken(jti string, remainTTL time.Duration)
 }

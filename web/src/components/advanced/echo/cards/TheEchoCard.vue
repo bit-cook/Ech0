@@ -145,9 +145,6 @@
 <script lang="ts">
 import { ref } from 'vue'
 
-// Module-scoped: whichever echo id is currently showing its action menu.
-// Declared in a non-setup <script> so it runs once per module, not per instance.
-// Setting this id auto-closes any other card's menu (only one open at a time).
 const activeMenuId = ref<string | null>(null)
 </script>
 
@@ -187,7 +184,6 @@ const props = defineProps<{
   index?: number
 }>()
 
-// 音视频作为「正文级」区块，与正文同宽对齐；图片保持满宽铺满卡片。
 const isAvEcho = computed(
   () => getEchoFilesBy(props.echo, { categories: ['audio', 'video'] }).length > 0,
 )
@@ -226,7 +222,6 @@ const handleUpdateEcho = async () => {
   }
 
   editorStore.isUpdateMode = true
-  // 保留当前的 ?page 等 query，编辑完返回时间线时才能回到原来那一页（而非跳回第 1 页）
   await router.push({
     name: 'home',
     query: { ...router.currentRoute.value.query, tab: 'publish' },
@@ -277,8 +272,6 @@ const handleEscape = (event: KeyboardEvent) => {
   if (event.key === 'Escape') closeMenu()
 }
 
-// scroll 用 capture 是因为内层 .home-main 容器滚动不会冒泡到 window；
-// passive 让浏览器知道我们只读坐标、不会 preventDefault，可与合成并行。
 const SCROLL_LISTENER_OPTIONS: AddEventListenerOptions = { passive: true, capture: true }
 
 const bindGlobalListeners = () => {
@@ -329,8 +322,6 @@ onBeforeUnmount(() => {
 
   max-width: 100%;
   overflow: clip visible;
-
-  /* 纵向允许溢出绘制，避免时间线内图片（如照片流 hover 放大）被裁切 */
 }
 
 .timeline-marker {
@@ -363,9 +354,6 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/* Only reveal the open button on hover-capable (mouse) devices. On touch
-   devices the first tap would otherwise just trigger this reveal (sticky
-   hover), swallowing the click and forcing a second tap on the date. */
 @media (hover: hover) {
   .echo-timeline:hover .echo-open-btn {
     opacity: 1;

@@ -11,8 +11,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/gocap/store"
 )
 
-// newTestStore builds a memstore whose background GC effectively never fires, so
-// tests can drive gcOnce explicitly with a deterministic clock.
 func newTestStore(t *testing.T) *Store {
 	t.Helper()
 	st := New(Options{GCInterval: time.Hour})
@@ -53,7 +51,6 @@ func TestTryMarkChallengeSigUsed(t *testing.T) {
 	})
 
 	t.Run("expired sig can be re-marked", func(t *testing.T) {
-		// Mark with an expiry equal to base; at a later instant it is expired.
 		if ok, err := st.TryMarkChallengeSigUsed("sig-exp", base, base.Add(-time.Second)); err != nil || !ok {
 			t.Fatalf("seed mark = (%v, %v), want (true, nil)", ok, err)
 		}
@@ -125,7 +122,6 @@ func TestUpsertSiteDefensiveCopy(t *testing.T) {
 		t.Fatalf("upsert err: %v", err)
 	}
 
-	// Mutating the caller's backing arrays must not affect stored state.
 	secret[0] = 'X'
 	jwt[0] = 'Y'
 
@@ -151,7 +147,6 @@ func TestGetSiteReturnsIsolatedCopy(t *testing.T) {
 	if !ok {
 		t.Fatalf("site not found")
 	}
-	// Mutating a returned copy must not leak into the store.
 	first.SecretHash[0] = 'Z'
 	first.JWTSecret[0] = 'Z'
 
@@ -190,7 +185,6 @@ func TestAllowRateLimitWindowRolling(t *testing.T) {
 		t.Fatalf("remaining when over limit = %d, want 0 (clamped)", remaining)
 	}
 
-	// Advancing past the window boundary rolls into a fresh bucket.
 	next := now.Add(time.Second)
 	allowed, _, err = st.AllowRateLimit("scope", "k", 1, time.Second, next)
 	if err != nil {
@@ -238,7 +232,6 @@ func TestGCOnceRemovesExpiredEntries(t *testing.T) {
 	base := time.Unix(4000, 0)
 	gcAt := base.Add(time.Minute)
 
-	// Challenge sigs: one live (kept), one expired (collected).
 	if ok, err := st.TryMarkChallengeSigUsed("sig-live", base.Add(time.Hour), base); err != nil || !ok {
 		t.Fatalf("seed live sig: ok=%v err=%v", ok, err)
 	}
@@ -246,7 +239,6 @@ func TestGCOnceRemovesExpiredEntries(t *testing.T) {
 		t.Fatalf("seed dead sig: ok=%v err=%v", ok, err)
 	}
 
-	// Redeem tokens: one live (kept), one expired (collected).
 	if err := st.StoreRedeemToken("site", "tok-live", base.Add(time.Hour)); err != nil {
 		t.Fatalf("store live token: %v", err)
 	}
@@ -254,7 +246,6 @@ func TestGCOnceRemovesExpiredEntries(t *testing.T) {
 		t.Fatalf("store dead token: %v", err)
 	}
 
-	// Rate windows: a long-lived window (kept) and a short expired one (collected).
 	if allowed, _, err := st.AllowRateLimit("keep", "k", 5, time.Hour, gcAt); err != nil || !allowed {
 		t.Fatalf("seed kept window: allowed=%v err=%v", allowed, err)
 	}
@@ -264,13 +255,10 @@ func TestGCOnceRemovesExpiredEntries(t *testing.T) {
 
 	st.gcOnce(gcAt)
 
-	// Live sig still present -> re-mark while active is rejected.
 	if ok, _ := st.TryMarkChallengeSigUsed("sig-live", base.Add(2*time.Hour), gcAt); ok {
 		t.Fatalf("live sig should have survived GC and remain active")
 	}
 
-	// Live token survives (found, not expired); dead token was deleted by GC,
-	// so it reads back as not found rather than found-but-expired.
 	if found, expired, _ := st.ConsumeRedeemToken("site", "tok-live", gcAt); !found || expired {
 		t.Fatalf("live token should survive GC: found=%v expired=%v", found, expired)
 	}
@@ -278,11 +266,9 @@ func TestGCOnceRemovesExpiredEntries(t *testing.T) {
 		t.Fatalf("expired token should have been removed by GC (found=false), got found=true")
 	}
 
-	// Kept window retains its count: next hit in the same bucket increments to 2.
 	if _, remaining, _ := st.AllowRateLimit("keep", "k", 5, time.Hour, gcAt); remaining != 3 {
 		t.Fatalf("kept window remaining = %d, want 3 (count preserved across GC)", remaining)
 	}
-	// Dropped window was collected: re-hitting the same bucket resets count to 1.
 	if _, remaining, _ := st.AllowRateLimit("drop", "k", 5, time.Second, base); remaining != 4 {
 		t.Fatalf("dropped window remaining = %d, want 4 (count reset after GC)", remaining)
 	}

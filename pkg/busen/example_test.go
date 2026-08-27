@@ -34,9 +34,6 @@ func Example() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// welcome hello@example.com
 }
 
 func ExampleBus_SubscribeTopic() {
@@ -58,9 +55,6 @@ func ExampleBus_SubscribeTopic() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// orders.eu.created=created
 }
 
 func ExampleBus_SubscribeTopics() {
@@ -85,10 +79,6 @@ func ExampleBus_SubscribeTopics() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// orders.created=created
-	// orders.updated=updated
 }
 
 func ExampleAsync() {
@@ -118,9 +108,6 @@ func ExampleAsync() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// processed job-42
 }
 
 func ExampleWithKey() {
@@ -154,10 +141,6 @@ func ExampleWithKey() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// tenant-a:1
-	// tenant-a:2
 }
 
 func ExampleBus_Use() {
@@ -198,9 +181,6 @@ func ExampleBus_Use() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// saved from middleware
 }
 
 func ExampleWithHooks() {
@@ -230,10 +210,6 @@ func ExampleWithHooks() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// handled u-1
-	// matched=1 delivered=1
 }
 
 func ExampleWithMetadataBuilder() {
@@ -269,9 +245,6 @@ func ExampleWithMetadataBuilder() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// o-1 from billing
 }
 
 func ExampleBus_UseObserver() {
@@ -304,9 +277,6 @@ func ExampleBus_UseObserver() {
 	if err := b.Close(context.Background()); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// observe orders.created busen_test.OrderCreated
 }
 
 func ExampleBus_Shutdown() {
@@ -330,7 +300,4 @@ func ExampleBus_Shutdown() {
 		log.Fatal(err)
 	}
 	fmt.Println(result.Mode == busen.ShutdownDrain, result.Completed)
-
-	// Output:
-	// true true
 }

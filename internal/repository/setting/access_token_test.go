@@ -15,14 +15,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// newSettingRepo 构造一个绑定到测试内存库的 SettingRepository。
 func newSettingRepo(t *testing.T) (*SettingRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
 	return NewSettingRepository(func() *gorm.DB { return db }), db
 }
 
-// newAccessToken 构造一条带唯一约束所需字段（Token / JTI 唯一索引）的访问令牌。
 func newAccessToken(id, userID, suffix string) *model.AccessTokenSetting {
 	return &model.AccessTokenSetting{
 		ID:        id,
@@ -64,7 +62,6 @@ func TestSettingRepository_CreateAccessToken_GeneratesIDWhenEmpty(t *testing.T) 
 
 	tok := newAccessToken("", "u1", "auto")
 	require.NoError(t, repo.CreateAccessToken(ctx, tok))
-	// BeforeCreate 钩子应为空 ID 生成 UUID。
 	assert.NotEmpty(t, tok.ID)
 }
 
@@ -113,7 +110,6 @@ func TestSettingRepository_DeleteAccessTokenByID(t *testing.T) {
 	})
 
 	t.Run("deleting a missing id is a no-op error-free", func(t *testing.T) {
-		// GORM Delete by条件未命中不报错（RowsAffected=0）。
 		require.NoError(t, repo.DeleteAccessTokenByID(ctx, "nonexistent"))
 	})
 }

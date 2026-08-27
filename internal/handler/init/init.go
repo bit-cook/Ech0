@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露系统初始化的 HTTP 接口（Huma type-first，公开无鉴权）。
 package handler
 
 import (

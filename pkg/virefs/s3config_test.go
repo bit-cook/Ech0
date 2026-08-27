@@ -73,10 +73,6 @@ func TestS3Config_Validation(t *testing.T) {
 	}
 }
 
-// TestNewS3Client_ChecksumBehavior verifies that every non-AWS target opts out
-// of the SDK's default flexible-checksum (aws-chunked trailer) behavior — which
-// S3-compatible services reject with XAmzContentSHA256Mismatch — while real AWS
-// S3 keeps the default WhenSupported so its integrity protections stay on.
 func TestNewS3Client_ChecksumBehavior(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -94,8 +90,6 @@ func TestNewS3Client_ChecksumBehavior(t *testing.T) {
 			wantWhenRequired: true,
 		},
 		{
-			// "other" S3-compatible services (Backblaze, Wasabi, ...) map to
-			// ProviderAWS in Ech0 but always carry a custom endpoint.
 			name:             "OtherViaCustomEndpoint",
 			cfg:              S3Config{Provider: ProviderAWS, Endpoint: "https://s3.example.com"},
 			wantWhenRequired: true,

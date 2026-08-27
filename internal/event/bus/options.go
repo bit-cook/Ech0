@@ -8,8 +8,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/busen"
 )
 
-// AsyncParallel 是“异步、多 worker 并行消费”的订阅策略，供按事件并行处理且无需保序的订阅者使用
-// （agent 缓存失效、embedding 增量索引）。buffer/parallelism 沿用历史的 ECH0_EVENT_AGENT_* 配置项。
 func AsyncParallel() []busen.SubscribeOption {
 	ec := config.Config().Event
 	return []busen.SubscribeOption{
@@ -20,8 +18,6 @@ func AsyncParallel() []busen.SubscribeOption {
 	}
 }
 
-// AsyncSequential 是“异步、单 worker FIFO”的订阅策略，供需要保序处理的系统事件订阅者使用
-// （快照计划重配）。buffer 取 ECH0_EVENT_SYSTEM_*。
 func AsyncSequential() []busen.SubscribeOption {
 	ec := config.Config().Event
 	return []busen.SubscribeOption{

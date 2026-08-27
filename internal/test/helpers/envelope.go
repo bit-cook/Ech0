@@ -9,8 +9,6 @@ import (
 	"testing"
 )
 
-// APIResult 是统一响应封套 commonModel.Result[T] 的测试侧投影（Data 保留为原始 JSON）。
-// 字段对齐 internal/model/common.Result 的 json tag，便于断言 i18n 错误契约。
 type APIResult struct {
 	Code       int             `json:"code"`
 	Msg        string          `json:"msg"`
@@ -19,7 +17,6 @@ type APIResult struct {
 	Data       json.RawMessage `json:"data"`
 }
 
-// ParseResult 解析 httptest 录制的响应体为 APIResult。
 func ParseResult(t *testing.T, rec *httptest.ResponseRecorder) APIResult {
 	t.Helper()
 	var r APIResult
@@ -29,7 +26,6 @@ func ParseResult(t *testing.T, rec *httptest.ResponseRecorder) APIResult {
 	return r
 }
 
-// DecodeData 把响应 Data 字段解码进 dest（指针）。
 func DecodeData(t *testing.T, raw json.RawMessage, dest any) {
 	t.Helper()
 	if err := json.Unmarshal(raw, dest); err != nil {

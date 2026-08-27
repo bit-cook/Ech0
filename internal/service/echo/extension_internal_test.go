@@ -13,11 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNormalizeEchoExtension_AllTypes 补齐 echo_test.go 未覆盖的扩展类型分支：
-// 每种类型的成功归一化与必填字段缺失/越界的拒绝。
 func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("empty type returns nil without error", func(t *testing.T) {
-		// Type 为空白字符串 -> 视为「无扩展」，返回 nil,nil（即便 Payload 非空）。
 		got, err := normalizeEchoExtension(&model.EchoExtension{Type: "   ", Payload: map[string]any{"x": "y"}})
 		require.NoError(t, err)
 		assert.Nil(t, got)
@@ -116,7 +113,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type: model.Extension_LOCATION,
 			Payload: map[string]any{
-				"latitude":    100.0, // > 90
+				"latitude":    100.0,
 				"longitude":   0.0,
 				"placeholder": "x",
 			},
@@ -161,7 +158,6 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	})
 }
 
-// TestGetPayloadFloat 覆盖 JSON 数字落地的各种类型容错（float/int/json.Number/string）与失败回退。
 func TestGetPayloadFloat(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -192,7 +188,6 @@ func TestGetPayloadFloat(t *testing.T) {
 	}
 }
 
-// TestGetPayloadString_NonString 补齐 getPayloadString 的非字符串/缺失/nil 回退分支。
 func TestGetPayloadString_NonString(t *testing.T) {
 	assert.Equal(t, "", getPayloadString(map[string]any{"v": 123}, "v"))
 	assert.Equal(t, "", getPayloadString(map[string]any{"v": nil}, "v"))
@@ -200,7 +195,6 @@ func TestGetPayloadString_NonString(t *testing.T) {
 	assert.Equal(t, "ok", getPayloadString(map[string]any{"v": "ok"}, "v"))
 }
 
-// TestCollectEchoFileIDs 覆盖文件 ID 收集的各分支：nil、空、FileID 优先、回退 File.ID、两者皆空跳过。
 func TestCollectEchoFileIDs(t *testing.T) {
 	t.Run("nil echo", func(t *testing.T) {
 		assert.Nil(t, collectEchoFileIDs(nil))
@@ -214,8 +208,8 @@ func TestCollectEchoFileIDs(t *testing.T) {
 		echo := &model.Echo{
 			EchoFiles: []fileModel.EchoFile{
 				{FileID: "direct-id"},
-				{FileID: "  ", File: fileModel.File{ID: "nested-id"}}, // FileID 空白 -> 用 File.ID
-				{FileID: "   ", File: fileModel.File{ID: "  "}},       // 两者皆空 -> 跳过
+				{FileID: "  ", File: fileModel.File{ID: "nested-id"}},
+				{FileID: "   ", File: fileModel.File{ID: "  "}},
 			},
 		}
 		assert.Equal(t, []string{"direct-id", "nested-id"}, collectEchoFileIDs(echo))

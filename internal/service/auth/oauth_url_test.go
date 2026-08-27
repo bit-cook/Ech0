@@ -17,12 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ---------------------------------------------------------------------------
-// buildOAuthAuthorizeURL：每个 provider 的纯 URL 构建分支
-// ---------------------------------------------------------------------------
-
 func TestBuildOAuthAuthorizeURL(t *testing.T) {
-	svc := &AuthService{} // 该方法不读取任何 receiver 状态
+	svc := &AuthService{}
 
 	t.Run("github carries standard authorize params", func(t *testing.T) {
 		setting := fullOAuth2Setting(string(commonModel.OAuth2GITHUB))
@@ -45,7 +41,6 @@ func TestBuildOAuthAuthorizeURL(t *testing.T) {
 		require.NoError(t, err)
 		q := u.Query()
 		assert.Equal(t, "offline", q.Get("access_type"))
-		// oauth2.ApprovalForce 现版本发出 prompt=consent（旧版的 approval_prompt=force）。
 		assert.Equal(t, "consent", q.Get("prompt"))
 		assert.Equal(t, "state-g", q.Get("state"))
 	})
@@ -89,15 +84,10 @@ func TestBuildOAuthAuthorizeURL(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// GetOAuthLoginURL：setting 校验 → redirect 校验 → state 签发 → 构建授权 URL
-// ---------------------------------------------------------------------------
-
 func TestGetOAuthLoginURL(t *testing.T) {
 	helpers.SetJWTSecret(t, "login-url-secret")
 
 	t.Run("provider not configured returns OAUTH2_NOT_CONFIGURED", func(t *testing.T) {
-		// 配置里 provider=github，但请求 provider=google → getOAuthSetting 拒绝。
 		svc, _, _, _ := newSvc(t, seedOAuth2KV(t, fullOAuth2Setting(string(commonModel.OAuth2GITHUB))))
 		out, err := svc.GetOAuthLoginURL(string(commonModel.OAuth2GOOGLE), "")
 		require.EqualError(t, err, commonModel.OAUTH2_NOT_CONFIGURED)
@@ -106,7 +96,6 @@ func TestGetOAuthLoginURL(t *testing.T) {
 
 	t.Run("invalid client redirect is rejected before state issuance", func(t *testing.T) {
 		svc, _, _, _ := newSvc(t, seedOAuth2KV(t, fullOAuth2Setting(string(commonModel.OAuth2GITHUB))))
-		// 相对 URL 不是绝对地址 → parseAndValidateClientRedirect 失败。
 		out, err := svc.GetOAuthLoginURL(string(commonModel.OAuth2GITHUB), "/relative/path")
 		require.EqualError(t, err, commonModel.INVALID_PARAMS)
 		assert.Empty(t, out)
@@ -123,10 +112,6 @@ func TestGetOAuthLoginURL(t *testing.T) {
 		assert.Equal(t, "code", u.Query().Get("response_type"))
 	})
 }
-
-// ---------------------------------------------------------------------------
-// GetOAuthInfo：非管理员拒绝 / GetUserByID 失败 / OIDC 与 OAuth2 两条查找分支
-// ---------------------------------------------------------------------------
 
 func TestGetOAuthInfo_NonAdminRejected(t *testing.T) {
 	ctx := helpers.CtxAsUser("u-1")

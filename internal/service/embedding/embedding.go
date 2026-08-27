@@ -20,7 +20,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// 检索默认返回的命中条数
 const defaultTopK = 6
 
 type EmbeddingService struct {
@@ -35,15 +34,10 @@ var (
 	_ Indexer = (*EmbeddingService)(nil)
 )
 
-// 构造函数保持 3 参数签名，Wire 直接调用、无需 make wire（变参会被 Wire 当成需注入的
-// []Option 依赖而报错，故不用变参）。测试通过下方 WithEmbedder 链式注入替身。
 func NewEmbeddingService(repo Repository, durableKV kvstore.Store, echoReader EchoReader) *EmbeddingService {
 	return &EmbeddingService{repo: repo, durableKV: durableKV, echoReader: echoReader, embedder: embedding.Client{}}
 }
 
-// WithEmbedder 替换向量化依赖（默认 embedding.Client{}）并返回自身，主要供测试注入 mock：
-//
-//	svc := service.NewEmbeddingService(repo, kv, reader).WithEmbedder(mockEmbedder)
 func (s *EmbeddingService) WithEmbedder(e Embedder) *EmbeddingService {
 	s.embedder = e
 	return s
@@ -61,7 +55,6 @@ func (s *EmbeddingService) Enabled(ctx context.Context) bool {
 	return setting.Enable && setting.Model != "" && setting.Dim > 0
 }
 
-// ensureReady 确保 vec0 表存在且维度与当前配置一致；维度/模型变化则清库重建（随后由回填重填）。
 func (s *EmbeddingService) ensureReady(ctx context.Context, setting settingModel.EmbeddingSetting) error {
 	var state model.IndexState
 	if stateRaw, err := s.durableKV.Get(ctx, commonModel.EmbeddingIndexStateKey); err == nil {
@@ -69,11 +62,9 @@ func (s *EmbeddingService) ensureReady(ctx context.Context, setting settingModel
 	}
 
 	if state.Dim == setting.Dim && state.Model == setting.Model {
-		// 已就绪（建表语句带 IF NOT EXISTS，重复调用安全）
 		return s.repo.EnsureVecTable(ctx, setting.Dim)
 	}
 
-	// 维度/模型变化：丢弃旧索引并重建
 	if err := s.repo.DropVecTable(ctx); err != nil {
 		return err
 	}
@@ -113,19 +104,18 @@ func (s *EmbeddingService) IndexEcho(ctx context.Context, echo echoModel.Echo) e
 		return err
 	}
 	if !setting.Enable || setting.Model == "" || setting.Dim <= 0 {
-		return nil // 未启用 → 跳过
+		return nil
 	}
 
 	text := buildText(echo)
 	if text == "" {
-		// 内容为空，删除既有索引
 		return s.repo.Delete(ctx, echo.ID)
 	}
 
 	hash := hashContent(text)
 	if meta, ok, _ := s.repo.GetMeta(ctx, echo.ID); ok &&
 		meta.ContentHash == hash && meta.Model == setting.Model && meta.Dim == setting.Dim {
-		return nil // 内容未变化，跳过
+		return nil
 	}
 
 	if err := s.ensureReady(ctx, setting); err != nil {
@@ -188,7 +178,6 @@ func (s *EmbeddingService) Backfill(ctx context.Context, onProgress func(Backfil
 	page := 1
 	var lastErr error
 	for {
-		// 尊重取消：异步 reindex 作业被取消时中断 page 循环。
 		if err := ctx.Err(); err != nil {
 			return result, err
 		}
@@ -236,7 +225,6 @@ func (s *EmbeddingService) Backfill(ctx context.Context, onProgress func(Backfil
 			}
 		}
 
-		// 每页结束上报累计计数（仅进内存，不落库）。
 		if onProgress != nil {
 			onProgress(result)
 		}
@@ -247,8 +235,6 @@ func (s *EmbeddingService) Backfill(ctx context.Context, onProgress func(Backfil
 		page++
 	}
 
-	// 全军覆没（一条都没成功，且确有失败）：把底层错误回传，避免前端只看到
-	// "失败 N 条" 却拿不到真正原因（如 404 / 鉴权失败 / Base URL 配错）。
 	if result.Indexed == 0 && result.Failed > 0 && lastErr != nil {
 		return result, lastErr
 	}

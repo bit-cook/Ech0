@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// WebhookObservation 是一次“已发生事件”的中立快照，供 webhook 分发与重放使用。
 type WebhookObservation struct {
 	Topic      string            `json:"topic"`
 	EventName  string            `json:"event_name"`
@@ -18,7 +17,6 @@ type WebhookObservation struct {
 	OccurredAt int64             `json:"occurred_at"`
 }
 
-// NewWebhookObservation 把一个事件序列化为中立观察。topic 取事件的稳定名（EventName）。
 func NewWebhookObservation(topic string, payload any, metadata map[string]string) (WebhookObservation, error) {
 	raw, err := json.Marshal(payload)
 	if err != nil {

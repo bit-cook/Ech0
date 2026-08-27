@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露数据迁移（导入/导出快照）的 HTTP 接口。
 package handler
 
 import (
@@ -99,8 +98,6 @@ func (h *MigrationHandler) CancelExport(ctx context.Context, _ *CancelExportInpu
 	return commonModel.OK(data), nil
 }
 
-// --- 以下为非 JSON 端点，仍走裸 gin（multipart 上传 / 二进制快照下载） ---
-
 func (h *MigrationHandler) UploadSourceZip() gin.HandlerFunc {
 	return response.Execute(func(ctx *gin.Context) response.Response {
 		sourceType := ctx.PostForm("source_type")
@@ -120,7 +117,6 @@ func (h *MigrationHandler) UploadSourceZip() gin.HandlerFunc {
 	})
 }
 
-// DownloadExport 取回上一次导出作业的产物（二进制 zip）。format 决定取快照还是胶囊槽位。
 func (h *MigrationHandler) DownloadExport() gin.HandlerFunc {
 	return response.Execute(func(ctx *gin.Context) response.Response {
 		if err := h.migrationService.DownloadExport(ctx, ctx.Request.Context(), ctx.Query("format")); err != nil {

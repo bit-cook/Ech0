@@ -2,12 +2,9 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2">
-    <!-- 分段控件：Connect / Copilot -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- Connect -->
     <TheConnectSetting v-if="tab === 'connect'" />
-    <!-- Ech0 Copilot -->
     <TheCopilotSetting v-else />
   </div>
 </template>

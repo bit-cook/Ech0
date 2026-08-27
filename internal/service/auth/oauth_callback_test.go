@@ -25,11 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// allowedReturnURL 是单测里统一使用的、必落在白名单内的客户端回跳地址。
 const allowedReturnURL = "https://app.example.com/auth"
 
-// fakeAdapter 实现未导出接口 oauthProviderAdapter，注入到 AuthService.resolveAdapter，
-// 从而让 HandleOAuthCallback 走完整流程而不触发真实 OAuth token/userinfo HTTP。
 type fakeAdapter struct {
 	identity *oauthIdentity
 	err      error
@@ -46,8 +43,6 @@ func (f *fakeAdapter) ResolveIdentity(
 	return f.identity, nil
 }
 
-// fullOAuth2Setting 构造一份字段齐备、可通过 getOAuthSetting 校验的 OAuth2 设置。
-// AuthRedirectAllowedReturnURLs 显式写死，使重定向校验与 ENV/全局 config 解耦、结果确定。
 func fullOAuth2Setting(provider string) settingModel.OAuth2Setting {
 	return settingModel.OAuth2Setting{
 		Enable:       true,
@@ -67,7 +62,6 @@ func fullOAuth2Setting(provider string) settingModel.OAuth2Setting {
 	}
 }
 
-// seedOAuth2KV 用一份给定的 OAuth2 设置预置内存 KV。
 func seedOAuth2KV(t *testing.T, setting settingModel.OAuth2Setting) kvstore.Store {
 	t.Helper()
 	kv := kvstore.NewMemory()
@@ -77,7 +71,6 @@ func seedOAuth2KV(t *testing.T, setting settingModel.OAuth2Setting) kvstore.Stor
 	return kv
 }
 
-// newSvc 组装一个仅依赖 mock 协作者的 AuthService。
 func newSvc(
 	t *testing.T,
 	kv kvstore.Store,
@@ -90,7 +83,6 @@ func newSvc(
 	return svc, repo, authRepo, tx
 }
 
-// runsTxInline 让 transactor.Run 真正执行回调（提交语义），用于 bind 事务路径。
 func runsTxInline(tx *txmock.MockTransactor) {
 	tx.EXPECT().
 		Run(mock.Anything, mock.Anything).
@@ -100,20 +92,14 @@ func runsTxInline(tx *txmock.MockTransactor) {
 		Once()
 }
 
-// ---------------------------------------------------------------------------
-// HandleOAuthCallback：provider / state 前置校验 + adapter 解析 + 委派
-// ---------------------------------------------------------------------------
-
 func TestHandleOAuthCallback_ValidationErrors(t *testing.T) {
 	helpers.SetJWTSecret(t, "callback-validation-secret")
 
-	// 一份合法的、provider=github 的 state，供「设置侧」错误用例复用。
 	validGithubState, _, err := jwtUtil.GenerateOAuthState(
 		string(authModel.OAuth2ActionLogin), "", allowedReturnURL, string(commonModel.OAuth2GITHUB),
 	)
 	require.NoError(t, err)
 
-	// state 内 provider=google，但回调 provider=github → 进入 provider 不一致分支。
 	mismatchProviderState, _, err := jwtUtil.GenerateOAuthState(
 		string(authModel.OAuth2ActionLogin), "", allowedReturnURL, string(commonModel.OAuth2GOOGLE),
 	)
@@ -167,7 +153,6 @@ func TestHandleOAuthCallback_ValidationErrors(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc, _, _, _ := newSvc(t, seedOAuth2KV(t, tc.setting))
-			// 这些用例都应在触达 adapter 前返回，注入会 panic 的 resolver 以反证未被调用。
 			svc.resolveAdapter = func(string) (oauthProviderAdapter, error) {
 				t.Fatalf("resolveAdapter must not be called on validation failure")
 				return nil, nil
@@ -191,7 +176,7 @@ func TestHandleOAuthCallback_InvalidState(t *testing.T) {
 	}
 
 	out, err := svc.HandleOAuthCallback(string(commonModel.OAuth2GITHUB), "code-123", "not-a-jwt")
-	require.Error(t, err) // ParseOAuthState 失败：非空、非业务常量错误
+	require.Error(t, err)
 	assert.Empty(t, out)
 }
 
@@ -226,8 +211,6 @@ func TestHandleOAuthCallback_AdapterErrors(t *testing.T) {
 	})
 }
 
-// HandleOAuthCallback 成功路径（OAuth login）：贯通 setting/state 校验 → adapter 解析
-// → resolveOAuthCallback 登录签发 → 重定向追加一次性 code。
 func TestHandleOAuthCallback_LoginSuccess(t *testing.T) {
 	helpers.SetJWTSecret(t, "callback-login-success-secret")
 
@@ -265,11 +248,6 @@ func TestHandleOAuthCallback_LoginSuccess(t *testing.T) {
 	assert.NotEmpty(t, storedCode)
 	assert.Equal(t, storedCode, parsed.Query().Get("code"))
 }
-
-// ---------------------------------------------------------------------------
-// resolveOAuthCallback：login vs bind、OIDC vs OAuth 查找、token 签发、
-// 重定向校验、一次性码存储、bind 事务 success/fail。
-// ---------------------------------------------------------------------------
 
 func loginState(redirect string) *authModel.OAuthState {
 	return &authModel.OAuthState{
@@ -329,7 +307,6 @@ func TestResolveOAuthCallback_PureValidation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			// 这些分支在触达任何协作者前返回；mock 无期望即反证未被调用。
 			svc, _, _, _ := newSvc(t, seedOAuth2KV(t, fullOAuth2Setting(string(commonModel.OAuth2GITHUB))))
 
 			out, err := svc.resolveOAuthCallback(
@@ -347,7 +324,6 @@ func TestResolveOAuthCallback_LoginOAuthSuccess(t *testing.T) {
 	svc, repo, authRepo, _ := newSvc(t, seedOAuth2KV(t, fullOAuth2Setting(string(commonModel.OAuth2GITHUB))))
 
 	user := userModel.User{ID: "u-1", Username: "alice"}
-	// OAuth（非 OIDC）走 GetUserByOAuthID，不带 issuer。
 	repo.EXPECT().
 		GetUserByOAuthID(mock.Anything, string(commonModel.OAuth2GITHUB), "ext-oauth").
 		Return(user, nil).
@@ -380,7 +356,6 @@ func TestResolveOAuthCallback_LoginOIDCSuccess(t *testing.T) {
 	svc, repo, authRepo, _ := newSvc(t, seedOAuth2KV(t, fullOAuth2Setting(string(commonModel.OAuth2GITHUB))))
 
 	user := userModel.User{ID: "u-9", Username: "oidcuser"}
-	// OIDC 走 GetUserByOIDC，按 (provider, externalID, issuer) 三元组查找。
 	repo.EXPECT().
 		GetUserByOIDC(mock.Anything, string(commonModel.OAuth2GITHUB), "sub-123", "https://idp.example.com").
 		Return(user, nil).
@@ -408,7 +383,6 @@ func TestResolveOAuthCallback_LoginLookupFailure(t *testing.T) {
 		GetUserByOAuthID(mock.Anything, string(commonModel.OAuth2GITHUB), "ext-unbound").
 		Return(userModel.User{}, notBound).
 		Once()
-	// 查找失败时不应签发 code（StoreOAuthCode 无期望即反证）。
 
 	out, err := svc.resolveOAuthCallback(
 		loginState(allowedReturnURL),
@@ -418,7 +392,6 @@ func TestResolveOAuthCallback_LoginLookupFailure(t *testing.T) {
 	assert.Empty(t, out)
 }
 
-// 登录成功签发 token 后，若 redirect 不在白名单内则拒绝，且一次性 code 不得落库。
 func TestResolveOAuthCallback_LoginRedirectRejected(t *testing.T) {
 	helpers.SetJWTSecret(t, "resolve-login-redirect-reject-secret")
 
@@ -428,7 +401,6 @@ func TestResolveOAuthCallback_LoginRedirectRejected(t *testing.T) {
 		GetUserByOAuthID(mock.Anything, string(commonModel.OAuth2GITHUB), "ext-1").
 		Return(userModel.User{ID: "u-1", Username: "alice"}, nil).
 		Once()
-	// StoreOAuthCode 必须在重定向校验之后；校验失败时它不应被调用。
 
 	out, err := svc.resolveOAuthCallback(
 		loginState("https://evil.example.net/auth"),
@@ -481,7 +453,6 @@ func TestResolveOAuthCallback_BindPersistFailure(t *testing.T) {
 	assert.Empty(t, out)
 }
 
-// bind 持久化成功后 redirect 不合法：事务已提交，但仍返回 INVALID_PARAMS。
 func TestResolveOAuthCallback_BindRedirectRejected(t *testing.T) {
 	helpers.SetJWTSecret(t, "resolve-bind-redirect-reject-secret")
 

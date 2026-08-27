@@ -1,6 +1,3 @@
-# Deploy hub/ (Vue + Vite PWA) to Cloudflare Workers Static Assets -> hub.ech0.app
-# hub imports from ../web/src (vite alias) and its prebuild runs
-# `npm install --prefix ../web`, so the full repo checkout + web/ must be present.
 name: Deploy hub
 
 on:
@@ -40,14 +37,10 @@ jobs:
         working-directory: hub
         run: pnpm install --frozen-lockfile
 
-      # `pnpm build` runs the prebuild step, which generates SEO assets and
-      # installs ../web (via `npm install --prefix ../web`) so vue-tsc can
-      # resolve the ../web/src imports.
       - name: Build
         working-directory: hub
         run: pnpm build
 
-      # Deploy as a Workers Static Assets project (config in hub/wrangler.jsonc).
       - name: Deploy to Cloudflare Workers
         working-directory: hub
         env:

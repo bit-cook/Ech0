@@ -67,8 +67,6 @@ func TestParseDay(t *testing.T) {
 		t.Fatalf("invalid → %d, want 0", got)
 	}
 
-	// 时区：同一日历日在不同时区切出的日界不同（用户视角的「这一天」按其时区算）。
-	// Asia/Shanghai (UTC+8) 的 2026-01-15 00:00 = UTC 2026-01-14 16:00。
 	sh, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
 		t.Fatalf("load location: %v", err)

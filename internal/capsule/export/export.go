@@ -1,16 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package export 实现 `ech0 export capsule`：把当前实例的库内容转储成一个符合
-// docs/dev/capsule/spec.md 的胶囊（目录或 .zip）。
-//
-// 本包只做「转储」——字段名与字段值一律原样落进胶囊，唯一的表示层差异是时间
-// （Unix 秒 → RFC3339 UTC）、形态（行 → frontmatter-markdown）与关系实体的内容化
-// （Tags → 名称数组、EchoFile.SortOrder → 数组顺序）。任何面向消费者的转换
-// （URL 计算、dataset 烘焙、统计冻结）都属于 build，不在这里（spec §11）。
-//
-// 读库一律直连 GORM 而不过 service 层：service 会发事件、会按当前登录者裁剪可见性，
-// 而导出要的是全量的、无副作用的快照。
 package export
 
 import (
@@ -28,24 +18,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// Deps 是导出所需的外部能力：库、字节、设置。三者都不可为 nil——导出没有
-// 「降级产出」这一档，缺任何一个都只会得到不自包含的胶囊。
 type Deps struct {
 	DB       *gorm.DB
 	Selector *storage.StorageSelector
 	KV       kvstore.Store
 }
 
-// Options 对应 CLI flag（spec §9）。
 type Options struct {
-	Output         string // 输出目录；Zip 时为输出文件（缺 .zip 后缀自动补）
+	Output         string
 	IncludePrivate bool
 	Zip            bool
-	Generator      string // 写入 manifest.generator 的生产者标识
+	Generator      string
 }
 
-// Result 是导出报告，供 CLI 打印。Files 为写入胶囊的 files 表记录总数（含外链），
-// 其中 ExternalFiles 条只带 URL、字节不随胶囊走（spec §11 保真度表）。
 type Result struct {
 	Path                              string
 	Echoes, Files, Comments, Connects int
@@ -65,7 +50,6 @@ func (d Deps) validate() error {
 	return nil
 }
 
-// Run 执行一次导出。
 func Run(ctx context.Context, deps Deps, opts Options) (*Result, error) {
 	if err := deps.validate(); err != nil {
 		return nil, err
@@ -80,10 +64,6 @@ func Run(ctx context.Context, deps Deps, opts Options) (*Result, error) {
 		return nil, err
 	}
 
-	// 两种形态都先落到暂存目录，成功才落位：媒体字节取不回时（S3 抖动、对象丢失）
-	// 导出必须失败，而失败不该在输出路径上留下半棵树——否则修好 S3 重跑会撞上
-	// 「目录已存在且非空」，逼用户手动 rm。暂存目录放在输出的同级而非系统临时目录，
-	// 保证落位是同文件系统内的 rename（原子且不复制字节）。
 	if !opts.Zip {
 		if err := ensureEmptyDir(output); err != nil {
 			return nil, err
@@ -129,8 +109,6 @@ func Run(ctx context.Context, deps Deps, opts Options) (*Result, error) {
 		return result, nil
 	}
 
-	// 落位：ensureEmptyDir 允许 output 是个已存在的空目录，而 rename 到已存在目录
-	// 并非所有平台都可靠，故先撤掉那个空壳再搬。
 	if err := os.Remove(output); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("capsule export: clear output %q: %w", output, err)
 	}
@@ -140,8 +118,6 @@ func Run(ctx context.Context, deps Deps, opts Options) (*Result, error) {
 	return result, nil
 }
 
-// ensureEmptyDir 拒绝往已有内容的目录里写：胶囊是一整棵树，覆盖式写入会把上一次
-// 导出的残留（已删除的 Echo、改名的媒体）混进新胶囊，且可能悄悄吃掉用户的数据。
 func ensureEmptyDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	switch {
@@ -155,8 +131,6 @@ func ensureEmptyDir(dir string) error {
 	return nil
 }
 
-// packZip 把暂存树按写入顺序打成 zip。keys 即 zip 内条目名，故 zip 解开后与目录
-// 形态逐字节同形。
 func packZip(ctx context.Context, stage virefs.FS, keys []string, output string) (string, error) {
 	out := output
 	if !strings.EqualFold(filepath.Ext(out), ".zip") {
@@ -174,7 +148,7 @@ func packZip(ctx context.Context, stage virefs.FS, keys []string, output string)
 	}
 	if err := vizip.Pack(ctx, stage, keys, f); err != nil {
 		_ = f.Close()
-		_ = os.Remove(out) // 半个 zip 比没有 zip 更危险
+		_ = os.Remove(out)
 		return "", fmt.Errorf("capsule export: pack %q: %w", out, err)
 	}
 	if err := f.Close(); err != nil {

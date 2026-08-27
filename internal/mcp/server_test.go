@@ -68,7 +68,6 @@ func setupTestServer() *Server {
 	return NewServer(reg)
 }
 
-// withMeta injects the 2026-07-28 per-request metadata into params.
 func withMeta(params map[string]any, version string) map[string]any {
 	if params == nil {
 		params = map[string]any{}
@@ -81,8 +80,6 @@ func withMeta(params map[string]any, version string) map[string]any {
 	return params
 }
 
-// doRaw posts a prebuilt body with explicit headers and returns the
-// recorder plus the decoded JSON-RPC response (when a body is present).
 func doRaw(t *testing.T, srv *Server, headers map[string]string, body string) (*httptest.ResponseRecorder, Response) {
 	t.Helper()
 	req := testRequest(t, http.MethodPost, body)
@@ -101,8 +98,6 @@ func doRaw(t *testing.T, srv *Server, headers map[string]string, body string) (*
 	return rec, resp
 }
 
-// doModern issues a conforming 2026-07-28 request: _meta in params plus the
-// MCP-Protocol-Version / Mcp-Method / Mcp-Name headers.
 func doModern(t *testing.T, srv *Server, method string, params map[string]any) (*httptest.ResponseRecorder, Response) {
 	t.Helper()
 	params = withMeta(params, ProtocolVersion)
@@ -304,8 +299,6 @@ func TestMethodNotFound(t *testing.T) {
 
 func TestInitializeRemoved(t *testing.T) {
 	srv := setupTestServer()
-	// Legacy handshake, exactly as a 2025-11-25 client would send it: no
-	// modern headers, no _meta.
 	rec, resp := doRaw(t, srv, nil, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`)
 	if resp.Error == nil {
 		t.Fatal("expected error for legacy initialize")
@@ -316,7 +309,6 @@ func TestInitializeRemoved(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
 	}
-	// The spec recommends naming supported versions in the diagnostic.
 	data, ok := resp.Error.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("error data = %v, want map with supported versions", resp.Error.Data)
@@ -452,11 +444,6 @@ func TestGetMethodNotAllowed(t *testing.T) {
 	}
 }
 
-// TestAdapterRegistersDiscoveryCapabilities verifies the new discovery
-// tools/resources are wired into RegisterAll with the intended scopes. Nil
-// services are fine here because RegisterAll only registers handlers, it never
-// invokes them. The admin-only scope on the visitor-stats resource is the
-// security-sensitive decision this test guards (REST gates it behind admin too).
 func TestAdapterRegistersDiscoveryCapabilities(t *testing.T) {
 	reg := NewRegistry()
 	NewAdapter(nil, nil, nil, nil, nil, nil, nil, nil, nil).RegisterAll(reg)

@@ -62,7 +62,6 @@ const dataset = {
 let fetchMock: Mock
 
 beforeAll(() => {
-  // dataset 只拉一次，缓存在 module-level Promise 里，所以整个文件共享同一份桩数据
   window.__ECH0_STATIC_BASE__ = '/blog/'
   fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => dataset }))
   vi.stubGlobal('fetch', fetchMock)
@@ -85,7 +84,6 @@ describe('handleStaticRequest', () => {
     )
 
     expect(page1.code).toBe(1)
-    // 大小写不敏感命中 e5 / e4 / e2，按 created_at 降序
     expect(page1.data.total).toBe(3)
     expect(page1.data.items.map((item) => item.id)).toEqual(['e5', 'e4'])
 
@@ -102,7 +100,6 @@ describe('handleStaticRequest', () => {
       'POST',
       { page: 1, pageSize: 0 },
     )
-    // pageSize < 1 回落到 10，total 是全部公开 Echo
     expect(unfiltered.data.total).toBe(5)
     expect(unfiltered.data.items).toHaveLength(5)
   })

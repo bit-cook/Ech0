@@ -8,35 +8,23 @@ import (
 	"fmt"
 )
 
-// ShutdownMode controls how bus shutdown handles queued async events.
 type ShutdownMode int
 
 const (
-	// ShutdownDrain waits for async queues to drain.
 	ShutdownDrain ShutdownMode = iota
-	// ShutdownBestEffort stops accepting work and waits until context ends.
 	ShutdownBestEffort
-	// ShutdownAbort stops accepting work and drops queued async events.
 	ShutdownAbort
 )
 
-// ShutdownResult reports structured shutdown outcomes.
 type ShutdownResult struct {
-	Mode ShutdownMode
-	// Processed is the number of handler executions observed during shutdown.
-	Processed int64
-	// Dropped is the number of dropped events observed during shutdown.
-	// It includes backpressure drops and abort-mode queue drops.
-	Dropped int64
-	// Rejected is the number of rejected events observed during shutdown.
-	Rejected int64
-	// TimedOutSubscribers contains subscriber IDs that did not stop before ctx ended.
+	Mode                ShutdownMode
+	Processed           int64
+	Dropped             int64
+	Rejected            int64
 	TimedOutSubscribers []uint64
-	// Completed reports whether shutdown fully completed before context cancellation.
-	Completed bool
+	Completed           bool
 }
 
-// Shutdown stops accepting new publishes and subscriptions according to mode.
 func (b *Bus) Shutdown(ctx context.Context, mode ShutdownMode) (ShutdownResult, error) {
 	result := ShutdownResult{Mode: mode}
 
@@ -50,10 +38,6 @@ func (b *Bus) Shutdown(ctx context.Context, mode ShutdownMode) (ShutdownResult, 
 		ctx = context.Background()
 	}
 
-	// before 快照必须先于 gate.Close()：这样发布方一旦观察到 ErrClosed，快照必然已拍下，
-	// 此后完成的 handler 执行都会计入增量（反过来的顺序会漏计 Close 与快照之间完成的执行，
-	// 外部也没有任何时点可以确认快照已生效）。权威订阅列表 subs 仍在 Close 之后取才完备；
-	// 夹缝中新增的订阅不在 before 里，applyStatsDelta 对其按零基线计入，语义无损。
 	before := snapshotSubscriptionStats(b.allSubscriptions())
 	b.gate.Close()
 	subs := b.allSubscriptions()

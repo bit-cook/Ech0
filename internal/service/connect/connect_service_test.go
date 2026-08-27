@@ -26,8 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// passthroughTx 返回一个直接执行闭包的事务 mock（不依赖真实 DB），
-// 期望恰好被调用一次，由 NewMockTransactor 的 Cleanup 校验。
 func passthroughTx(t *testing.T) *txmock.MockTransactor {
 	t.Helper()
 	tx := txmock.NewMockTransactor(t)
@@ -40,7 +38,6 @@ func passthroughTx(t *testing.T) *txmock.MockTransactor {
 	return tx
 }
 
-// adminCommon 返回一个把 userID 解析为管理员用户的 commonService mock。
 func adminCommon(t *testing.T, userID string) *commonmock.MockService {
 	t.Helper()
 	cs := commonmock.NewMockService(t)
@@ -59,7 +56,6 @@ func TestAddConnect_NonAdminDenied(t *testing.T) {
 		CommonGetUserByUserId(mock.Anything, userID).
 		Return(userModel.User{IsAdmin: false}, nil).
 		Once()
-	// connectRepository 不应被触达（权限校验先于落库）。
 	repo := connectmock.NewMockRepository(t)
 
 	svc := connectService.NewConnectService(tx, repo, nil, cs, nil)
@@ -91,7 +87,6 @@ func TestAddConnect_EmptyURLRejected(t *testing.T) {
 	const userID = "u-1"
 	tx := passthroughTx(t)
 	cs := adminCommon(t, userID)
-	// 空地址应在落库前被拒，repository 不被触达。
 	repo := connectmock.NewMockRepository(t)
 
 	svc := connectService.NewConnectService(tx, repo, nil, cs, nil)
@@ -101,8 +96,6 @@ func TestAddConnect_EmptyURLRejected(t *testing.T) {
 	assert.EqualError(t, err, commonModel.INVALID_CONNECTION_URL)
 }
 
-// TestAddConnect_SSRFPrevalidation 验证入库前的 SSRF 预校验：指向私网/回环/
-// 云元数据/非法协议/含用户信息的对端地址必须在触达 repository 之前被拒。
 func TestAddConnect_SSRFPrevalidation(t *testing.T) {
 	const userID = "u-1"
 	cases := []struct {
@@ -125,7 +118,6 @@ func TestAddConnect_SSRFPrevalidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := passthroughTx(t)
 			cs := adminCommon(t, userID)
-			// repository 不应被触达：SSRF 预校验必须先于 GetAllConnects/CreateConnect。
 			repo := connectmock.NewMockRepository(t)
 
 			svc := connectService.NewConnectService(tx, repo, nil, cs, nil)
@@ -146,7 +138,6 @@ func TestAddConnect_DuplicateRejected(t *testing.T) {
 		GetAllConnects(mock.Anything).
 		Return([]model.Connected{{ID: "x", ConnectURL: "https://example.com"}}, nil).
 		Once()
-	// CreateConnect 不应被调用（地址已存在）。
 
 	svc := connectService.NewConnectService(tx, repo, nil, cs, nil)
 	err := svc.AddConnect(helpers.CtxAsUser(userID), model.Connected{ConnectURL: "https://example.com"})
@@ -182,7 +173,6 @@ func TestAddConnect_Success_TrimsURLBeforePersist(t *testing.T) {
 		GetAllConnects(mock.Anything).
 		Return([]model.Connected{}, nil).
 		Once()
-	// 入参带尾部斜杠/空格，落库时必须已被 TrimURL 归一化。
 	repo.EXPECT().
 		CreateConnect(mock.Anything, mock.MatchedBy(func(c *model.Connected) bool {
 			return c != nil && c.ConnectURL == "https://example.com"
@@ -196,7 +186,6 @@ func TestAddConnect_Success_TrimsURLBeforePersist(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// systemSettingJSON 构造 system_settings 键的存储值，供 setting.Get 反序列化。
 func systemSettingJSON(t *testing.T, serverURL, serverLogo string) string {
 	t.Helper()
 	raw, err := json.Marshal(settingModel.SystemSetting{
@@ -283,7 +272,6 @@ func TestGetConnect_SettingErrorShortCircuits(t *testing.T) {
 		Return("", errors.New("kv unavailable")).
 		Once()
 
-	// setting.Get 返回错误时应立即短路：owner / echo 统计不应被查询。
 	cs := commonmock.NewMockService(t)
 	echoRepo := connectmock.NewMockEchoRepository(t)
 
@@ -304,7 +292,6 @@ func TestGetConnect_OwnerErrorShortCircuits(t *testing.T) {
 	cs := commonmock.NewMockService(t)
 	cs.EXPECT().GetOwner().Return(userModel.User{}, wantErr).Once()
 
-	// owner 查询失败时 echo 统计不应被查询。
 	echoRepo := connectmock.NewMockEchoRepository(t)
 
 	svc := connectService.NewConnectService(nil, nil, echoRepo, cs, kv)

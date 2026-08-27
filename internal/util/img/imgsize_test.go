@@ -15,7 +15,6 @@ import (
 	"testing"
 )
 
-// encodePNG 生成一张指定宽高的 PNG，返回其字节。
 func encodePNG(t *testing.T, w, h int) []byte {
 	t.Helper()
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
@@ -27,7 +26,6 @@ func encodePNG(t *testing.T, w, h int) []byte {
 	return buf.Bytes()
 }
 
-// errReader 始终返回错误，用于覆盖 io.ReadAll 失败分支。
 type errReader struct{}
 
 func (errReader) Read([]byte) (int, error) { return 0, errors.New("boom") }
@@ -106,7 +104,6 @@ func TestGetImageSizeFromPath(t *testing.T) {
 func TestGetImageSizeFromFile(t *testing.T) {
 	data := encodePNG(t, 5, 9)
 
-	// 构造一个真实的 multipart.FileHeader 驱动 file.Open()。
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	part, err := mw.CreateFormFile("file", "upload.png")

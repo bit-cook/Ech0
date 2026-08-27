@@ -12,8 +12,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// registerEmbedding 注册 Embedding 向量索引操作（owner / 管理员，需 admin:settings scope）。
-// 注意：Embedding 设置（get/update）仍归口到 registerSetting（尚未迁移）。
 func registerEmbedding(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, secured(revoker, authModel.ScopeAdminSettings), huma.Operation{
 		OperationID: "embedding-reindex",

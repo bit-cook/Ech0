@@ -292,7 +292,6 @@ onBeforeUnmount(() => {
         </section>
 
         <template v-else>
-          <!-- Mutually exclusive with #explore-feed so "Checking" and feed "Loading" never spin together -->
           <section v-if="loadingProbe" class="hub-explore-mono my-8">
             <TheLoadingIndicator label="Checking instances…" />
           </section>
@@ -369,7 +368,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* layout only: `paint` can interfere with per-row filter + hover stacking */
 .hub-item-wrap {
   contain: layout;
 }

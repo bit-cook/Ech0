@@ -9,9 +9,6 @@ import (
 	"github.com/lin-snow/ech0/internal/config"
 )
 
-// TestBuildS3PathURLResolver_Addressing 锁定公开直链的寻址方式与 SDK 一致：
-// virtual-hosted 服务（COS/OSS/AWS）拼 bucket.endpoint，path-style 服务（MinIO/R2、
-// 或 other 开了开关）拼 endpoint/bucket，CDN 域名始终优先。
 func TestBuildS3PathURLResolver_Addressing(t *testing.T) {
 	cases := []struct {
 		name string

@@ -120,7 +120,6 @@ let windowScrollRaf: number | null = null
 
 const paletteOpen = ref<boolean>(false)
 const chatLauncherOpen = ref<boolean>(false)
-// 对话入口：仅登录且 Agent 已开启时可用，与原侧边栏入口的可见条件保持一致
 const chatAvailable = computed(() => isLogin.value && AgentSetting.value.enable)
 
 const handleGlobalKeydown = (event: KeyboardEvent) => {
@@ -131,7 +130,6 @@ const handleGlobalKeydown = (event: KeyboardEvent) => {
     paletteOpen.value = !paletteOpen.value
     return
   }
-  // Cmd/Ctrl+J 唤起对话快捷输入框（仅在对话可用时拦截，否则放行给浏览器）
   const isChatShortcut = withModifier && event.key === 'j'
   if (isChatShortcut && chatAvailable.value) {
     event.preventDefault()
@@ -154,7 +152,6 @@ const saveTimelineScrollPosition = () => {
   })
 }
 
-// 手机布局下滚动发生在 window 上，单独持久化以便恢复。
 const saveWindowScrollPosition = () => {
   if (windowScrollRaf !== null) return
   windowScrollRaf = window.requestAnimationFrame(() => {
@@ -178,9 +175,6 @@ const restoreTimelineScrollPosition = () => {
   }
 }
 
-// 空闲时预热下游 chunk：
-//   - EchoView：点击日期跳详情前提前下好
-//   - markdown core：避免慢网下首屏 echo 卡片显示原文 fallback 的过渡时长
 const prefetchHeavyChunks = () => {
   const trigger = () => {
     import('@/views/echo/EchoView.vue').catch(() => {})
@@ -201,7 +195,6 @@ onMounted(async () => {
     mainColumn.value.addEventListener('scroll', saveTimelineScrollPosition, { passive: true })
   }
   window.addEventListener('scroll', saveWindowScrollPosition, { passive: true })
-  // 等首批 echo 渲染后再恢复滚动位置，否则容器高度还没撑开，scrollTop 会被夹到 0。
   const stopScrollRestoreWatch = watch(
     () => echoStore.echoList.length > 0 && !echoStore.isLoading,
     (ready) => {

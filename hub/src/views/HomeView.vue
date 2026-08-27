@@ -66,7 +66,6 @@ onMounted(async () => {
       toastMessage.value = `Loaded ${n} instance${n === 1 ? '' : 's'}`
     }
   } catch {
-    /* home: omit noisy errors; explore shows full diagnostics */
   }
 })
 

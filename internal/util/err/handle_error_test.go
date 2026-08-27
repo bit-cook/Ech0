@@ -38,7 +38,6 @@ func TestHandleError(t *testing.T) {
 }
 
 func TestHandlePanicErrorPanicsWithMsg(t *testing.T) {
-	// With a nil inner error the function skips logging and panics with se.Msg.
 	se := &model.ServerError{Msg: "panic message"}
 
 	defer func() {

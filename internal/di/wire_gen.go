@@ -77,7 +77,6 @@ import (
 
 // Injectors from wire.go:
 
-// BuildApp 构建 Web 生命周期应用。
 func BuildApp() (*app.App, error) {
 	v := database.ProvideDBProvider()
 	v2 := bus.ProvideProvider()
@@ -132,8 +131,6 @@ func BuildEventRegistrar(dbProvider func() *gorm.DB, ebProvider func() *busen.Bu
 	return eventRegistrar, nil
 }
 
-// BuildHandlers 使用 wire 生成的代码来构建 Handlers 实例。
-// tracker 由顶层 BuildApp/BuildServer 注入,保证整个进程只有一个 visitor.Tracker 实例。
 func BuildHandlers(dbProvider func() *gorm.DB, appCache cache.ICache[string, any], tx transaction.Transactor, ebProvider func() *busen.Bus, tracker *visitor.Tracker, jobManager *job.Manager, storageManager *storage.Manager) (*handler.Bundle, error) {
 	webHandler := handler2.NewWebHandler(tracker)
 	userRepository := repository4.NewUserRepository(dbProvider, appCache)
@@ -182,10 +179,6 @@ func BuildHandlers(dbProvider func() *gorm.DB, appCache cache.ICache[string, any
 	return bundle, nil
 }
 
-// BuildJobManager 装配共享单例 *job.Manager：repo + 各领域 Runner（含其依赖的领域
-// service），在构造期注册完成。Runner 依赖的 EmbeddingService / migrator.ImportEngine 均不
-// 含 *job.Manager，故无构造环。storageManager 由顶层共享单例注入，确保迁移导入 S3
-// 设置时 reload 的就是文件服务在用的那份 Manager。
 func BuildJobManager(dbProvider func() *gorm.DB, appCache cache.ICache[string, any], storageManager *storage.Manager, ebProvider func() *busen.Bus, tx transaction.Transactor) (*job.Manager, error) {
 	jobRepository := repository12.NewJobRepository(dbProvider)
 	embeddingRepository := repository.NewEmbeddingRepository(dbProvider)
@@ -204,14 +197,12 @@ func BuildJobManager(dbProvider func() *gorm.DB, appCache cache.ICache[string, a
 	return manager, nil
 }
 
-// BuildMiddlewares 构建中间件依赖。
 func BuildMiddlewares(dbProvider func() *gorm.DB, appCache cache.ICache[string, any]) (*middleware.Deps, error) {
 	authRepository := repository7.NewAuthRepository(dbProvider, appCache)
 	deps := middleware.NewDeps(authRepository)
 	return deps, nil
 }
 
-// BuildServer 构建 HTTP server
 func BuildServer() (*server.Server, error) {
 	engine := server.ProvideGinEngine()
 	v := database.ProvideDBProvider()
@@ -263,14 +254,8 @@ func BuildTasker(dbProvider func() *gorm.DB, appCache cache.ICache[string, any],
 
 var AppSet = app.ProviderSet
 
-// VisitorSet 独立于 HandlerSet/TaskerSet,避免 wire 为两个 Build 各自生成一个 Tracker
-// 导致"WebHandler 写入 #1、Tasker 从 #2 读出恒为 0"的 bug。必须在 BuildApp/BuildServer
-// 顶层引入一次,统一下沉给 BuildHandlers 和 BuildTasker。
 var VisitorSet = wire.NewSet(visitor.NewTracker)
 
-// ProvideJobManager 构造已装配好 Runner 的共享单例 *job.Manager（在构造期一次性
-// 完成注册）。Runner 只依赖 EmbeddingService / migrator.ImportEngine（均不含 *job.Manager），
-// 故不会与「MigratorService 需要 Manager」形成构造环。
 func ProvideJobManager(
 	repo job.JobRepository,
 	reindex *runner.ReindexRunner,
@@ -284,8 +269,6 @@ func ProvideJobManager(
 	return m
 }
 
-// ProvideTaskManager 把各领域定时 Task 收进共享单例 *task.Manager（对应 ProvideJobManager）。
-// NewManager 是变参，wire 无法直接喂，故在此把具体 Task 收口成一次构造。
 func ProvideTaskManager(
 	cleanup *scheduled.Cleanup,
 	snapshot *scheduled.Snapshot,
@@ -294,23 +277,12 @@ func ProvideTaskManager(
 	return task.NewManager(cleanup, snapshot, visitorSnapshot)
 }
 
-// StorageSet 提供进程级共享单例 *storage.Manager。storage.Manager 是有状态基础设施
-// （缓存当前存储后端，ReloadFromConfigAndDB 会改写它），必须全进程一个实例，否则
-// 「设置页 / 迁移改了 S3 → 只 reload 了自己那份 Manager，文件服务仍用旧后端」。同
-// VisitorSet：顶层引入一次，统一下沉给 BuildHandlers/BuildTasker/BuildJobManager。
-// 它自带一份 KeyValueRepository，经 ProvideStorageKV 适配成 kvstore.Store：Manager 借此
-// 走 setting.Get(setting.S3) 读 S3 设置，与各 Build 内的 KeyValueSet 互不冲突。
 var StorageSet = wire.NewSet(keyvalue.NewKeyValueRepository, ProvideStorageKV, storage.ProviderSet)
 
-// ProvideStorageKV 把 StorageSet 的 *KeyValueRepository 适配成 kvstore.Store，单实例同时
-// 供 storage.Manager（读 S3 设置）与 BuildApp 顶层 app.ProvideOptions 的启动 seeder 使用。
-// 它消费（而非再 provide）该具体类型，故不与各 Build 内的 KeyValueSet 冲突。
 func ProvideStorageKV(repo *keyvalue.KeyValueRepository) kvstore.Store {
 	return kvstore.NewPersistent(repo)
 }
 
-// ProvideGormDB 把库句柄提供者摊平成句柄本身。胶囊包直连 GORM 读写（见 internal/capsule
-// 各包注释），而 wire 图里流通的是 func() *gorm.DB，故需这一层。
 func ProvideGormDB(dbProvider func() *gorm.DB) *gorm.DB {
 	return dbProvider()
 }

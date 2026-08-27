@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package memos 是 Memos → Ech0 的导入适配器(占位实现)。
 package memos
 
 import (

@@ -19,9 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeInitRepo is a hand-written minimal fake for the unexported-domain
-// init.Repository interface (no generated mock exists for it). It records call
-// counts so tests can assert short-circuit behavior without timing.
 type fakeInitRepo struct {
 	initialized    bool
 	initializedErr error
@@ -42,7 +39,6 @@ func (f *fakeInitRepo) GetOwner() (userModel.User, error) {
 	return f.owner, f.getOwnerErr
 }
 
-// asBizError unwraps an error into *commonModel.BizError for i18n-contract assertions.
 func asBizError(t *testing.T, err error) *commonModel.BizError {
 	t.Helper()
 	var biz *commonModel.BizError
@@ -60,7 +56,7 @@ func TestInitService_GetStatus(t *testing.T) {
 		repo        *fakeInitRepo
 		wantErr     error
 		wantStatus  initModel.Status
-		wantOwnerHi bool // whether GetOwner should have been consulted
+		wantOwnerHi bool
 	}{
 		{
 			name:       "IsInitialized error short-circuits",
@@ -92,8 +88,6 @@ func TestInitService_GetStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GetStatus never touches user/setting services; supply empty mocks
-			// (no expectations) so any accidental call would fail the test.
 			us := usermock.NewMockService(t)
 			ss := settingmock.NewMockService(t)
 			svc := initService.NewInitService(tc.repo, us, ss)
@@ -104,7 +98,6 @@ func TestInitService_GetStatus(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.wantErr)
 				assert.Equal(t, initModel.Status{}, got)
-				// GetOwner must not be reached when IsInitialized fails.
 				assert.Equal(t, 0, tc.repo.getOwnerCalls)
 				return
 			}
@@ -129,7 +122,7 @@ func TestInitService_InitOwner(t *testing.T) {
 
 		sentinel := errors.New("db down")
 		repo := &fakeInitRepo{initializedErr: sentinel}
-		us := usermock.NewMockService(t) // no InitOwner expectation -> must not be called
+		us := usermock.NewMockService(t)
 		ss := settingmock.NewMockService(t)
 		svc := initService.NewInitService(repo, us, ss)
 
@@ -144,7 +137,7 @@ func TestInitService_InitOwner(t *testing.T) {
 		t.Parallel()
 
 		repo := &fakeInitRepo{initialized: true}
-		us := usermock.NewMockService(t) // InitOwner must not be invoked
+		us := usermock.NewMockService(t)
 		ss := settingmock.NewMockService(t)
 		svc := initService.NewInitService(repo, us, ss)
 
@@ -162,7 +155,6 @@ func TestInitService_InitOwner(t *testing.T) {
 		repo := &fakeInitRepo{initialized: false}
 		us := usermock.NewMockService(t)
 		us.EXPECT().InitOwner(dto).Return(sentinel).Once()
-		// settingService.BootstrapDefaultLocale must NOT be called -> no expectation.
 		ss := settingmock.NewMockService(t)
 		svc := initService.NewInitService(repo, us, ss)
 

@@ -234,8 +234,6 @@ func (a *Adapter) registerEchoResources(reg *Registry) {
 	}, a.resourcePostByID, authModel.ScopeEchoRead)
 }
 
-// --- Tool handlers ---
-
 func (a *Adapter) searchPosts(ctx context.Context, args map[string]any) (*ToolCallResult, error) {
 	query := stringArg(args, "query")
 	page := intArg(args, "page", 1)
@@ -406,8 +404,6 @@ func (a *Adapter) getOnThisDayPosts(ctx context.Context, args map[string]any) (*
 	}
 	return jsonResult(posts)
 }
-
-// --- Resource handlers ---
 
 func (a *Adapter) resourceTags(_ context.Context, _ string) (*ResourceReadResult, error) {
 	tags, err := a.echoSvc.GetAllTags()

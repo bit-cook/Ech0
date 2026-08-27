@@ -11,7 +11,6 @@ import (
 	"testing"
 )
 
-// writeLogFile writes the given lines to a temp log file and returns its path.
 func writeLogFile(t *testing.T, lines []string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "app.log")
@@ -119,7 +118,6 @@ func TestQueryLogFileTailFilters(t *testing.T) {
 }
 
 func TestQueryLogFileTailDefaultLimit(t *testing.T) {
-	// Write more than the default cap (200) to verify tail retention.
 	const total = 205
 	lines := make([]string, total)
 	for i := range total {
@@ -127,14 +125,13 @@ func TestQueryLogFileTailDefaultLimit(t *testing.T) {
 	}
 	path := writeLogFile(t, lines)
 
-	got, err := QueryLogFileTail(path, 0, "", "") // limit<=0 -> 200
+	got, err := QueryLogFileTail(path, 0, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 200 {
 		t.Fatalf("len = %d, want 200 (default limit)", len(got))
 	}
-	// Tail retention: last 200 entries are lines 5..204.
 	if got[0].Msg != "5" {
 		t.Errorf("first kept Msg = %q, want %q", got[0].Msg, "5")
 	}
@@ -144,7 +141,6 @@ func TestQueryLogFileTailDefaultLimit(t *testing.T) {
 }
 
 func TestQueryLogFileTailMaxLimit(t *testing.T) {
-	// Write more than the hard cap (5000) to verify clamping.
 	const total = 5005
 	lines := make([]string, total)
 	for i := range total {
@@ -152,7 +148,7 @@ func TestQueryLogFileTailMaxLimit(t *testing.T) {
 	}
 	path := writeLogFile(t, lines)
 
-	got, err := QueryLogFileTail(path, 10000, "", "") // limit>5000 -> 5000
+	got, err := QueryLogFileTail(path, 10000, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

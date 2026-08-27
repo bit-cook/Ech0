@@ -377,7 +377,6 @@ func migrateFiles(ctx context.Context, tx *gorm.DB, sourceDB *gorm.DB, sourceRoo
 			continue
 		}
 		if err := copySourceLocalFileToTargetRoot(sourceRoot, file.Key); err != nil {
-			// 本地文件缺失不阻断整任务，避免历史仅数据库快照导致整体失败。
 			localCopyFailed++
 			logUtil.GetLogger().Warn("migration ech0 local file copy skipped",
 				slog.String("module", "migration"),

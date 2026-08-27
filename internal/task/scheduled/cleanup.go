@@ -13,7 +13,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// Cleanup 周期清理过期的临时/孤儿文件。
 type Cleanup struct {
 	fileService fileService.Service
 }
@@ -24,7 +23,6 @@ func NewCleanup(fileSvc fileService.Service) *Cleanup {
 
 func (c *Cleanup) Name() string { return "cleanup-temp-files" }
 
-// Schedule 每三天清理一次孤儿文件。
 func (c *Cleanup) Schedule(_ context.Context, s gocron.Scheduler) error {
 	_, err := s.NewJob(
 		gocron.DurationJob(72*time.Hour),

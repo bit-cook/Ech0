@@ -16,9 +16,7 @@ import (
 	"github.com/lin-snow/ech0/pkg/viewer"
 )
 
-// GetAllWebhooks 获取所有 Webhook
 func (settingService *SettingService) GetAllWebhooks(ctx context.Context) ([]webhookModel.Webhook, error) {
-	// 鉴权
 	userid := viewer.MustFromContext(ctx).UserID()
 	user, err := settingService.commonService.CommonGetUserByUserId(ctx, userid)
 	if err != nil {
@@ -36,9 +34,7 @@ func (settingService *SettingService) GetAllWebhooks(ctx context.Context) ([]web
 	return webhooks, nil
 }
 
-// DeleteWebhook 删除 Webhook
 func (settingService *SettingService) DeleteWebhook(ctx context.Context, id string) error {
-	// 鉴权
 	userid := viewer.MustFromContext(ctx).UserID()
 	user, err := settingService.commonService.CommonGetUserByUserId(ctx, userid)
 	if err != nil {
@@ -53,13 +49,11 @@ func (settingService *SettingService) DeleteWebhook(ctx context.Context, id stri
 	})
 }
 
-// UpdateWebhook 更新 Webhook
 func (settingService *SettingService) UpdateWebhook(
 	ctx context.Context,
 	id string,
 	newWebhook *model.WebhookDto,
 ) error {
-	// 鉴权
 	userid := viewer.MustFromContext(ctx).UserID()
 	user, err := settingService.commonService.CommonGetUserByUserId(ctx, userid)
 	if err != nil {
@@ -69,10 +63,8 @@ func (settingService *SettingService) UpdateWebhook(
 		return errors.New(commonModel.NO_PERMISSION_DENIED)
 	}
 
-	// 数据处理
 	newWebhook.URL = urlUtil.TrimURL(newWebhook.URL)
 
-	// 检查名称或URL是否为空
 	if newWebhook.Name == "" || newWebhook.URL == "" {
 		return errors.New(commonModel.WEBHOOK_NAME_OR_URL_CANNOT_BE_EMPTY)
 	}
@@ -80,7 +72,6 @@ func (settingService *SettingService) UpdateWebhook(
 		return err
 	}
 
-	// 保存到数据库
 	webhook := &webhookModel.Webhook{
 		Name:     newWebhook.Name,
 		URL:      newWebhook.URL,
@@ -93,12 +84,10 @@ func (settingService *SettingService) UpdateWebhook(
 	})
 }
 
-// CreateWebhook 创建 Webhook
 func (settingService *SettingService) CreateWebhook(
 	ctx context.Context,
 	newWebhook *model.WebhookDto,
 ) error {
-	// 鉴权
 	userid := viewer.MustFromContext(ctx).UserID()
 	user, err := settingService.commonService.CommonGetUserByUserId(ctx, userid)
 	if err != nil {
@@ -108,10 +97,8 @@ func (settingService *SettingService) CreateWebhook(
 		return errors.New(commonModel.NO_PERMISSION_DENIED)
 	}
 
-	// 数据处理
 	newWebhook.URL = urlUtil.TrimURL(newWebhook.URL)
 
-	// 检查名称或URL是否为空
 	if newWebhook.Name == "" || newWebhook.URL == "" {
 		return errors.New(commonModel.WEBHOOK_NAME_OR_URL_CANNOT_BE_EMPTY)
 	}
@@ -119,7 +106,6 @@ func (settingService *SettingService) CreateWebhook(
 		return err
 	}
 
-	// 保存到数据库
 	webhook := &webhookModel.Webhook{
 		Name:     newWebhook.Name,
 		URL:      newWebhook.URL,
@@ -132,9 +118,7 @@ func (settingService *SettingService) CreateWebhook(
 	})
 }
 
-// TestWebhook 测试单个 Webhook
 func (settingService *SettingService) TestWebhook(ctx context.Context, id string) error {
-	// 鉴权
 	userid := viewer.MustFromContext(ctx).UserID()
 	user, err := settingService.commonService.CommonGetUserByUserId(ctx, userid)
 	if err != nil {

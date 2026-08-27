@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGetAllWebhooks_Success 覆盖管理员读取列表的成功路径与仓储错误上抛。
 func TestGetAllWebhooks_Success(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
@@ -45,7 +44,6 @@ func TestGetAllWebhooks_Success(t *testing.T) {
 	})
 }
 
-// TestDeleteWebhook_Success 覆盖管理员删除走事务的成功路径。
 func TestDeleteWebhook_Success(t *testing.T) {
 	d := newDeps(t)
 	d.expectAdmin()
@@ -55,7 +53,6 @@ func TestDeleteWebhook_Success(t *testing.T) {
 	require.NoError(t, d.build().DeleteWebhook(helpers.CtxAsUser(testUserID), "wh-9"))
 }
 
-// TestUpdateWebhook_Validation 覆盖更新前的数据校验分支：空 URL、SSRF 私网拦截。
 func TestUpdateWebhook_Validation(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
@@ -76,8 +73,6 @@ func TestUpdateWebhook_Validation(t *testing.T) {
 	})
 }
 
-// TestTestWebhook_ValidationBranches 覆盖 TestWebhook 在调用发送器之前的失败分支，
-// 无需真实 webhookSender：取回失败上抛、取回后 URL 校验失败上抛。
 func TestTestWebhook_ValidationBranches(t *testing.T) {
 	ctx := helpers.CtxAsUser(testUserID)
 
@@ -104,7 +99,6 @@ func TestTestWebhook_ValidationBranches(t *testing.T) {
 	})
 }
 
-// TestUpdateOAuth2Setting_Success 覆盖管理员保存 OAuth2 设置（URL 清洗 + 落库）。
 func TestUpdateOAuth2Setting_Success(t *testing.T) {
 	d := newDeps(t)
 	d.expectAdmin()
@@ -125,7 +119,6 @@ func TestUpdateOAuth2Setting_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TestUpdatePasskeySetting_Success 覆盖管理员保存 Passkey 设置（RPID/Origins 落库）。
 func TestUpdatePasskeySetting_Success(t *testing.T) {
 	d := newDeps(t)
 	d.expectAdmin()

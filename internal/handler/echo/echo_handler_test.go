@@ -6,7 +6,7 @@ package handler_test
 import (
 	"errors"
 	"testing"
-	_ "time/tzdata" // 内嵌 IANA 时区库，保证 NormalizeTimezone 在任意平台可解析 "Asia/Tokyo" 等时区
+	_ "time/tzdata"
 
 	handler "github.com/lin-snow/ech0/internal/handler/echo"
 	commonModel "github.com/lin-snow/ech0/internal/model/common"
@@ -18,10 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// errBoom 是各错误透传用例共用的哨兵错误。
 var errBoom = errors.New("boom")
 
-// newPage 构造一个非零的分页结果，便于断言数据被原样透传。
 func newPage(items []echoModel.Echo) commonModel.PageQueryResult[[]echoModel.Echo] {
 	return commonModel.PageQueryResult[[]echoModel.Echo]{
 		Items: items,

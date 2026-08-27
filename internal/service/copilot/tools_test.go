@@ -18,9 +18,6 @@ import (
 	userModel "github.com/lin-snow/ech0/internal/model/user"
 )
 
-// --- 手写极简替身（copilot 域接口很窄，逐方法覆写即可，其余嵌入 nil 接口未调用即不触发） ---
-
-// stubEchoSvc 覆写 copilot 实际调用到的少数 EchoService 方法（QueryEchos / GetEchoById / GetAllTags）。
 type stubEchoSvc struct {
 	EchoService
 	queryFn   func(dto commonModel.EchoQueryDto) (commonModel.PageQueryResult[[]echoModel.Echo], error)
@@ -44,7 +41,6 @@ func (f *stubEchoSvc) GetEchoById(_ context.Context, id string) (*echoModel.Echo
 
 func (f *stubEchoSvc) GetAllTags() ([]echoModel.Tag, error) { return f.tags, nil }
 
-// stubEmbeddingSvc 覆写 copilot 实际调用到的 Enabled / Search。
 type stubEmbeddingSvc struct {
 	EmbeddingService
 	enabled    bool
@@ -66,7 +62,6 @@ func (f *stubEmbeddingSvc) Search(_ context.Context, query string, k int, author
 	return nil, nil
 }
 
-// stubUserReader 是 copilot UserReader 的极简替身。
 type stubUserReader struct {
 	user userModel.User
 	err  error
@@ -74,8 +69,6 @@ type stubUserReader struct {
 
 func (f *stubUserReader) GetUserByID(_ string) (userModel.User, error) { return f.user, f.err }
 
-// singlePage 返回一个「page 1 给全量、后续页给空」的 QueryEchos 替身：total==len(items) 时
-// collectRange 一次取尽即终止，不会进入第二页。
 func singlePage(items []echoModel.Echo, total int64) func(commonModel.EchoQueryDto) (commonModel.PageQueryResult[[]echoModel.Echo], error) {
 	return func(dto commonModel.EchoQueryDto) (commonModel.PageQueryResult[[]echoModel.Echo], error) {
 		if dto.Page > 1 {
@@ -99,8 +92,6 @@ func ts(date string) int64 {
 	return t.Unix()
 }
 
-// ---- effectiveTopK（纯函数：四个分支） ----
-
 func TestEffectiveTopK(t *testing.T) {
 	cases := []struct {
 		name              string
@@ -121,11 +112,8 @@ func TestEffectiveTopK(t *testing.T) {
 	}
 }
 
-// ---- searchEchosTool.Execute ----
-
 func newSearchUser() chatUser { return chatUser{ID: "u1", Username: "alice"} }
 
-// 既无 query 又无结构化过滤 → 直接返回参数错误，不触碰任何依赖。
 func TestSearchEchosTool_NeedsQueryOrFilter(t *testing.T) {
 	s := &CopilotService{echoService: &stubEchoSvc{}, embedding: &stubEmbeddingSvc{}}
 	tool := s.searchEchosTool(nil, false, "zh-CN", time.UTC, 0, newSearchUser())
@@ -136,14 +124,13 @@ func TestSearchEchosTool_NeedsQueryOrFilter(t *testing.T) {
 	}
 }
 
-// 带结构化过滤（日期范围）→ 走 SQL 路径；命中数 > 展示数时前置覆盖度提示；enrichHits 折入扩展分享。
 func TestSearchEchosTool_StructuredWithCoverageNote(t *testing.T) {
 	items := []echoModel.Echo{
 		{ID: "e1", Content: "读了三体", CreatedAt: ts("2026-01-05")},
 		{ID: "e2", Content: "读了球状闪电", CreatedAt: ts("2026-01-09")},
 	}
 	echoSvc := &stubEchoSvc{
-		queryFn: singlePage(items, 10), // total 10 > 展示 2 → 覆盖度提示
+		queryFn: singlePage(items, 10),
 		getByIDFn: func(id string) (*echoModel.Echo, error) {
 			return &echoModel.Echo{
 				ID:        id,
@@ -172,7 +159,6 @@ func TestSearchEchosTool_StructuredWithCoverageNote(t *testing.T) {
 	}
 }
 
-// 纯 query + 向量启用 → 走 embedding 语义检索，并按当前用户名收口。
 func TestSearchEchosTool_SemanticPath(t *testing.T) {
 	emb := &stubEmbeddingSvc{
 		enabled: true,
@@ -204,7 +190,6 @@ func TestSearchEchosTool_SemanticPath(t *testing.T) {
 	}
 }
 
-// 纯 query + 向量未启用 → 回退 SQL LIKE 路径（queryEchos）。
 func TestSearchEchosTool_DefaultSQLFallback(t *testing.T) {
 	var gotSearch string
 	echoSvc := &stubEchoSvc{
@@ -232,7 +217,6 @@ func TestSearchEchosTool_DefaultSQLFallback(t *testing.T) {
 	}
 }
 
-// queryEchos 出错时 Execute 透传错误。
 func TestSearchEchosTool_QueryErrorPropagates(t *testing.T) {
 	wantErr := errors.New("db down")
 	echoSvc := &stubEchoSvc{queryFn: func(commonModel.EchoQueryDto) (commonModel.PageQueryResult[[]echoModel.Echo], error) {
@@ -246,8 +230,6 @@ func TestSearchEchosTool_QueryErrorPropagates(t *testing.T) {
 		t.Fatalf("want propagated db error, got %v", err)
 	}
 }
-
-// ---- statsOverviewTool.Execute ----
 
 func TestStatsOverviewTool_NeedsDateRange(t *testing.T) {
 	s := &CopilotService{echoService: &stubEchoSvc{}}
@@ -290,8 +272,6 @@ func TestStatsOverviewTool_CollectErrorPropagates(t *testing.T) {
 	}
 }
 
-// ---- summarizeEchosTool.Execute（材料放得下预算时不调用 LLM） ----
-
 func TestSummarizeEchosTool_NeedsDateRange(t *testing.T) {
 	s := &CopilotService{echoService: &stubEchoSvc{}}
 	tool := s.summarizeEchosTool(nil, settingModel.AgentSetting{}, "zh-CN", time.UTC, newSearchUser())
@@ -307,7 +287,6 @@ func TestSummarizeEchosTool_HappyPathFitsBudget(t *testing.T) {
 		{ID: "a", Content: "一月读书", CreatedAt: ts("2026-01-05")},
 		{ID: "b", Content: "二月旅行", CreatedAt: ts("2026-02-10")},
 	}
-	// ContextWindow=0 → 默认 256k 预算，两条短材料必然放得下，mapReduceSummary 直接返回不调 LLM。
 	s := &CopilotService{echoService: &stubEchoSvc{queryFn: singlePage(items, int64(len(items)))}}
 	tool := s.summarizeEchosTool(nil, settingModel.AgentSetting{}, "zh-CN", time.UTC, newSearchUser())
 

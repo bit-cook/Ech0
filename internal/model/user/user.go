@@ -12,7 +12,6 @@ const (
 	USER_NOT_EXISTS_ID = ""
 )
 
-// User 定义用户实体
 type User struct {
 	ID       string `gorm:"type:char(36);primaryKey" json:"id"`
 	Username string `gorm:"size:255;not null;unique" json:"username"`

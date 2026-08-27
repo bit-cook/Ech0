@@ -8,13 +8,8 @@ import (
 	"uuid"
 )
 
-// nameSpaceDNS is the RFC 9562 §6.6 DNS namespace, used only by the RFC vector below.
 var nameSpaceDNS = uuid.MustParse("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 
-// TestNewV5Golden pins NewV5 against the RFC 9562 vector plus the namespace and
-// ids the capsule build derives. These values were produced by the previously
-// used github.com/google/uuid implementation, so a drift here means already
-// published capsule datasets would change their entity ids.
 func TestNewV5Golden(t *testing.T) {
 	capsuleNS := NewV5(NameSpaceURL, []byte("https://github.com/lin-snow/Ech0/capsule/build"))
 
@@ -45,8 +40,6 @@ func TestNewV5Golden(t *testing.T) {
 	}
 }
 
-// TestNewV5DistinctNamespaces guards the property the capsule build depends on:
-// the same name under different namespaces must not collide.
 func TestNewV5DistinctNamespaces(t *testing.T) {
 	a := NewV5(NameSpaceURL, []byte("x"))
 	b := NewV5(nameSpaceDNS, []byte("x"))

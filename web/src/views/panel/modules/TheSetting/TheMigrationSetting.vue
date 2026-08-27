@@ -116,7 +116,6 @@ import { fetchUploadMigrationSourceZip, type MigrationSourceType } from '@/servi
 import { useMigrationStore } from '@/stores'
 import { theToast } from '@/utils/toast'
 
-// SourceCard 的 value 直接复用 API 契约里的来源枚举,避免两处各写一份。
 interface SourceCard {
   value: MigrationSourceType
   title: string
@@ -186,14 +185,11 @@ const startActionText = computed(() => {
   return String(t('migrationSetting.startMigration'))
 })
 
-// ---- job 进度卡 ----
 const jobSubtitle = computed(
   () =>
     `${t('migrationSetting.source')} ${sourceLabelMap.value[migrationStore.state.source_type] || migrationStore.state.source_type}`,
 )
 
-// 步进器阶段名由具体 importer 决定:ech0 走 解析→写入→汇总→完成,
-// 胶囊 importer 只上报 校验→导入→完成,两套不能混用。
 const importSteps = computed(() => {
   if (migrationStore.state.source_type === 'capsule') {
     return [
@@ -320,7 +316,6 @@ const handleStartMigration = async () => {
       return
     }
     const sourcePayload: Record<string, unknown> = { ...(uploadRes.data?.source_payload ?? {}) }
-    // 私密内容开关只对胶囊有意义,随 source_payload 交给后端作业。
     if (sourceType.value === 'capsule') {
       sourcePayload.include_private = capsuleIncludePrivate.value
     }

@@ -41,7 +41,6 @@ const (
 
 var pngBytes = []byte("\x89PNG\r\n\x1a\nfake-image-payload")
 
-// fixture 把「内存库 + 临时存储根 + 一份手搭胶囊」打包，让各用例只描述差异。
 type fixture struct {
 	db      *gorm.DB
 	deps    Deps
@@ -61,8 +60,6 @@ func newFixture(t *testing.T) *fixture {
 	alice := userModel.User{Username: "alice"}
 	require.NoError(t, db.Create(&alice).Error)
 
-	// 预置一份「标题已配置、其余留空」的站点设置：只填空位这条规则唯有在
-	// 目标库确实有非空项时才谈得上被验证。
 	kv := kvstore.NewMemory()
 	require.NoError(t, coreSetting.Set(context.Background(), kv, coreSetting.System,
 		settingModel.SystemSetting{SiteTitle: "Existing Title"}))
@@ -80,8 +77,6 @@ func newFixture(t *testing.T) *fixture {
 	}
 }
 
-// writeCapsule 按 spec §2 的布局把一份胶囊铺到磁盘上，走真实编解码器，
-// 免得测试悄悄绕过 frontmatter/YAML 这一层。
 func writeCapsule(
 	t *testing.T,
 	manifest *capsule.Manifest,
@@ -216,25 +211,23 @@ func TestRun_LandsCapsuleVerbatim(t *testing.T) {
 	res, err := Run(context.Background(), f.deps, loadCapsule(t, dir), Options{})
 	require.NoError(t, err)
 
-	require.Equal(t, 2, res.EchoesCreated) // private 被排除
+	require.Equal(t, 2, res.EchoesCreated)
 	require.Equal(t, 1, res.SkippedPrivate)
 	require.Equal(t, 0, res.EchoesSkipped)
 	require.Equal(t, 2, res.TagsCreated)
 	require.Equal(t, 1, res.FilesCreated)
 	require.Equal(t, 1, res.CommentsCreated)
-	require.Equal(t, 1, res.OrphanComments) // 宿主是被排除的 private Echo
+	require.Equal(t, 1, res.OrphanComments)
 	require.Empty(t, res.Renames)
 
 	var echo echoModel.Echo
 	require.NoError(t, f.db.Where("id = ?", echoIDPublic).First(&echo).Error)
-	// 逐字：created_at / username / fav_count 一个字节都不许变。
 	require.Equal(t, publicCreatedTS, echo.CreatedAt)
 	require.Equal(t, "alice", echo.Username)
 	require.Equal(t, 42, echo.FavCount)
 	require.Equal(t, "hello **capsule**\n", echo.Content)
 	require.Equal(t, echoModel.LayoutGrid, echo.Layout)
 	require.False(t, echo.Private)
-	// 唯一的补全：同名用户存在即挂接。
 	require.Equal(t, f.aliceID, echo.UserID)
 
 	var ghost echoModel.Echo
@@ -246,7 +239,6 @@ func TestRun_LandsCapsuleVerbatim(t *testing.T) {
 	require.NoError(t, f.db.Model(&echoModel.Echo{}).Where("id = ?", echoIDPrivate).Count(&private).Error)
 	require.Zero(t, private)
 
-	// 标签：find-or-create + 关系表 + usage_count 重算。
 	var tags []echoModel.Tag
 	require.NoError(t, f.db.Order("name asc").Find(&tags).Error)
 	require.Len(t, tags, 2)
@@ -258,7 +250,6 @@ func TestRun_LandsCapsuleVerbatim(t *testing.T) {
 	require.NoError(t, f.db.Model(&echoModel.EchoTag{}).Where("echo_id = ?", echoIDPublic).Count(&links).Error)
 	require.EqualValues(t, 2, links)
 
-	// 文件：字段 1:1，URL 留空（托管文件的直链由 AfterFind 重算）。
 	var file fileModel.File
 	require.NoError(t, f.db.Where("key = ?", "pic.png").First(&file).Error)
 	require.Equal(t, string(storage.StorageTypeLocal), file.StorageType)
@@ -276,7 +267,6 @@ func TestRun_LandsCapsuleVerbatim(t *testing.T) {
 	require.Equal(t, file.ID, link.FileID)
 	require.Equal(t, 0, link.SortOrder)
 
-	// 字节真的落到了当前后端（schema 路由到 images/）。
 	require.Equal(t, pngBytes, readStoredBytes(t, f, "pic.png"))
 
 	var ext echoModel.EchoExtension
@@ -284,7 +274,6 @@ func TestRun_LandsCapsuleVerbatim(t *testing.T) {
 	require.Equal(t, echoModel.Extension_WEBSITE, ext.Type)
 	require.Equal(t, "https://example.com", ext.Payload["url"])
 
-	// 评论：Email/IPHash/UserAgent/UserID 保持零值，status/source 走缺省。
 	var comment commentModel.Comment
 	require.NoError(t, f.db.Where("id = ?", commentIDLive).First(&comment).Error)
 	require.Equal(t, echoIDPublic, comment.EchoID)
@@ -301,7 +290,6 @@ func TestRun_LandsCapsuleVerbatim(t *testing.T) {
 	require.NoError(t, f.db.Model(&commentModel.Comment{}).Where("id = ?", commentIDOrphan).Count(&orphan).Error)
 	require.Zero(t, orphan)
 
-	// 站点设置只填空位；connects 去重追加。
 	require.ElementsMatch(t, []string{"server_name", "footer_link"}, res.SiteFieldsFilled)
 	sys, err := coreSetting.Get(context.Background(), f.deps.KV, coreSetting.System)
 	require.NoError(t, err)
@@ -347,7 +335,6 @@ func TestRun_DryRunWritesNothing(t *testing.T) {
 	res, err := Run(context.Background(), f.deps, loadCapsule(t, dir), Options{DryRun: true})
 	require.NoError(t, err)
 
-	// 清单照常统计，便于用户预览。
 	require.Equal(t, 2, res.EchoesCreated)
 	require.Equal(t, 1, res.FilesCreated)
 	require.Equal(t, 2, res.TagsCreated)
@@ -357,11 +344,9 @@ func TestRun_DryRunWritesNothing(t *testing.T) {
 
 	require.Equal(t, map[string]int64{}, nonZero(snapshotCounts(t, f.db)))
 
-	// 字节也没写：存储根下不该多出任何文件。
 	_, err = f.deps.Selector.Get(context.Background(), storage.StorageTypeLocal, "pic.png")
 	require.Error(t, err)
 
-	// KV 仓储的缓存不随事务回滚，dry-run 必须完全绕开写 KV。
 	sys, err := coreSetting.Get(context.Background(), f.deps.KV, coreSetting.System)
 	require.NoError(t, err)
 	require.Equal(t, "Existing Title", sys.SiteTitle)
@@ -383,7 +368,6 @@ func TestRun_RenamesOnKeyCollisionWithDifferentBytes(t *testing.T) {
 	require.Equal(t, 1, res.FilesCreated)
 	require.Empty(t, res.Renames)
 
-	// 同 key、不同字节：手写胶囊撞名，必须改名落盘而不是覆盖既有字节。
 	other := []byte("\x89PNG\r\n\x1a\na-totally-different-payload")
 	second := writeCapsule(t, fullManifest(), []*capsule.EchoDoc{{
 		ID:        echoIDGhost,
@@ -472,12 +456,8 @@ func TestRun_IncludePrivateLandsPrivateEchoAndItsComment(t *testing.T) {
 	require.Equal(t, 0, res.OrphanComments)
 }
 
-// TestRun_FreshInstanceTakesCapsuleSiteIdentity 守卫「搬站」这个头号用例：
-// 全新实例的 KV 里没有 system_settings，setting.Get 会返回一份 config 派生的
-// 非空默认值（SiteTitle="Ech0" 等）。若「空位」只按空串判，站点身份就永远导不进来。
 func TestRun_FreshInstanceTakesCapsuleSiteIdentity(t *testing.T) {
 	f := newFixture(t)
-	// 抹掉预置配置，回到「从未配置过」的状态。
 	f.deps.KV = kvstore.NewMemory()
 
 	pristine := coreSetting.System.Default()
@@ -517,7 +497,6 @@ func snapshotCounts(t *testing.T, db *gorm.DB) map[string]int64 {
 	return out
 }
 
-// nonZero 只留下非空表，让「什么都没写」这个断言的失败信息直接指出脏在哪张表。
 func nonZero(in map[string]int64) map[string]int64 {
 	out := map[string]int64{}
 	for k, v := range in {

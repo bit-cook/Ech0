@@ -15,7 +15,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// newConnectRepo 构造一个绑定到测试内存库的仓储。
 func newConnectRepo(t *testing.T) (*ConnectRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
@@ -105,8 +104,6 @@ func TestConnectRepository_DeleteConnect(t *testing.T) {
 	})
 }
 
-// TestConnectRepository_GetDB_UsesContextTx 验证 getDB 优先使用上下文中的事务：
-// 在事务中写入后回滚，基础库连接读不到该行，说明写入走的是事务而非基础 db。
 func TestConnectRepository_GetDB_UsesContextTx(t *testing.T) {
 	repo, db := newConnectRepo(t)
 

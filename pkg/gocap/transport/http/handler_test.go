@@ -68,7 +68,6 @@ func TestRedeemCompatUnknownFieldsAndSiteverifyNoRateLimit(t *testing.T) {
 		t.Fatalf("missing redeem token")
 	}
 
-	// siteverify should not be rate-limited by default.
 	verifyBody, _ := json.Marshal(map[string]any{
 		"secret":   "secret1",
 		"response": redeemResp.Token,

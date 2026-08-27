@@ -30,7 +30,6 @@ var demoSpec = Spec[demo]{
 	},
 }
 
-// boomStore 的 Get 永远返回非 ErrNotFound 的后端错误。
 type boomStore struct{}
 
 func (boomStore) Get(context.Context, string) (string, error) { return "", errors.New("boom") }
@@ -61,7 +60,7 @@ func TestGet_ReadsStoredValue(t *testing.T) {
 
 func TestGet_AppliesNormalizeToStoredValue(t *testing.T) {
 	kv := kvstore.NewMemory()
-	_ = kv.Set(context.Background(), demoSpec.Key, `{"name":"stored"}`) // tag empty
+	_ = kv.Set(context.Background(), demoSpec.Key, `{"name":"stored"}`)
 	got, err := Get(context.Background(), kv, demoSpec)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
@@ -109,7 +108,6 @@ func TestSet_RoundTrip(t *testing.T) {
 
 func TestSet_AppliesNormalizeOnWrite(t *testing.T) {
 	kv := kvstore.NewMemory()
-	// Tag 为空 → Normalize 在写时补成 "normalized"，落库即已归一化。
 	if err := Set(context.Background(), kv, demoSpec, demo{Name: "x"}); err != nil {
 		t.Fatalf("set: %v", err)
 	}
@@ -175,7 +173,6 @@ func TestSeed_CommentDefaultsSMTPPort(t *testing.T) {
 
 func TestSeed_PasskeyMigratesFromLegacyOAuth2(t *testing.T) {
 	kv := kvstore.NewMemory()
-	// 旧版把 WebAuthn 字段内联在 oauth2_setting 里。
 	_ = kv.Set(context.Background(), commonModel.OAuth2SettingKey,
 		`{"webauthn_rp_id":"example.com","webauthn_allowed_origins":["https://example.com"]}`)
 
@@ -195,5 +192,4 @@ func TestSeed_PasskeyMigratesFromLegacyOAuth2(t *testing.T) {
 	}
 }
 
-// 编译期确保 registry 元素均为 seedable（含泛型 Spec 与 serverURLSeed）。
 var _ = []seedable{System, serverURLSeed{}, Spec[settingModel.AgentSetting]{}}

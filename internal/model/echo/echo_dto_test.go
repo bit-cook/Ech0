@@ -42,7 +42,6 @@ func TestEchoUpsertDto_ToModel(t *testing.T) {
 		require.NotNil(t, got.Extension)
 		assert.Equal(t, Extension_MUSIC, got.Extension.Type)
 		assert.Equal(t, payload, got.Extension.Payload)
-		// Only Type/Payload are copied; the rest of EchoExtension stays zero.
 		assert.Equal(t, "", got.Extension.ID)
 		assert.Equal(t, "", got.Extension.EchoID)
 		assert.Equal(t, int64(0), got.Extension.CreatedAt)

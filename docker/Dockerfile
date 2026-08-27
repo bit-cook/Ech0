@@ -1,4 +1,3 @@
-# =================== 构建阶段 ===================
 FROM alpine:latest AS builder
 
 WORKDIR /app
@@ -10,13 +9,10 @@ RUN mkdir -p /app/data
 
 COPY --chmod=0755 backend-artifacts/ech0-${TARGETOS}-${TARGETARCH} /app/ech0
 
-# =================== 最终镜像 ===================
 FROM alpine:latest
 
 WORKDIR /app
 
-# 时区数据已通过 `_ "time/tzdata"`(见 cmd/ech0/main.go) 内嵌进二进制,
-# 无需再从系统安装 tzdata。
 COPY --from=builder /app /app
 
 EXPOSE 6277

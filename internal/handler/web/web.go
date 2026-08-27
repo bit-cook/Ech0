@@ -53,7 +53,6 @@ func (webHandler *WebHandler) Templates() gin.HandlerFunc {
 		fullPath := path.Clean("." + requestPath)
 		f, err := fileServer.Open(fullPath)
 		if err != nil {
-			// fallback 到 index.html
 			fallback, err := fileServer.Open("index.html")
 			if err != nil {
 				ctx.Status(http.StatusNotFound)
@@ -77,7 +76,6 @@ func (webHandler *WebHandler) Templates() gin.HandlerFunc {
 
 		stat, _ := f.Stat()
 
-		// 适配资源压缩Gzip 算法
 		encoding := ctx.GetHeader("Accept-Encoding")
 		if strings.Contains(encoding, "gzip") {
 			gzPath := fullPath + ".gz"

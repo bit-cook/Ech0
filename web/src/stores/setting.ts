@@ -26,9 +26,6 @@ type SnapshotUIStatus = 'idle' | 'pending' | 'running' | 'success' | 'failed' | 
 export const useSettingStore = defineStore('settingStore', () => {
   const userStore = useUserStore()
 
-  /**
-   * State
-   */
   const SystemSetting = ref<App.Api.Setting.SystemSetting>({
     site_title: import.meta.env.VITE_APP_TITLE,
     server_logo: '/Ech0.svg',
@@ -95,27 +92,18 @@ export const useSettingStore = defineStore('settingStore', () => {
   })
   const hello = ref<App.Api.Ech0.HelloEch0>()
   const loading = ref<boolean>(true)
-  // 快照 = 导出作业（job.Manager，按类型单行、服务端持久化）。前端不再持有 taskId / localStorage，
-  // 状态直接来自 GET /migration/export/status（与导入状态机一致）。
   const snapshotStatus = ref<SnapshotUIStatus>('idle')
   const snapshotError = ref<string>('')
-  // 后端导出状态回传的 phase(packing/completed)与产物信息(成功时填充),用于 job 进度展示。
   const snapshotPhase = ref<string>('')
   const snapshotFileName = ref<string>('')
   const snapshotSize = ref<number>(0)
-  // 界面上待发起的导出格式与「含私密内容」选择（仅胶囊有意义，快照本就含全部私密内容）。
   const exportFormat = ref<ExportFormat>('snapshot')
   const exportIncludePrivate = ref<boolean>(false)
-  // 作业实际产出的格式,来自轮询响应,与界面选择器解耦:用户导完胶囊后可能又把选择器拨回快照,
-  // 下载必须仍指向真实产物。老后端不回该字段时按 snapshot 兜底。
   const snapshotFormat = ref<ExportFormat>('snapshot')
   const snapshotPolling = ref<boolean>(false)
   const snapshotPollTimer = ref<ReturnType<typeof setTimeout> | null>(null)
   const snapshotPollInFlight = ref<boolean>(false)
 
-  /**
-   * Actions
-   */
   const getSystemSetting = async () => {
     await fetchGetSettings().then((res) => {
       if (res.code === 1) {
@@ -188,7 +176,6 @@ export const useSettingStore = defineStore('settingStore', () => {
     snapshotStatus.value = data.status
     snapshotError.value = data.error_message || ''
     snapshotPhase.value = data.phase || ''
-    // 产物文件名/大小仅在终态成功时由后端补出;非成功态后端回空,这里如实清零。
     snapshotFileName.value = data.file_name || ''
     snapshotSize.value = data.size || 0
     snapshotFormat.value = data.format || 'snapshot'
@@ -225,8 +212,6 @@ export const useSettingStore = defineStore('settingStore', () => {
     scheduleSnapshotPoll()
   }
 
-  // format 显式入参而非直读 exportFormat：定时快照 tab 的「立即创建」必须永远产出快照，
-  // 不能被导出 tab 的选择器带偏。
   const startSnapshotTask = async (
     format: ExportFormat = 'snapshot',
     includePrivate: boolean = false,
@@ -235,7 +220,6 @@ export const useSettingStore = defineStore('settingStore', () => {
     const res = await fetchStartExport({ format, include_private: includePrivate })
     if (res.code === 1 && res.data) {
       applyExportState(res.data)
-      // 起始响应尚未回填 format 时以本次请求的格式为准，否则会兜底成 snapshot 而下载错产物。
       if (!res.data.format) snapshotFormat.value = format
       snapshotPolling.value = true
       scheduleSnapshotPoll()
@@ -243,7 +227,6 @@ export const useSettingStore = defineStore('settingStore', () => {
     return res
   }
 
-  // 进入页面时从服务端恢复：仅当存在进行中的导出作业才接管轮询；终态不回灌（避免每次挂载误弹成功提示）。
   const restoreSnapshotTask = async () => {
     const res = await fetchGetExportStatus()
     if (res.code === 1 && (res.data.status === 'pending' || res.data.status === 'running')) {

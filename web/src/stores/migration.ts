@@ -87,8 +87,6 @@ export const useMigrationStore = defineStore('migrationStore', () => {
     const res = await fetchCancelMigration()
     if (res.code === 1) {
       applyState(res.data as Partial<MigrationStatusPayload>)
-      // 取消改为协作式（迁入 job 子系统后）：作业可能尚未落到 cancelled，需继续轮询
-      // 直到后端确认终态，否则会停在 running 不再刷新。
       if (isRunning.value) {
         startPolling()
       } else {

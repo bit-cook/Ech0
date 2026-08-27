@@ -162,8 +162,6 @@ func (echoRepository *EchoRepository) DeleteEchoById(ctx context.Context, id str
 	var echo model.Echo
 	echoRepository.getDB(ctx).Where("echo_id = ?", id).Delete(&fileModel.EchoFile{})
 
-	// echo_extensions 的 ON DELETE CASCADE 依赖 SQLite 的 foreign_keys 开关,
-	// 连接默认不启用,必须与 echo_files 一样手动级联删除,否则留下孤儿行。
 	if err := echoRepository.getDB(ctx).Where("echo_id = ?", id).Delete(&model.EchoExtension{}).Error; err != nil {
 		return err
 	}
@@ -401,7 +399,6 @@ func (echoRepository *EchoRepository) QueryEchos(
 				Where("echo_tags.tag_id IN ?", queryDto.TagIDs)
 		}
 		if !showPrivate {
-			// 无私密可见权限：强制仅公开，dto.Private 被静默忽略（防泄漏兜底）。
 			db = db.Where("echos.private = ?", false)
 		} else if queryDto.Private != nil {
 			db = db.Where("echos.private = ?", *queryDto.Private)
@@ -614,10 +611,7 @@ func (echoRepository *EchoRepository) GetHotEchos(limit int, showPrivate bool) (
 	return sorted, nil
 }
 
-// GetRandomEcho 随机返回一篇 Echo。故意绕过 echo_cache（随机语义要求每次可能不同）。
-// 非管理员视角（showPrivate=false）只随机到公开 echo；无可见内容时返回 (nil, nil)，不视为错误。
 func (echoRepository *EchoRepository) GetRandomEcho(showPrivate bool) (*model.Echo, error) {
-	// SQLite / PostgreSQL 用 RANDOM()，MySQL 用 RAND()
 	randomExpr := "RANDOM()"
 	if echoRepository.db().Name() == "mysql" {
 		randomExpr = "RAND()"
@@ -648,15 +642,11 @@ func (echoRepository *EchoRepository) GetRandomEcho(showPrivate bool) (*model.Ec
 	return &echos[0], nil
 }
 
-// GetOnThisDayEchos 返回「那年今日」——过去年份中与今天同一「月-日」发布的 Echo。
-// 在 Go 侧按用户时区算出每个过去年份当日的 [0点, 次日0点) Unix 区间再 OR 查询，
-// 走 (private, created_at) 索引、不依赖任何 DB 方言专属的日期函数。无匹配/空库返回空切片。
 func (echoRepository *EchoRepository) GetOnThisDayEchos(showPrivate bool, timezone string) []model.Echo {
 	loc := timezoneUtil.LoadLocationOrUTC(timezoneUtil.NormalizeTimezone(timezone))
 	now := time.Now().In(loc)
 	month, day, currentYear := now.Month(), now.Day(), now.Year()
 
-	// 找出最早一条 Echo 所在年份，限定回溯范围
 	minQuery := echoRepository.db().Model(&model.Echo{})
 	if !showPrivate {
 		minQuery = minQuery.Where("private = ?", false)
@@ -701,9 +691,6 @@ func (echoRepository *EchoRepository) GetOnThisDayEchos(showPrivate bool, timezo
 	return echos
 }
 
-// onThisDayUnixRanges 计算 [earliestYear, currentYear) 区间内每个「存在 month-day 这一天」的过去年份，
-// 其当日 [0点, 次日0点) 的 Unix 秒区间（按给定时区，逐年计算以正确处理 DST 导致的非 24h 天）。
-// 对非闰年的 2/29 等不存在的日期（time.Date 会归一化成 3/1）直接跳过。
 func onThisDayUnixRanges(earliestYear, currentYear int, month time.Month, day int, loc *time.Location) [][2]int64 {
 	var ranges [][2]int64
 	for y := earliestYear; y < currentYear; y++ {

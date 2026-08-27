@@ -15,8 +15,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// isHelmChartArtifactStyleTag reports tags used only for Helm chart packages (ech0-<anything>),
-// which must not be treated as application semver releases.
 func isHelmChartArtifactStyleTag(tag string) bool {
 	t := strings.TrimSpace(tag)
 	return len(t) >= 5 && strings.EqualFold(t[:5], "ech0-")
@@ -52,14 +50,12 @@ const (
 	githubAPIBase        = "https://api.github.com"
 )
 
-// githubRelease 仅解出挑选最新版本所需的字段。
 type githubRelease struct {
 	TagName    string `json:"tag_name"`
 	Draft      bool   `json:"draft"`
 	Prerelease bool   `json:"prerelease"`
 }
 
-// fetchReleasesPage 请求某一页 releases（GitHub REST API）。
 func fetchReleasesPage(ctx context.Context, owner, repo string, page int) ([]githubRelease, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=%d&page=%d", githubAPIBase, owner, repo, releasesPerPage, page)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -86,7 +82,6 @@ func fetchReleasesPage(ctx context.Context, owner, repo string, page int) ([]git
 	return releases, nil
 }
 
-// GetLatestVersion 获取最新版本（跳过 Helm chart 专用 tag：以 ech0- 开头）
 func GetLatestVersion() (string, error) {
 	now := time.Now().UTC()
 	latestVersionCache.mu.Lock()
@@ -130,7 +125,6 @@ pageLoop:
 			best = canon
 			break pageLoop
 		}
-		// 本页少于满页数量，说明已到最后一页（GitHub 用 Link 头表示下一页，这里用条数判断即可）。
 		if len(releases) < releasesPerPage {
 			break
 		}
@@ -140,7 +134,6 @@ pageLoop:
 		return "", fmt.Errorf("no stable application release found (ech0-* chart tags are ignored)")
 	}
 
-	// 保持与 versionPkg.Version 一致：返回不带 v 的 X.Y.Z
 	result := strings.TrimPrefix(best, "v")
 
 	latestVersionCache.mu.Lock()

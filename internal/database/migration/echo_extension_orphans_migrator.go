@@ -12,9 +12,6 @@ import (
 
 type echoExtensionOrphansMigrator struct{}
 
-// NewEchoExtensionOrphansMigrator 清理历史遗留的 echo_extensions 孤儿行:
-// 旧版删除 echo 时未手动级联删除 extension,而 schema 里的 ON DELETE CASCADE
-// 因 SQLite 连接默认不开 foreign_keys 从未生效,孤儿行会静默累积。
 func NewEchoExtensionOrphansMigrator() Migrator {
 	return &echoExtensionOrphansMigrator{}
 }

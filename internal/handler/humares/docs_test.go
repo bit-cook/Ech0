@@ -17,23 +17,19 @@ import (
 
 func init() { gin.SetMode(gin.TestMode) }
 
-// 测试用的 group 前缀，与生产 humaAPIBase 保持一致。
 const testBasePath = "/api"
 
-// 页面里实际会请求的绝对路径（= basePath + 组内相对路由）。
 var (
-	scriptAbsPath = testBasePath + scalarScriptRoute // /api/docs/scalar.standalone.js
-	specAbsURL    = testBasePath + scalarSpecRoute   // /api/openapi.json
+	scriptAbsPath = testBasePath + scalarScriptRoute
+	specAbsURL    = testBasePath + scalarSpecRoute
 )
 
-// newDocsRouter 建一个仅注册 Scalar docs 路由的引擎（复用生产注册逻辑）。
 func newDocsRouter() *gin.Engine {
 	r := gin.New()
 	registerScalarDocs(r.Group(testBasePath), testBasePath)
 	return r
 }
 
-// newAPIRouter 走完整 NewAPI 装配（按 renderer 决定挂内置 docs 还是 Scalar），用于验证默认/可选切换。
 func newAPIRouter(docs DocsRenderer) *gin.Engine {
 	r := gin.New()
 	NewAPI(r, r.Group(testBasePath), "test", "1.0", testBasePath, docs)
@@ -47,7 +43,7 @@ func TestParseDocsRenderer(t *testing.T) {
 		"  scalar  ": DocsRendererScalar,
 		"stoplight":  DocsRendererStoplight,
 		"":           DocsRendererStoplight,
-		"swagger-ui": DocsRendererStoplight, // 未知值回退默认
+		"swagger-ui": DocsRendererStoplight,
 		"nonsense":   DocsRendererStoplight,
 	}
 	for in, want := range cases {
@@ -60,7 +56,6 @@ func TestParseDocsRenderer(t *testing.T) {
 func TestNewAPI_DefaultUsesHumaBuiltinDocs(t *testing.T) {
 	r := newAPIRouter(DocsRendererStoplight)
 
-	// 默认应保留 Huma 内置 docs（Stoplight），且不注册自托管 Scalar bundle 路由。
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, testBasePath+"/docs", nil))
 	if rec.Code != http.StatusOK {
@@ -107,7 +102,6 @@ func TestScalarDocs_HTMLReferencesLocalAssets(t *testing.T) {
 		t.Fatalf("expected text/html, got %q", ct)
 	}
 	body := rec.Body.String()
-	// 必须自托管：脚本指向本地离线 bundle 的根绝对路径，且不出现联网 CDN。
 	if !strings.Contains(body, `src="`+scriptAbsPath+`"`) {
 		t.Fatalf("docs HTML missing local bundle path %q; got: %s", scriptAbsPath, body)
 	}
@@ -133,7 +127,6 @@ func TestScalarBundle_GzipPassthrough(t *testing.T) {
 	if enc := rec.Header().Get("Content-Encoding"); enc != "gzip" {
 		t.Fatalf("expected Content-Encoding gzip, got %q", enc)
 	}
-	// 直吐的应当与 embed 的预压字节一致，且能解压回真实 bundle。
 	if !bytes.Equal(rec.Body.Bytes(), scalarBundleGz) {
 		t.Fatalf("gzip passthrough body differs from embedded asset")
 	}

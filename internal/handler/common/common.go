@@ -29,7 +29,6 @@ type (
 		WebsiteURL string `query:"website_url" required:"true" doc:"目标网站 URL"`
 	}
 
-	// HelloResponse 扁平化 version 信息到顶层，与前端 About 页契约一致。
 	HelloResponse struct {
 		Hello     string `json:"hello"`
 		Copyright string `json:"copyright"`
@@ -86,8 +85,6 @@ func (commonHandler *CommonHandler) GetRss(ctx *gin.Context) {
 		return
 	}
 
-	// 浏览器请求（Accept 含 text/html）按通用 XML 返回，触发 /rss.xsl 美化渲染；
-	// 订阅器请求按 application/atom+xml 返回，保持 RSS MIME 契约。
 	const browserContentType = "application/xml; charset=utf-8"
 	const feedContentType = "application/atom+xml; charset=utf-8"
 	contentType := feedContentType

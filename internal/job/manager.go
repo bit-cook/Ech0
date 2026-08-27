@@ -19,14 +19,10 @@ import (
 const logModule = "job"
 
 var (
-	// ErrNoRunner 提交了未注册类型的作业。
-	ErrNoRunner = errors.New("no runner registered for job type")
-	// ErrAlreadyRunning 该类型已有一条非终态作业（同类型互斥）。
+	ErrNoRunner       = errors.New("no runner registered for job type")
 	ErrAlreadyRunning = errors.New("a job of this type is already running")
 )
 
-// Manager 管理所有作业的生命周期：Runner 注册表、durable 持久化、内存实时进度、
-// 取消句柄。它从不解析领域 payload，只搬运 JSON。实现 app.Component。
 type Manager struct {
 	repo JobRepository
 
@@ -45,15 +41,12 @@ func NewManager(repo JobRepository) *Manager {
 	}
 }
 
-// Register 登记某类型的 Runner，须在任何 Submit 之前于启动期调用。
 func (m *Manager) Register(jobType string, r Runner) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.runners[jobType] = r
 }
 
-// Submit 提交一次作业：校验已注册、同类型互斥、upsert pending、登记取消句柄，
-// 起 goroutine 执行，返回 pending 行。
 func (m *Manager) Submit(ctx context.Context, jobType string, payload []byte) (jobModel.Job, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -63,7 +56,6 @@ func (m *Manager) Submit(ctx context.Context, jobType string, payload []byte) (j
 		return jobModel.Job{}, fmt.Errorf("%w: %s", ErrNoRunner, jobType)
 	}
 
-	// 同类型互斥：现存非终态行则拒绝。持锁读判断+upsert，单进程下即原子。
 	if existing, err := m.repo.GetByType(ctx, jobType); err == nil {
 		if !existing.Status.IsTerminal() {
 			return jobModel.Job{}, ErrAlreadyRunning
@@ -83,8 +75,6 @@ func (m *Manager) Submit(ctx context.Context, jobType string, payload []byte) (j
 		return jobModel.Job{}, err
 	}
 
-	// 作业独立于触发它的 HTTP 请求，用 background 派生可取消 ctx；持锁登记取消句柄，
-	// 消除「pending 已建、cancel 未登记」的窗口。
 	runCtx, cancel := context.WithCancel(context.Background())
 	m.cancels[jobType] = cancel
 	delete(m.live, jobType)
@@ -95,9 +85,7 @@ func (m *Manager) Submit(ctx context.Context, jobType string, payload []byte) (j
 	return pending, nil
 }
 
-// run 在独立 goroutine 内推进作业：running → success/failed/cancelled。
 func (m *Manager) run(runCtx context.Context, jobType string, runner Runner, base jobModel.Job) {
-	// durable 写用 background ctx，避免取消后终态行写不进去。
 	dbCtx := context.Background()
 	report := func(phase string, snapshot any) { m.setLive(jobType, phase, snapshot) }
 
@@ -141,8 +129,6 @@ func (m *Manager) run(runCtx context.Context, jobType string, runner Runner, bas
 	m.clear(jobType)
 }
 
-// Get 返回 durable 行；本进程正在跑时叠加内存实时进度。snapshot 为 nil 时只覆盖
-// Phase，不动 durable Payload。
 func (m *Manager) Get(ctx context.Context, jobType string) (jobModel.Job, error) {
 	row, err := m.repo.GetByType(ctx, jobType)
 	if err != nil {
@@ -160,7 +146,6 @@ func (m *Manager) Get(ctx context.Context, jobType string) (jobModel.Job, error)
 	return row, nil
 }
 
-// Delete 删除该类型的行并清空内存进度，使其回到「无作业」。仅应在终态时调用。
 func (m *Manager) Delete(ctx context.Context, jobType string) error {
 	if err := m.repo.Delete(ctx, jobType); err != nil {
 		return err
@@ -169,7 +154,6 @@ func (m *Manager) Delete(ctx context.Context, jobType string) error {
 	return nil
 }
 
-// Cancel 触发该类型在跑作业的 ctx 取消；无在跑/已终态则 no-op。
 func (m *Manager) Cancel(jobType string) error {
 	m.mu.Lock()
 	cancel := m.cancels[jobType]
@@ -202,10 +186,8 @@ func (m *Manager) clear(jobType string) {
 	m.mu.Unlock()
 }
 
-// Name 实现 app.Namer。
 func (m *Manager) Name() string { return "job" }
 
-// Start 把上次进程残留的 pending/running 行扫成 failed，避免前端永久转圈。幂等。
 func (m *Manager) Start(ctx context.Context) error {
 	if err := m.repo.SweepRunning(ctx, "interrupted by restart"); err != nil {
 		logUtil.GetLogger().Error("sweep orphan jobs failed", slog.String("module", logModule), logUtil.Err(err))
@@ -214,7 +196,6 @@ func (m *Manager) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop 取消所有在跑作业，使其协作退出。
 func (m *Manager) Stop(context.Context) error {
 	m.mu.Lock()
 	cancels := make([]context.CancelFunc, 0, len(m.cancels))

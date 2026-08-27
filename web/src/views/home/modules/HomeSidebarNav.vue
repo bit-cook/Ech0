@@ -24,7 +24,6 @@
       >
         <Search class="home-sidebar-nav__search-icon" />
       </button>
-      <!-- 对话入口：移动端与搜索放大镜成对，仅登录且 Agent 开启时出现 -->
       <button
         v-if="chatAvailable"
         type="button"

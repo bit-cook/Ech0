@@ -16,7 +16,6 @@ func TestUserRepository_UpsertLocalAuth(t *testing.T) {
 	repo, db, _ := newUserRepo(t)
 	ctx := context.Background()
 
-	// 初次插入。
 	require.NoError(t, repo.UpsertLocalAuth(ctx, &userModel.UserLocalAuth{
 		UserID: "u1", PasswordHash: "hash-md5", PasswordAlgo: "md5",
 	}))
@@ -26,7 +25,6 @@ func TestUserRepository_UpsertLocalAuth(t *testing.T) {
 	assert.Equal(t, "md5", row.PasswordAlgo)
 	assert.NotZero(t, row.UpdatedAt, "autoUpdateTime 应被填充")
 
-	// user_id 主键冲突 → 覆盖 hash/algo，而非插入新行。
 	require.NoError(t, repo.UpsertLocalAuth(ctx, &userModel.UserLocalAuth{
 		UserID: "u1", PasswordHash: "hash-bcrypt", PasswordAlgo: "bcrypt",
 	}))

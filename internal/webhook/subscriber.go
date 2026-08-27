@@ -12,9 +12,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// Registrations 让 Dispatcher 作为普通事件订阅者自注册：为每个可观测事件登记一条同步订阅，
-// 把强类型事件转为中立 WebhookObservation 后投递。并发 / 重试由 Dispatcher 的 worker pool 承担，
-// 故此处同步即可。新增可观测事件时，记得在此追加对应的 observe 行。
 func (wd *Dispatcher) Registrations() []eventbus.Registration {
 	return []eventbus.Registration{
 		observe[event.UserCreated](wd.HandleObservation),
@@ -33,8 +30,6 @@ func (wd *Dispatcher) Registrations() []eventbus.Registration {
 	}
 }
 
-// observe 构造单个事件类型的 webhook 观察订阅（同步）。它需要 busen 信封的 Meta（source 等元数据），
-// 故走 eventbus.OnWithMeta 而非 On —— On 只透传 Value。
 func observe[T event.Named](
 	deliver func(context.Context, event.WebhookObservation) error,
 ) eventbus.Registration {

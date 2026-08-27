@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNormalizeS3SettingDto 覆盖 SSL 推导、协议头剥离、CDN 末尾斜杠、按 provider 补齐 region。
 func TestNormalizeS3SettingDto(t *testing.T) {
 	cases := []struct {
 		name          string
@@ -90,7 +89,6 @@ func TestNormalizeS3SettingDto(t *testing.T) {
 			assert.Equal(t, tc.wantCDN, got.CDNURL, "CDNURL")
 			assert.Equal(t, tc.wantPrefix, got.PathPrefix, "PathPrefix")
 			assert.Equal(t, tc.wantPathStyle, got.UsePathStyle, "UsePathStyle")
-			// 透传字段保持原值。
 			assert.Equal(t, tc.in.Provider, got.Provider)
 		})
 	}
@@ -142,12 +140,10 @@ func TestSanitizeURLList(t *testing.T) {
 	got := sanitizeURLList([]string{"https://a.example.com/", "", "   ", "/b/"})
 	assert.Equal(t, []string{"https://a.example.com", "b"}, got)
 
-	// 全空输入返回空（非 nil）切片。
 	empty := sanitizeURLList([]string{"", "  "})
 	assert.Equal(t, []string{}, empty)
 }
 
-// TestRemainingTTLForRevoke 锁定 JTI 黑名单存留时长的三条分支（GHSA-fpw6-hrg5-q5x5）。
 func TestRemainingTTLForRevoke(t *testing.T) {
 	const neverFallback = 100 * 365 * 24 * time.Hour
 
@@ -168,7 +164,6 @@ func TestRemainingTTLForRevoke(t *testing.T) {
 	})
 }
 
-// TestValidateAccessTokenRequest_EdgeCases 补充既有用例未覆盖的边界（nil / 空名 / 空 scope / 合法）。
 func TestValidateAccessTokenRequest_EdgeCases(t *testing.T) {
 	admin := userModel.User{IsAdmin: true}
 	normal := userModel.User{IsAdmin: false}
@@ -177,7 +172,7 @@ func TestValidateAccessTokenRequest_EdgeCases(t *testing.T) {
 		name    string
 		user    userModel.User
 		dto     *model.AccessTokenSettingDto
-		wantErr string // 空表示期望无错
+		wantErr string
 	}{
 		{"nil dto rejected", admin, nil, commonModel.INVALID_PARAMS_BODY},
 		{

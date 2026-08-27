@@ -17,11 +17,8 @@ import (
 	uuidUtil "github.com/lin-snow/ech0/internal/util/uuid"
 )
 
-// echoFileMode 是回写 Echo 文件的权限；与导出侧产出的文件保持一致。
 const echoFileMode = 0o644
 
-// validateManifest 校验 ech0.yaml（spec §3）。清单是胶囊的身份证明：
-// 它不可读或版本不认识时，后面所有字段校验都失去意义，故只报这一条。
 func validateManifest(
 	r *Report,
 	loaded *capsule.Loaded,
@@ -44,8 +41,6 @@ func validateManifest(
 	case v <= 0:
 		r.errorf(p, "schema_version", "schema_version is required")
 	case v > capsule.SchemaVersion:
-		// 高于自身支持的版本必须拒绝（spec §8）：语义可能已变更，
-		// 「尽力而为地解析」只会静默产出错数据。
 		r.errorf(p, "schema_version", "unsupported schema_version %d, this build supports up to %d", v, capsule.SchemaVersion)
 	}
 
@@ -63,14 +58,9 @@ func validateManifest(
 		r.warnf(p, "site.server_logo", "embeds source instance URL (%s), the link may break after migration", marker)
 	}
 
-	// 清单里的 files 块与 frontmatter 的 files[] 同形，校验规则也完全一致——
-	// 它承载的是没挂在任何 Echo 上的文件行（logo、未使用的上传）。
 	validateFiles(r, loaded, p, loaded.Manifest.Files, referenced)
 }
 
-// validateEchoes 校验全部 Echo 内容文件（spec §4），返回胶囊内的 Echo id 集合
-// （评论孤儿判定用）与被引用的媒体路径集合（悬空媒体判定用）。
-// 只有 --fix 的写回失败会中断校验：那是 I/O 故障，继续跑只会掩盖它。
 func validateEchoes(r *Report, loaded *capsule.Loaded, opts Options, serverURL string) (ids map[string]struct{}, referenced map[string]struct{}, err error) {
 	ids = make(map[string]struct{}, len(loaded.Echoes))
 	referenced = make(map[string]struct{})
@@ -103,7 +93,6 @@ func validateEchoes(r *Report, loaded *capsule.Loaded, opts Options, serverURL s
 			r.errorf(e.Path, "id", "id %q is not a valid UUID", doc.ID)
 		default:
 			if first, dup := firstSeen[doc.ID]; dup {
-				// id 是幂等键与 permalink，重复即无法区分两条 Echo。
 				r.errorf(e.Path, "id", "duplicate id %s, already used by %s", doc.ID, first)
 			} else {
 				firstSeen[doc.ID] = e.Path
@@ -117,9 +106,6 @@ func validateEchoes(r *Report, loaded *capsule.Loaded, opts Options, serverURL s
 			r.errorf(e.Path, "created_at", "%v", perr)
 		}
 
-		// 表现层枚举不认得的取值只警告，不阻断（spec §7）：内容本身完好，消费者
-		// 退回默认值即可。活实例的写路径本来就是这么干的（service/echo 把未知
-		// layout 归一成 waterfall），校验器没有理由比它描述的系统更严格。
 		if doc.Layout != "" {
 			if _, ok := capsule.ValidLayouts[doc.Layout]; !ok {
 				r.warnf(e.Path, "layout", "unknown layout %q, consumers fall back to %q", doc.Layout, capsule.DefaultLayout)
@@ -136,8 +122,6 @@ func validateEchoes(r *Report, loaded *capsule.Loaded, opts Options, serverURL s
 	return ids, referenced, nil
 }
 
-// validateExtension 校验 extension 块（spec §4.2）：type 与 payload 同时必须，
-// payload 内部结构随 type 而异，规格不约束，这里只扫内嵌实例 URL。
 func validateExtension(r *Report, echoPath string, ext *capsule.Extension, serverURL string) {
 	if ext == nil {
 		return
@@ -145,8 +129,6 @@ func validateExtension(r *Report, echoPath string, ext *capsule.Extension, serve
 	if ext.Type == "" {
 		r.errorf(echoPath, "extension.type", "extension.type is required when extension is present")
 	} else if _, ok := capsule.ValidExtensionTypes[ext.Type]; !ok {
-		// 同 layout/category：类型不认得只是渲染不出来，正文与 payload 都还在，
-		// 不该让整个胶囊无法导入。缺失 type 才是硬错——那时 payload 无从解释。
 		r.warnf(echoPath, "extension.type", "unknown extension type %q, consumers skip rendering it", ext.Type)
 	}
 	if ext.Payload == nil {
@@ -158,8 +140,6 @@ func validateExtension(r *Report, echoPath string, ext *capsule.Extension, serve
 	}
 }
 
-// validateFiles 校验 files[]（spec §4.2 / §6）。托管条目的字节位置是
-// MediaPath(key) 的纯函数结果，胶囊不存路径，所以「字节在不在」只能这样比对。
 func validateFiles(r *Report, loaded *capsule.Loaded, echoPath string, files []capsule.FileRef, referenced map[string]struct{}) {
 	for i := range files {
 		f := files[i]
@@ -187,8 +167,6 @@ func validateFiles(r *Report, loaded *capsule.Loaded, echoPath string, files []c
 		}
 
 		media := capsule.MediaPath(f.Key)
-		// 即使字节缺失也算「被引用」：悬空判定看的是引用意图，
-		// 缺字节已经单独报了 error，不该再牵连别的文件。
 		referenced[media] = struct{}{}
 
 		size, ok := loaded.MediaPaths[media]
@@ -202,7 +180,6 @@ func validateFiles(r *Report, loaded *capsule.Loaded, echoPath string, files []c
 	}
 }
 
-// validateComments 校验 comments.yaml（spec §5）。
 func validateComments(r *Report, loaded *capsule.Loaded, echoIDs map[string]struct{}) {
 	p := capsule.CommentsPath
 	if !loaded.HasComments {
@@ -216,8 +193,6 @@ func validateComments(r *Report, loaded *capsule.Loaded, echoIDs map[string]stru
 		r.warnf(p, "", "unknown field ignored: %s", u)
 	}
 
-	// 禁止字段必须从原始键检出：Comment 结构体压根没有这些字段，
-	// 走结构体解码只会把隐私泄露降级成「未知字段」警告。
 	raw, err := capsule.RawComments(loaded.CommentsRaw)
 	if err != nil {
 		r.errorf(p, "", "parse %s: %v", p, err)
@@ -250,7 +225,6 @@ func validateComments(r *Report, loaded *capsule.Loaded, echoIDs map[string]stru
 		if c.EchoID == "" {
 			r.errorf(p, at("echo_id"), "echo_id is required")
 		} else if _, ok := echoIDs[c.EchoID]; !ok {
-			// 孤儿评论只是警告：胶囊可能只导出了部分 Echo（如排除私密）。
 			r.warnf(p, at("echo_id"), "orphan comment: echo %s is not in this capsule", c.EchoID)
 		}
 
@@ -273,8 +247,6 @@ func validateComments(r *Report, loaded *capsule.Loaded, echoIDs map[string]stru
 	}
 }
 
-// validateMedia 找出悬空媒体（spec §6）：合法但没人引用，通常是导出侧
-// 多拷了东西或引用被删掉了。
 func validateMedia(r *Report, loaded *capsule.Loaded, referenced map[string]struct{}, site capsule.Site) {
 	logo := logoMedia(site.ServerLogo, loaded.MediaPaths)
 	for _, p := range sortedMediaPaths(loaded.MediaPaths) {
@@ -288,7 +260,6 @@ func validateMedia(r *Report, loaded *capsule.Loaded, referenced map[string]stru
 	}
 }
 
-// validatePaths 处理与具体文件内容无关的路径级规则（spec §2）。
 func validatePaths(r *Report, loaded *capsule.Loaded) {
 	for i := range loaded.Echoes {
 		reportTraversal(r, loaded.Echoes[i].Path)
@@ -298,7 +269,6 @@ func validatePaths(r *Report, loaded *capsule.Loaded) {
 	}
 	for _, p := range loaded.UnknownPaths {
 		reportTraversal(r, p)
-		// 未知路径必须被忽略而非拒绝（spec §8），但用户有权知道它们的存在。
 		r.warnf(p, "", "unknown path ignored: not defined by the capsule spec")
 	}
 }
@@ -318,9 +288,6 @@ func hasTraversal(p string) bool {
 	return false
 }
 
-// fixEchoID 补全缺失的 id 并回写整个文件（spec §7 唯一的自动修复项）。
-// 用 EncodeEcho 重写而非插一行 YAML：正文逐字保留由编码器保证，
-// 手工拼字符串迟早会在 CRLF / 无正文这类边角上出错。
 func fixEchoID(r *Report, loaded *capsule.Loaded, e *capsule.LoadedEcho) error {
 	id := uuidUtil.NewV7()
 	e.Doc.ID = id
@@ -329,21 +296,15 @@ func fixEchoID(r *Report, loaded *capsule.Loaded, e *capsule.LoadedEcho) error {
 	if err != nil {
 		return fmt.Errorf("capsule check: re-encode %s: %w", e.Path, err)
 	}
-	// 仅目录形态会走到这里（Validate 已挡掉 zip）。
 	target := filepath.Join(loaded.Source.Path, filepath.FromSlash(e.Path))
 	if err := os.WriteFile(target, data, echoFileMode); err != nil {
 		return fmt.Errorf("capsule check: write back %s: %w", e.Path, err)
 	}
 
-	// 不重命名文件：文件名里的 id 前缀纯属浏览友好，消费者禁止从中解析语义
-	// （spec §4.1），重命名只会制造无谓的路径变更。
 	r.Fixed = append(r.Fixed, fmt.Sprintf("%s: generated id %s", e.Path, id))
 	return nil
 }
 
-// logoMedia 把 site.server_logo 反查成胶囊内的媒体路径。logo 原样导出
-// （可能是绝对 URL、也可能是 /api/files/... 相对引用），唯一稳定的锚点
-// 是文件名，所以按 basename 比对。
 func logoMedia(logo string, media map[string]int64) string {
 	if logo == "" || len(media) == 0 {
 		return ""

@@ -18,7 +18,7 @@ func TestOnThisDayUnixRanges(t *testing.T) {
 		}
 		for i, year := range []int{2020, 2021, 2022, 2023} {
 			wantStart := time.Date(year, time.March, 15, 0, 0, 0, 0, utc).Unix()
-			wantEnd := wantStart + 86400 // 无 DST 的 UTC 天恒为 24h
+			wantEnd := wantStart + 86400
 			if got[i][0] != wantStart || got[i][1] != wantEnd {
 				t.Errorf("year %d: got [%d,%d), want [%d,%d)", year, got[i][0], got[i][1], wantStart, wantEnd)
 			}
@@ -33,7 +33,6 @@ func TestOnThisDayUnixRanges(t *testing.T) {
 
 	t.Run("feb 29 only matches leap years", func(t *testing.T) {
 		got := onThisDayUnixRanges(2018, 2025, time.February, 29, utc)
-		// 2018-2024 中的闰年只有 2020、2024
 		if len(got) != 2 {
 			t.Fatalf("expected 2 ranges (2020, 2024), got %d", len(got))
 		}
@@ -50,7 +49,6 @@ func TestOnThisDayUnixRanges(t *testing.T) {
 		if err != nil {
 			t.Skip("tzdata unavailable:", err)
 		}
-		// 2021-03-14 美东夏令时切换日（spring forward），当天只有 23 小时
 		got := onThisDayUnixRanges(2021, 2022, time.March, 14, loc)
 		if len(got) != 1 {
 			t.Fatalf("expected 1 range, got %d", len(got))

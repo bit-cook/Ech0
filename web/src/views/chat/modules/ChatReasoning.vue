@@ -1,10 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Copyright (C) 2025-2026 lin-snow -->
-<!--
-  推理（reasoning）折叠块：推理模型把思考过程经 <think> / reasoning_content 分流出来，
-  这里默认折叠成「已思考（用时 X 秒）」，点开可看完整思考。流式思考时自动展开并显示「思考中…」，
-  答案开始（收到后端 reasoning_done）后定格耗时并自动折叠。安静克制，非推理模型完全不出现。
--->
 <template>
   <div class="reasoning" :class="{ 'reasoning--active': active }">
     <button class="reasoning__header" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
@@ -49,10 +44,8 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-// 思考中默认展开，思考结束 / 历史恢复默认折叠。
 const collapsed = ref<boolean>(props.active !== true)
 
-// 思考结束（active: true→false）时自动折叠，把舞台让回答案。
 watch(
   () => props.active,
   (now, prev) => {
@@ -73,7 +66,6 @@ const label = computed<string>(() => {
   margin-bottom: 0.55rem;
 }
 
-/* 折叠头：克制的 muted 小行，hover 才微微亮起；不抢答案的视觉重心 */
 .reasoning__header {
   display: inline-flex;
   align-items: center;
@@ -97,7 +89,6 @@ const label = computed<string>(() => {
   color: var(--color-text-secondary);
 }
 
-/* 思考脸图标：思考中着 accent 并轻轻呼吸，结束后随 muted 文字静止 */
 .reasoning__glyph {
   width: 1.05rem;
   height: 1.05rem;
@@ -105,7 +96,6 @@ const label = computed<string>(() => {
   opacity: 0.85;
 }
 
-/* 图标内置 fill=#888888，统一改用 currentColor 以便随状态/主题着色 */
 .reasoning__glyph :deep(path) {
   fill: currentColor;
 }
@@ -145,7 +135,6 @@ const label = computed<string>(() => {
   transform: rotate(180deg);
 }
 
-/* 思考正文：左侧一道淡边界 + muted 文字，明显次于答案 */
 .reasoning__body {
   margin-top: 0.35rem;
   padding: 0.1rem 0 0.1rem 0.85rem;

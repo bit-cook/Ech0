@@ -16,7 +16,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/viewer"
 )
 
-// GetSnapshotScheduleSetting 获取定时快照计划。缺省值由 setting 引擎处理。
 func (settingService *SettingService) GetSnapshotScheduleSetting(
 	setting *model.SnapshotSchedule,
 ) error {
@@ -28,12 +27,10 @@ func (settingService *SettingService) GetSnapshotScheduleSetting(
 	return nil
 }
 
-// UpdateSnapshotScheduleSetting 更新定时快照计划
 func (settingService *SettingService) UpdateSnapshotScheduleSetting(
 	ctx context.Context,
 	newSetting *model.SnapshotScheduleDto,
 ) error {
-	// 鉴权
 	userid := viewer.MustFromContext(ctx).UserID()
 	user, err := settingService.commonService.CommonGetUserByUserId(ctx, userid)
 	if err != nil {
@@ -48,7 +45,6 @@ func (settingService *SettingService) UpdateSnapshotScheduleSetting(
 		CronExpression: newSetting.CronExpression,
 	}
 
-	// 验证 Cron 表达式是否合法
 	if err := fmtUtil.ValidateCrontabExpression(updated.CronExpression); err != nil {
 		return errors.New(commonModel.INVALID_CRON_EXPRESSION)
 	}
@@ -57,7 +53,6 @@ func (settingService *SettingService) UpdateSnapshotScheduleSetting(
 		return err
 	}
 
-	// 写入成功后再发布事件，避免失败时出现幽灵事件。
 	eventbus.Notify(context.Background(), settingService.bus, event.UpdateSnapshotSchedule{Schedule: updated})
 	return nil
 }

@@ -2,16 +2,13 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full text-[var(--color-text-secondary)]">
-    <!-- 可选说明：向量索引非必需，不配置也能正常对话 -->
     <p class="text-xs opacity-70 mb-4">{{ t('embeddingSetting.optionalHint') }}</p>
 
-    <!-- 启用 -->
     <div class="flex items-center justify-between mb-4">
       <h2 class="font-semibold">{{ t('embeddingSetting.enable') }}</h2>
       <BaseSwitch v-model="setting.enable" :disabled="!editMode" />
     </div>
 
-    <!-- 模型名称 -->
     <div class="mb-4">
       <h2 class="font-semibold mb-1.5">{{ t('embeddingSetting.modelName') }}</h2>
       <span v-if="!editMode" class="block truncate opacity-80" v-tooltip="setting.model">
@@ -28,7 +25,6 @@
       />
     </div>
 
-    <!-- 向量维度 -->
     <div class="mb-4">
       <h2 class="font-semibold mb-1.5">{{ t('embeddingSetting.dim') }}</h2>
       <span v-if="!editMode" class="block truncate opacity-80">
@@ -43,7 +39,6 @@
       />
     </div>
 
-    <!-- API Key -->
     <div class="mb-4">
       <h2 class="font-semibold mb-1.5">{{ t('embeddingSetting.apiKey') }}</h2>
       <span v-if="!editMode" class="block truncate opacity-80">
@@ -58,7 +53,6 @@
       />
     </div>
 
-    <!-- 自定义 Base URL -->
     <div class="mb-4">
       <h2 class="font-semibold mb-1.5">{{ t('embeddingSetting.baseUrl') }}</h2>
       <span v-if="!editMode" class="block truncate opacity-80">
@@ -73,7 +67,6 @@
       <p v-if="editMode" class="text-xs opacity-70 mt-1">{{ t('embeddingSetting.baseUrlHint') }}</p>
     </div>
 
-    <!-- 单批条数：单次请求向量化的文本上限，规避提供商对 input 数组条数的限制 -->
     <div class="mb-4">
       <h2 class="font-semibold mb-1.5">{{ t('embeddingSetting.batchSize') }}</h2>
       <span v-if="!editMode" class="block truncate opacity-80">
@@ -91,7 +84,6 @@
       </p>
     </div>
 
-    <!-- 重建索引（异步作业 + 轮询进度，可取消） -->
     <div
       class="flex flex-row items-center justify-between gap-2 mt-5 pt-4 border-t border-[var(--color-border-subtle)]"
     >
@@ -112,7 +104,6 @@
         </BaseButton>
       </div>
     </div>
-    <!-- 进行中：有计数则显示已索引进度，否则显示通用进行中 -->
     <p v-if="reindex.isRunning" class="text-xs text-[var(--color-text-secondary)] opacity-80 mt-2">
       {{
         reindex.result
@@ -123,7 +114,6 @@
           : t('embeddingSetting.reindexRunning')
       }}
     </p>
-    <!-- 成功 -->
     <p
       v-else-if="reindex.status === 'success' && reindex.result"
       class="text-xs text-[var(--color-text-secondary)] opacity-80 mt-2"
@@ -136,14 +126,12 @@
         })
       }}
     </p>
-    <!-- 失败 -->
     <p
       v-else-if="reindex.status === 'failed'"
       class="text-xs text-[var(--color-danger,#dc2626)] mt-2"
     >
       {{ t('embeddingSetting.reindexFailed', { error: reindex.error }) }}
     </p>
-    <!-- 已取消 -->
     <p
       v-else-if="reindex.status === 'cancelled'"
       class="text-xs text-[var(--color-text-secondary)] opacity-80 mt-2"
@@ -170,21 +158,19 @@ const props = defineProps<{ editMode: boolean }>()
 const { t } = useI18n()
 const { openConfirm } = useBaseDialog()
 
-// 常见 OpenAI 兼容 embedding 模型 → 默认维度（提示性，非穷举；维度仍可手动改）
 const MODEL_DIM_PRESETS: Record<string, number> = {
   'text-embedding-3-small': 1536,
   'text-embedding-3-large': 3072,
   'text-embedding-ada-002': 1536,
-  'text-embedding-v3': 1024, // Qwen / DashScope
+  'text-embedding-v3': 1024,
   'bge-m3': 1024,
   'bge-large-zh-v1.5': 1024,
   'jina-embeddings-v3': 1024,
-  'nomic-embed-text': 768, // Ollama
-  'mxbai-embed-large': 1024, // Ollama
+  'nomic-embed-text': 768,
+  'mxbai-embed-large': 1024,
 }
 const modelOptions = Object.keys(MODEL_DIM_PRESETS)
 
-// 重建索引改为异步作业，状态/进度/取消全交给 reindex store（复用 migration 轮询范式）。
 const reindex = useReindexStore()
 
 const setting = ref<App.Api.Embedding.EmbeddingSetting>({
@@ -196,12 +182,9 @@ const setting = ref<App.Api.Embedding.EmbeddingSetting>({
   batch_size: 0,
 })
 
-// 已保存的基线，用于判断 model/dim 是否变化（变化则需重建索引）
 const originalModel = ref<string>('')
 const originalDim = ref<number>(0)
 
-// 命中预设的模型时自动带出其默认维度。需要自定义维度（如 Matryoshka 模型）时，
-// 选完模型再手动改维度即可——之后模型未变，本 watch 不会再覆盖手填值。
 watch(
   () => setting.value.model,
   (next) => {
@@ -222,7 +205,6 @@ const getSetting = async () => {
   }
 }
 
-// 由父组件的编辑胶囊触发；保存后回填最新设置
 const save = async () => {
   const changed =
     setting.value.model !== originalModel.value || setting.value.dim !== originalDim.value
@@ -230,7 +212,6 @@ const save = async () => {
     .then((res) => {
       if (res.code === 1) {
         theToast.success(res.msg)
-        // 模型/维度变更且索引已启用：旧索引已失效，提示用户立即重建
         if (changed && setting.value.enable) {
           openConfirm({
             title: t('embeddingSetting.reindexConfirmTitle'),

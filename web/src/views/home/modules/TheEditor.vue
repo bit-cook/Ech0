@@ -86,8 +86,6 @@ const fillEditorFromEchoToUpdate = () => {
         id: String(f.id || ''),
         url: f.url || '',
         storage_type: f.storage_type || 'local',
-        // 保留 category 等元信息：否则 mediaCategory 算成 null，编辑器会把音视频当图片，
-        // 且发布时会把音视频 echo 的 layout 从 none 误改成 waterfall。
         category: f.category,
         content_type: f.content_type,
         key: f.key || '',

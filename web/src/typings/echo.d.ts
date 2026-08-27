@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Echo / 标签 / 扩展卡片相关类型（通过命名空间合并扩展 App.Api）。
 declare namespace App {
   namespace Api {
     namespace Ech0 {
@@ -26,7 +25,6 @@ declare namespace App {
         search?: string
       }
 
-      /** 可见性过滤三态（仅 admin 生效；'all' 不下发 private 参数） */
       type EchoVisibilityFilter = 'all' | 'public' | 'private'
 
       type EchoQueryParams = {
@@ -36,10 +34,8 @@ declare namespace App {
         tagIds?: string[]
         sortBy?: string
         sortOrder?: string
-        /** 按 created_at 过滤的闭区间，单位 Unix 秒 */
         dateFrom?: number
         dateTo?: number
-        /** 可见性过滤：true 仅私密、false 仅公开、缺省不过滤。非 admin 请求被服务端忽略 */
         private?: boolean
       }
 
@@ -54,7 +50,6 @@ declare namespace App {
         extension?: EchoExtension | null
         tags?: Tag[]
         fav_count: number
-        /** Unix 秒/毫秒或 ISO 字符串，视 API / 序列化而定 */
         created_at: number | string
       }
 
@@ -65,10 +60,10 @@ declare namespace App {
         storage_type: File.StorageType
         category?: File.Category
         content_type?: string
-        key?: string // 对应后端 file.key
-        size?: number // 文件大小（字节）
-        width?: number // 图片宽度
-        height?: number // 图片高度
+        key?: string
+        size?: number
+        width?: number
+        height?: number
       }
 
       type Tag = {
@@ -107,10 +102,10 @@ declare namespace App {
         storage_type: File.StorageType
         category?: File.Category
         content_type?: string
-        key?: string // 对应后端 file.key
-        size?: number // 文件大小（字节）
-        width?: number // 图片宽度
-        height?: number // 图片高度
+        key?: string
+        size?: number
+        width?: number
+        height?: number
       }
 
       type TagToAdd = {

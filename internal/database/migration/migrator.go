@@ -15,7 +15,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Migrator 定义数据库启动后需要执行的迁移任务接口。
 type Migrator interface {
 	Name() string
 	Key() string
@@ -28,17 +27,14 @@ type migrateOptions struct {
 	stopOnError bool
 }
 
-// Option 用于按需扩展 migration 执行行为。
 type Option func(*migrateOptions)
 
-// WithMigrators 追加要执行的迁移器。
 func WithMigrators(migrators ...Migrator) Option {
 	return func(opts *migrateOptions) {
 		opts.migrators = append(opts.migrators, migrators...)
 	}
 }
 
-// WithStopOnError 配置遇到首个迁移错误时立即停止。
 func WithStopOnError() Option {
 	return func(opts *migrateOptions) {
 		opts.stopOnError = true
@@ -52,7 +48,6 @@ func defaultOptions() migrateOptions {
 	}
 }
 
-// Migrate 是 migration 子包统一入口，按顺序执行迁移器集合。
 func Migrate(db *gorm.DB, optionFns ...Option) {
 	if db == nil {
 		logUtil.Warn("database migration skipped: db is nil", slog.String("module", "database"))

@@ -21,8 +21,6 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// runExecute 用 en-US localizer 驱动 Execute(fn) 一次，返回录制的响应。
-// 挂 en-US localizer 是为了让 message_key 解析阶梯真正走到本地化分支。
 func runExecute(t *testing.T, res Response) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
@@ -33,17 +31,13 @@ func runExecute(t *testing.T, res Response) *httptest.ResponseRecorder {
 	return rec
 }
 
-// ---------------------------------------------------------------------------
-// 成功路径
-// ---------------------------------------------------------------------------
-
 func TestExecute_Success(t *testing.T) {
 	cases := []struct {
 		name        string
 		res         Response
 		wantCode    int
 		wantMessage string
-		wantData    string // 解码后的 Data（字符串负载）
+		wantData    string
 	}{
 		{
 			name:        "code-zero-plain-data-empty-msg",
@@ -63,7 +57,7 @@ func TestExecute_Success(t *testing.T) {
 			name:        "code-zero-known-msg-localized",
 			res:         Response{Code: 0, Data: "payload", Msg: commonModel.SUCCESS_MESSAGE},
 			wantCode:    commonModel.DEFAULT_SUCCESS_CODE,
-			wantMessage: "Request succeeded", // common.success @ en-US
+			wantMessage: "Request succeeded",
 			wantData:    "payload",
 		},
 		{
@@ -89,7 +83,6 @@ func TestExecute_Success(t *testing.T) {
 			got := helpers.ParseResult(t, rec)
 			assert.Equal(t, tc.wantCode, got.Code)
 			assert.Equal(t, tc.wantMessage, got.Msg)
-			// 成功封套不携带 error_code / message_key。
 			assert.Empty(t, got.ErrorCode)
 			assert.Empty(t, got.MessageKey)
 
@@ -99,10 +92,6 @@ func TestExecute_Success(t *testing.T) {
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// 失败路径
-// ---------------------------------------------------------------------------
 
 func TestExecute_Failure(t *testing.T) {
 	cases := []struct {
@@ -130,7 +119,7 @@ func TestExecute_Failure(t *testing.T) {
 				Err: errors.New("boom"),
 				Msg: commonModel.AGENT_MODEL_MISSING,
 			},
-			wantErrorCode:  "", // 非 BizError 且未显式设 ErrorCode
+			wantErrorCode:  "",
 			wantMessageKey: commonModel.MsgKeyAgentModelMissing,
 			wantMessage:    "Agent model name is not configured or is empty",
 		},
@@ -160,7 +149,6 @@ func TestExecute_Failure(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := runExecute(t, tc.res)
 
-			// 失败统一 400，错误信息装在封套里。
 			require.Equal(t, http.StatusBadRequest, rec.Code)
 			got := helpers.ParseResult(t, rec)
 			assert.Equal(t, commonModel.DEFAULT_FAILED_CODE, got.Code)
@@ -171,8 +159,6 @@ func TestExecute_Failure(t *testing.T) {
 	}
 }
 
-// 未挂 localizer 时（ctx 无 localizer），message_key 仍被透出，
-// 文本回退为默认文案（Localize 对 nil localizer 直接返回 defaultText）。
 func TestExecute_Failure_NoLocalizerFallsBackToDefaultText(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -190,5 +176,5 @@ func TestExecute_Failure_NoLocalizerFallsBackToDefaultText(t *testing.T) {
 	got := helpers.ParseResult(t, rec)
 	assert.Equal(t, commonModel.ErrCodeInvalidQuery, got.ErrorCode)
 	assert.Equal(t, commonModel.MsgKeyInvalidQueryParams, got.MessageKey)
-	assert.Equal(t, "raw msg", got.Msg) // 未本地化，回退默认文案
+	assert.Equal(t, "raw msg", got.Msg)
 }

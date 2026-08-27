@@ -18,10 +18,7 @@ import (
 	urlUtil "github.com/lin-snow/ech0/internal/util/url"
 )
 
-// 各配置的「词汇」：一处声明 key / 默认值 / 归一化（/ 升级迁移）。读取统一走
-// setting.Get(ctx, kv, setting.Xxx)，seeding 统一由 registry 驱动。
 var (
-	// System 站点系统设置。默认值取自 config（ENV），URL 字段先 TrimURL。
 	System = Spec[settingModel.SystemSetting]{
 		Key: commonModel.SystemSettingsKey,
 		Default: func() settingModel.SystemSetting {
@@ -46,7 +43,6 @@ var (
 		},
 	}
 
-	// OAuth2 登录设置。认证边界（returnURL/CORS 白名单）以 Panel 为主、ENV 仅默认值。
 	OAuth2 = Spec[settingModel.OAuth2Setting]{
 		Key: commonModel.OAuth2SettingKey,
 		Default: func() settingModel.OAuth2Setting {
@@ -64,8 +60,6 @@ var (
 		Normalize: normalizeOAuth2Boundary,
 	}
 
-	// S3 对象存储设置。默认值取自 config，并做与历史读路径一致的 endpoint/CDN/前缀清洗。
-	// 读出后的脱敏（非管理员 ******）属请求态逻辑，留在 SettingService，不在此归一化。
 	S3 = Spec[settingModel.S3Setting]{
 		Key: commonModel.S3SettingKey,
 		Default: func() settingModel.S3Setting {
@@ -87,8 +81,6 @@ var (
 		},
 	}
 
-	// Passkey(WebAuthn) 设置。首次 seeding 时优先从旧 oauth2_setting 搬迁 WebAuthn
-	// 字段（Migrate），避免历史用户升级后丢配置；否则回退 config 默认。
 	Passkey = Spec[settingModel.PasskeySetting]{
 		Key: commonModel.PasskeySettingKey,
 		Default: func() settingModel.PasskeySetting {
@@ -101,7 +93,6 @@ var (
 		Migrate:   migratePasskeyFromLegacy,
 	}
 
-	// Agent LLM 生成设置。
 	Agent = Spec[settingModel.AgentSetting]{
 		Key: commonModel.AgentSettingKey,
 		Default: func() settingModel.AgentSetting {
@@ -112,18 +103,16 @@ var (
 		},
 	}
 
-	// Snapshot 定时快照计划。
 	Snapshot = Spec[settingModel.SnapshotSchedule]{
 		Key: commonModel.SnapshotScheduleKey,
 		Default: func() settingModel.SnapshotSchedule {
 			return settingModel.SnapshotSchedule{
 				Enable:         false,
-				CronExpression: "0 2 * * 0", // 每周日凌晨 2 点
+				CronExpression: "0 2 * * 0",
 			}
 		},
 	}
 
-	// Embedding 向量设置。默认零值（Enable=false），与历史「miss 即视为未启用」一致。
 	Embedding = Spec[settingModel.EmbeddingSetting]{
 		Key: commonModel.EmbeddingSettingKey,
 		Default: func() settingModel.EmbeddingSetting {
@@ -131,8 +120,6 @@ var (
 		},
 	}
 
-	// Comment 评论系统设置（含邮件通知）。SMTPPassword 的脱敏（SMTPPasswordSet 模式）
-	// 属输出投影，留在 CommentService 的读出口，不在此归一化。
 	Comment = Spec[commentModel.SystemSetting]{
 		Key: commentModel.CommentSystemSettingKey,
 		Default: func() commentModel.SystemSetting {
@@ -148,8 +135,6 @@ var (
 	}
 )
 
-// registry 是 seeder 的驱动表。serverURLSeed 紧随 System，把派生的 server_url
-// 便捷键一并落库。
 var registry = []seedable{
 	System,
 	serverURLSeed{},
@@ -162,7 +147,6 @@ var registry = []seedable{
 	Comment,
 }
 
-// normalizeOAuth2Boundary 在边界白名单为空时回退到 config 默认（方向 config→value）。
 func normalizeOAuth2Boundary(s *settingModel.OAuth2Setting) {
 	if len(s.AuthRedirectAllowedReturnURLs) == 0 {
 		s.AuthRedirectAllowedReturnURLs = append([]string{}, config.Config().Auth.Redirect.AllowedReturnURLs...)
@@ -172,7 +156,6 @@ func normalizeOAuth2Boundary(s *settingModel.OAuth2Setting) {
 	}
 }
 
-// normalizePasskeyBoundary 在 RPID/Origins 为空时回退到 config 默认。
 func normalizePasskeyBoundary(s *settingModel.PasskeySetting) {
 	if strings.TrimSpace(s.WebAuthnRPID) == "" {
 		s.WebAuthnRPID = strings.TrimSpace(config.Config().Auth.WebAuthn.RPID)
@@ -182,15 +165,12 @@ func normalizePasskeyBoundary(s *settingModel.PasskeySetting) {
 	}
 }
 
-// normalizeComment 补齐邮件端口默认（与 CommentService.applySettingDefaults 同规则，
-// 跨 service/setting 边界不便共享，保留这一行同步）。
 func normalizeComment(s *commentModel.SystemSetting) {
 	if s.EmailNotify.SMTPPort <= 0 {
 		s.EmailNotify.SMTPPort = 587
 	}
 }
 
-// migratePasskeyFromLegacy 从旧 oauth2_setting 中读取曾经内联的 WebAuthn 字段。
 func migratePasskeyFromLegacy(ctx context.Context, kv kvstore.Store) (settingModel.PasskeySetting, bool) {
 	var result settingModel.PasskeySetting
 	raw, err := kv.Get(ctx, commonModel.OAuth2SettingKey)
@@ -209,8 +189,6 @@ func migratePasskeyFromLegacy(ctx context.Context, kv kvstore.Store) (settingMod
 	return result, result.WebAuthnRPID != "" || len(result.WebAuthnAllowedOrigins) > 0
 }
 
-// serverURLSeed 把 System.ServerURL 这一派生值同步进 server_url 便捷键（comment 等
-// 只需 URL 的消费方读它，省去反序列化整个 SystemSetting）。复用 System.Default 保持单一来源。
 type serverURLSeed struct{}
 
 func (serverURLSeed) seed(ctx context.Context, kv kvstore.Store) error {
@@ -226,12 +204,10 @@ func (serverURLSeed) seed(ctx context.Context, kv kvstore.Store) error {
 	return kv.Set(ctx, commonModel.ServerURLKey, sys.ServerURL)
 }
 
-// stripScheme 去掉 endpoint 的 http(s):// 前缀，与历史读路径清洗一致。
 func stripScheme(s string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(s, "http://"), "https://")
 }
 
-// sanitizeURLList TrimURL 每一项并剔除空串。
 func sanitizeURLList(values []string) []string {
 	result := make([]string, 0, len(values))
 	for _, v := range values {

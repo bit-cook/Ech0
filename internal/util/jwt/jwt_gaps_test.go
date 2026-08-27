@@ -16,8 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCreateAccessClaimsWithExpiry_AudienceOverride 覆盖 jwt.go:87-90 的受众分支：
-// 显式传入 audience 时覆盖配置默认值；传空字符串时回落到 config.Auth.Jwt.Audience。
 func TestCreateAccessClaimsWithExpiry_AudienceOverride(t *testing.T) {
 	user := userModel.User{ID: "u-aud", Username: "aud"}
 
@@ -42,9 +40,6 @@ func TestCreateAccessClaimsWithExpiry_AudienceOverride(t *testing.T) {
 	})
 }
 
-// TestCreateAccessClaimsWithExpiry_NegativeExpiryGetsFiniteExp 覆盖 jwt.go:96-98 的
-// expiry < 0 分支（与现有 expiry==0 用例互补）：负数同样视为"永不过期"，须回落到
-// 有限的远期 ExpiresAt，避免吊销路径的 nil 解引用 (GHSA-fpw6-hrg5-q5x5)。
 func TestCreateAccessClaimsWithExpiry_NegativeExpiryGetsFiniteExp(t *testing.T) {
 	user := userModel.User{ID: "u-neg", Username: "neg"}
 	claimsAny := CreateAccessClaimsWithExpiry(user, -5, []string{authModel.ScopeProfileRead}, authModel.AudienceCLI, "jti-neg")
@@ -56,8 +51,6 @@ func TestCreateAccessClaimsWithExpiry_NegativeExpiryGetsFiniteExp(t *testing.T) 
 	assert.True(t, claims.ExpiresAt.After(atLeast), "expected far-future ExpiresAt, got %v", claims.ExpiresAt.Time)
 }
 
-// TestParseRefreshToken_TypeEnforcement 覆盖 jwt.go:147-148：ParseRefreshToken 必须
-// 拒绝 access typ 的 token（防止 access_token 被拿去刷新），但接受合法 refresh token。
 func TestParseRefreshToken_TypeEnforcement(t *testing.T) {
 	helpers.SetJWTSecret(t, "jwt-gaps-test-secret-0123456789ab")
 	user := userModel.User{ID: "u-r", Username: "r"}
@@ -115,9 +108,6 @@ func validStateClaims() jwt.MapClaims {
 	}
 }
 
-// TestParseOAuthState_MissingOrInvalidFields 覆盖 jwt.go:218-254 的字段缺失/非法分支：
-// getStringClaim 对每个必需字符串字段（按 action→nonce→redirect→provider 顺序）以及
-// exp 缺失都会报错。
 func TestParseOAuthState_MissingOrInvalidFields(t *testing.T) {
 	helpers.SetJWTSecret(t, "jwt-gaps-test-secret-0123456789ab")
 
@@ -177,7 +167,6 @@ func TestParseOAuthState_MissingOrInvalidFields(t *testing.T) {
 	}
 }
 
-// TestParseOAuthState_BadSignature 覆盖 jwt.go:214-216：签名/格式校验失败直接返回错误。
 func TestParseOAuthState_BadSignature(t *testing.T) {
 	helpers.SetJWTSecret(t, "jwt-gaps-test-secret-0123456789ab")
 

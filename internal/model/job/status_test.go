@@ -5,8 +5,6 @@ package model
 
 import "testing"
 
-// TestStatusIsTerminal 表驱动覆盖 Status.IsTerminal：success/failed/cancelled 为终态(true)，
-// pending/running 及任意未知值为非终态(false)。
 func TestStatusIsTerminal(t *testing.T) {
 	t.Parallel()
 

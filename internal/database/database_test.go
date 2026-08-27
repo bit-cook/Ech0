@@ -52,7 +52,7 @@ func TestOpenSQLite_AppliesConnectionParams(t *testing.T) {
 	if err := db.Raw("PRAGMA synchronous").Scan(&synchronous).Error; err != nil {
 		t.Fatalf("query synchronous failed: %v", err)
 	}
-	if synchronous != 1 { // 1 == NORMAL
+	if synchronous != 1 {
 		t.Fatalf("expected synchronous NORMAL(1), got %d", synchronous)
 	}
 }

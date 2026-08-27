@@ -9,9 +9,6 @@ import { computed } from 'vue'
 import { Avatar, Style, type StyleOptions } from '@dicebear/core'
 import micah from '@dicebear/styles/micah.json'
 
-// DiceBear 10 distributes styles as JSON definitions. `new Style()` validates
-// the definition against its JSON Schema, so build it once at module scope and
-// reuse it for every avatar instead of paying that cost on each render.
 const micahStyle = new Style(micah)
 
 type MicahOptions = StyleOptions<typeof micah>

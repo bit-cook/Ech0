@@ -3,7 +3,6 @@
 
 package model
 
-// Panic Constants
 const (
 	INIT_LOGGER_PANIC          = "初始化 Logger 失败"
 	READ_CONFIG_PANIC          = "读取配置文件失败"

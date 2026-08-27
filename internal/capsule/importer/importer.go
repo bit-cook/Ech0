@@ -1,19 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package importer 把一个已通过 check 的胶囊落进目标库（spec §11.1 / §11.3）。
-//
-// 它是「导出即转储」的反向端点：胶囊字段 1:1 写回 DB 列，禁止任何数值转换。
-// 唯一的补全是 Echo.UserID —— 胶囊不携带这个内部必填外键，按 username 挂接同名
-// 用户、否则挂 owner；展示归属始终以原样保留的 username 为准。
-//
-// 三条硬纪律，破坏其一即破坏整个边界：
-//
-//   - 不 import internal/capsule/check。校验由 CLI 统一前置（check.Run 有 error
-//     即拒绝），本包的前提就是「胶囊已合法」，反向依赖只会让两个包成环。
-//   - 不发布事件、不调 service 层。导入是数据搬运，不该唤醒 webhook / embedding /
-//     agent 订阅者；只用 GORM 与领域模型。
-//   - 无 --overwrite。id 已存在即跳过并计数，不覆盖不合并，重复执行安全。
 package importer
 
 import (
@@ -37,12 +24,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// logModule 让胶囊各阶段的日志能被一条 module 过滤出来。
 const logModule = "capsule"
 
-// errDryRun 是 --dry-run 的回滚哨兵：统计照常累加在 Result 上（Result 由调用方
-// 持有，不随事务回滚而失效），事务本身则靠这个 error 被丢弃。真正需要单独拦截的
-// 只有两处非事务性副作用——写字节与写 KV 缓存，见 putBytes / applySite。
 var errDryRun = errors.New("capsule import: dry-run rollback")
 
 type Deps struct {
@@ -63,11 +46,10 @@ type Result struct {
 	CommentsCreated, CommentsSkipped             int
 	TagsCreated                                  int
 	SiteFieldsFilled                             []string
-	Renames                                      []string // "oldkey -> newkey"
+	Renames                                      []string
 	OrphanComments                               int
 }
 
-// Run 在单个事务内完成整个导入。调用方必须先跑 check 且确认无 error。
 func Run(ctx context.Context, deps Deps, loaded *capsule.Loaded, opts Options) (*Result, error) {
 	switch {
 	case loaded == nil:
@@ -118,8 +100,6 @@ func Run(ctx context.Context, deps Deps, loaded *capsule.Loaded, opts Options) (
 	return result, nil
 }
 
-// session 承载一次导入的全部可变状态。所有跨阶段的查表缓存都挂在这里，
-// 免得同一个 username / tag / file 在几百条 Echo 上重复打库。
 type session struct {
 	db       *gorm.DB
 	selector *storage.StorageSelector
@@ -128,24 +108,16 @@ type session struct {
 	opts     Options
 	res      *Result
 
-	// ownerID 是归属兜底：胶囊里没有对应同名用户时，Echo 挂到执行导入的 owner。
-	ownerID string
-	// userIDByName 缓存 username -> 目标库 user id（未命中同名用户时缓存 ownerID）。
+	ownerID      string
 	userIDByName map[string]string
-	// tagIDByName 缓存本次导入接触过的标签，同时充当 dry-run 下「已 find-or-create」的账本。
-	tagIDByName map[string]string
-	// landed 是本次运行新建的 Echo id。它只是 dry-run 的补丁：dry-run 下这些行
-	// 不会真写进库，评论归属判定得靠它才不至于把新内容的评论全记成孤儿。
-	landed map[string]struct{}
+	tagIDByName  map[string]string
+	landed       map[string]struct{}
 
-	// 当前存储后端的路由三元组，files 表的唯一索引 idx_file_route 就是按它 + key 建的。
 	storageType storage.StorageType
 	provider    string
 	bucket      string
 	keygen      storage.KeyGenerator
-	// routeCache 记录「(路由, key) -> 已存在或本次新建的文件行」。dry-run 下新建的行
-	// 只活在这里，好让同一胶囊内的重复 key 依然能被识别。
-	routeCache map[string]*fileEntry
+	routeCache  map[string]*fileEntry
 }
 
 func newSession(ctx context.Context, deps Deps, loaded *capsule.Loaded, opts Options, res *Result) *session {
@@ -154,7 +126,6 @@ func newSession(ctx context.Context, deps Deps, loaded *capsule.Loaded, opts Opt
 		db = tx
 	}
 
-	// 托管文件一律落到当前默认后端；external 由 url 条目单独表达，绝不进 selector。
 	storageType := storage.StorageTypeLocal
 	provider, bucket := "", ""
 	if deps.Selector.ObjectEnabled() {
@@ -202,12 +173,8 @@ func (s *session) run(ctx context.Context) error {
 	return s.applyConnects()
 }
 
-// ErrNoOwner 表示目标库里没有站主账号。胶囊刻意不携带账号与凭据，内容必须挂到既有站主
-// 名下，所以这是「目标实例还不可用」而非「胶囊有问题」——两者要给用户的下一步完全不同，
-// 故单列一个哨兵，让 CLI 与 Web 各自给出合适的指引。
 var ErrNoOwner = errors.New("target instance has no owner account")
 
-// resolveOwner 定位 owner。Echo.UserID 是 not null 外键，没有 owner 就无从兜底。
 func (s *session) resolveOwner() error {
 	var owner userModel.User
 	err := s.db.Where("is_owner = ?", true).First(&owner).Error
@@ -221,8 +188,6 @@ func (s *session) resolveOwner() error {
 	return nil
 }
 
-// resolveUserID 是本包唯一允许的字段补全：username 逐字入库不改写，UserID 另按
-// 同名用户挂接、缺失则挂 owner（spec §11.3）。
 func (s *session) resolveUserID(username string) (string, error) {
 	if username == "" {
 		return s.ownerID, nil
@@ -248,7 +213,6 @@ func (s *session) resolveUserID(username string) (string, error) {
 func (s *session) importEchoes(ctx context.Context) error {
 	for i := range s.loaded.Echoes {
 		le := &s.loaded.Echoes[i]
-		// check 已经拒绝过解析失败的胶囊；此处再拒一次，避免调用方漏跑 check 时静默丢内容。
 		if le.Err != nil {
 			return fmt.Errorf("capsule import: %s: %w", le.Path, le.Err)
 		}
@@ -276,7 +240,6 @@ func (s *session) importEcho(ctx context.Context, path string, doc *capsule.Echo
 		return fmt.Errorf("capsule import: %s: probe echo: %w", path, err)
 	}
 	if existing > 0 {
-		// 幂等：不覆盖不合并，其 files / tags / comments 一并跳过。
 		s.res.EchoesSkipped++
 		return nil
 	}
@@ -295,18 +258,15 @@ func (s *session) importEcho(ctx context.Context, path string, doc *capsule.Echo
 	}
 
 	echo := echoModel.Echo{
-		ID:       doc.ID,
-		Content:  doc.Content,
-		Username: doc.Username,
-		Layout:   layout,
-		Private:  doc.Private,
-		UserID:   userID,
-		FavCount: doc.FavCount,
-		// CreatedAt 带 autoCreateTime：GORM 只在字段为零值时才代填，显式赋非零值即被原样保留。
+		ID:        doc.ID,
+		Content:   doc.Content,
+		Username:  doc.Username,
+		Layout:    layout,
+		Private:   doc.Private,
+		UserID:    userID,
+		FavCount:  doc.FavCount,
 		CreatedAt: createdAt,
 	}
-	// 关联全部手工落地（tags 需 find-or-create、files 需去重与改名），交给 GORM
-	// 级联只会绕过这些语义。
 	if err := s.db.Omit(clause.Associations).Create(&echo).Error; err != nil {
 		return fmt.Errorf("capsule import: %s: create echo: %w", path, err)
 	}
@@ -324,7 +284,6 @@ func (s *session) importEcho(ctx context.Context, path string, doc *capsule.Echo
 
 func (s *session) importTags(path string, doc *capsule.EchoDoc) error {
 	for _, name := range doc.Tags {
-		// 空标签名建不出有意义的 tags 行（name 唯一索引），直接忽略而非造一条 "" 标签。
 		if name == "" {
 			continue
 		}
@@ -332,7 +291,6 @@ func (s *session) importTags(path string, doc *capsule.EchoDoc) error {
 		if err != nil {
 			return fmt.Errorf("capsule import: %s: tag %q: %w", path, name, err)
 		}
-		// 同一篇里重复列同名标签时 DoNothing 兜底，联合主键不会炸。
 		if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).
 			Create(&echoModel.EchoTag{EchoID: doc.ID, TagID: tagID}).Error; err != nil {
 			return fmt.Errorf("capsule import: %s: link tag %q: %w", path, name, err)
@@ -357,7 +315,6 @@ func (s *session) ensureTag(name string) (string, error) {
 		return "", err
 	}
 
-	// UsageCount 不从胶囊取，导入完统一按 echo_tags 行数重算，这里留零值。
 	tag = echoModel.Tag{ID: uuidUtil.NewV7(), Name: name}
 	if err := s.db.Create(&tag).Error; err != nil {
 		return "", err
@@ -367,7 +324,6 @@ func (s *session) ensureTag(name string) (string, error) {
 	return tag.ID, nil
 }
 
-// recountTagUsage 只重算本次接触过的标签：导入不该顺手改写与本次无关的行。
 func (s *session) recountTagUsage() error {
 	if len(s.tagIDByName) == 0 {
 		return nil
@@ -420,14 +376,10 @@ func (s *session) importComments() error {
 			return fmt.Errorf("capsule import: probe comment %s: %w", c.ID, err)
 		}
 		if existing > 0 {
-			// 幂等由评论自己的 id 保证，重复导入不会叠加。
 			s.res.CommentsSkipped++
 			continue
 		}
 		if _, ok := hosts[c.EchoID]; !ok {
-			// 孤儿的定义是「库里根本没有这个 Echo」，不是「这轮没建这个 Echo」：
-			// 往既有 Echo 追加评论不构成对该 Echo 的修改，正是增量导入的主用例。
-			// 被 private 排除的 Echo 自然落在同一条规则下——库里没有，其评论即孤儿。
 			s.res.OrphanComments++
 			continue
 		}
@@ -445,8 +397,6 @@ func (s *session) importComments() error {
 			source = string(commentModel.SourceGuest)
 		}
 
-		// Email / IPHash / UserAgent / UserID 是隐私投影剔除的字段，胶囊里没有也
-		// 不该凭空造，一律留零值。
 		row := commentModel.Comment{
 			ID:        c.ID,
 			EchoID:    c.EchoID,
@@ -466,9 +416,6 @@ func (s *session) importComments() error {
 	return nil
 }
 
-// resolveCommentHosts 一次性查出 comments.yaml 引用到的 echo_id 里哪些真在库中，
-// 避免每条评论打一次库。事务内查询，本轮新建的 Echo 也算数；dry-run 下那些行不会
-// 真写进去，故并上 landed 兜底。
 func (s *session) resolveCommentHosts() (map[string]struct{}, error) {
 	referenced := make([]string, 0, len(s.loaded.Comments.Comments))
 	seen := make(map[string]struct{}, len(s.loaded.Comments.Comments))
@@ -504,23 +451,13 @@ func (s *session) resolveCommentHosts() (map[string]struct{}, error) {
 	return hosts, nil
 }
 
-// applySite 只填空位：目标实例已配置的项一律不动（spec §11.3）。
-//
-// 「空位」不能只按空字符串判：setting.Get 在 KV 缺键时会返回一份 config 派生的
-// 默认值（SiteTitle="Ech0"、ServerLogo="/Ech0.svg"、ServerURL 等都非空），若只认
-// 空串，站点身份在全新实例上永远导不进去——而「把站点搬到新实例」正是胶囊的头号
-// 用例。故把「当前值 == 未经修改的默认值」也视为空位：没人配过的项让胶囊填，
-// 配过的项一个都不动。
 func (s *session) applySite(ctx context.Context) error {
 	site := s.loaded.Manifest.Site
 	current, err := coreSetting.Get(ctx, s.kv, coreSetting.System)
 	if err != nil {
-		// Get 在后端故障时也返回一份可用默认值；此时回写等于用默认值覆盖真实配置，
-		// 宁可整单失败也不能做这件事。
 		return fmt.Errorf("capsule import: read system setting: %w", err)
 	}
 
-	// 记录的字段名用胶囊/DB 的 json tag，报告与 ech0.yaml 对得上。
 	fields := []struct {
 		name    string
 		target  *string
@@ -568,7 +505,6 @@ func (s *session) applySite(ctx context.Context) error {
 	}
 	s.res.SiteFieldsFilled = append(s.res.SiteFieldsFilled, filled...)
 
-	// KV 仓储写完会同步刷进程内缓存，那一步不随事务回滚——dry-run 必须绕开。
 	if s.opts.DryRun {
 		return nil
 	}
@@ -578,7 +514,6 @@ func (s *session) applySite(ctx context.Context) error {
 	return nil
 }
 
-// applyConnects 按 connect_url 去重追加：互联列表是运维自主项，导入只补不删不改。
 func (s *session) applyConnects() error {
 	connects := s.loaded.Manifest.Connects
 	if len(connects) == 0 {

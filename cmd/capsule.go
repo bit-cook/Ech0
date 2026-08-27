@@ -8,9 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// 命令语法见 docs/dev/capsule/spec.md §9：动词在前、格式为子命令。
-// 格式不做成 `--type=capsule|snapshot` 是因为两种产物的 flag 集合本就分叉，
-// 且 snapshot 导入是破坏性整库替换——这种语义差别不该只隔着一个 flag 值。
 var (
 	exportCmd = &cobra.Command{
 		Use:   "export",
@@ -104,7 +101,6 @@ var buildCmd = &cobra.Command{
 	},
 }
 
-// pathArg 取可选的位置参数，缺省回落到规格约定的默认路径。
 func pathArg(args []string, fallback string) string {
 	if len(args) > 0 && args[0] != "" {
 		return args[0]

@@ -47,17 +47,8 @@ func APIEndpointWithBase(baseURL string) string {
 	return strings.TrimRight(base, "/") + APIEndpoint()
 }
 
-// sharedEngine builds the captcha engine once and reuses it for the whole
-// process. The HTTP handler (mounted via NewHTTPHandler) and the in-process
-// SiteVerify must share one instance: redeem tokens live in the engine's
-// in-memory store, so verification has to hit the engine that issued them.
 var sharedEngine = sync.OnceValues(NewEngine)
 
-// SiteVerify validates and consumes a captcha redeem token in-process against
-// the shared engine — the same instance that served the challenge/redeem flow.
-// It returns nil only when the token is valid and freshly consumed; any
-// rejection or backing-store failure yields a non-nil error so callers fail
-// closed.
 func SiteVerify(token string) error {
 	token = strings.TrimSpace(token)
 	if token == "" {

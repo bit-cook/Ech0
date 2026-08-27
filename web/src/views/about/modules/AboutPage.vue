@@ -85,8 +85,6 @@ import Arrow from '@/components/icons/arrow.vue'
 const { t } = useI18n()
 const settingStore = useSettingStore()
 
-// Draggable logo sticker: follow the pointer while held, then spring back to
-// its origin on release (drag.x/y → 0 with the CSS spring transition).
 const stickerRef = ref<HTMLElement | null>(null)
 const dragging = ref(false)
 const drag = reactive({ x: 0, y: 0 })
@@ -116,9 +114,7 @@ const onPointerUp = (e: PointerEvent) => {
   drag.y = 0
   try {
     stickerRef.value?.releasePointerCapture(e.pointerId)
-  } catch {
-    // pointer already released — nothing to do
-  }
+  } catch {}
 }
 
 const FALLBACK_REPO = 'https://github.com/lin-snow/Ech0'
@@ -137,8 +133,6 @@ const copyright = computed(
     settingStore.hello?.copyright || `Copyright (C) ${new Date().getFullYear()} ${author.value}`,
 )
 
-// AGPL-3.0 §13 anchor: the commit hash links to /tree/<commit> so the source the
-// user browses matches the exact running binary.
 const commitURL = computed(() => `${repoURL.value}/tree/${commit.value}`)
 </script>
 
@@ -158,7 +152,6 @@ const commitURL = computed(() => `${repoURL.value}/tree/${commit.value}`)
   max-width: 28rem;
 }
 
-/* Plain text link — no border, no background, no pill. */
 .about-back {
   display: inline-flex;
   align-items: center;
@@ -188,7 +181,6 @@ const commitURL = computed(() => `${repoURL.value}/tree/${commit.value}`)
   transform: rotate(180deg) translateX(2px);
 }
 
-/* The whole "about" is just quiet text on the page — no card, no layers. */
 .about-colophon {
   display: flex;
   align-items: flex-start;
@@ -200,7 +192,6 @@ const commitURL = computed(() => `${repoURL.value}/tree/${commit.value}`)
   min-width: 0;
 }
 
-/* Playful logo sticker — drag it around, it springs back home on release. */
 .about-sticker {
   flex: 0 0 auto;
   margin-top: 0.15rem;
@@ -258,7 +249,6 @@ const commitURL = computed(() => `${repoURL.value}/tree/${commit.value}`)
   color: var(--color-text-muted);
 }
 
-/* The commit hash is a link — give it a quiet underline so it reads clickable. */
 .about-colophon__commit {
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--color-text-muted) 50%, transparent);

@@ -11,7 +11,6 @@ import (
 	echoModel "github.com/lin-snow/ech0/internal/model/echo"
 )
 
-// mkStatsEcho 构造一条指定日期（YYYY-MM-DD, UTC）与标签的 Echo。
 func mkStatsEcho(date string, tags ...string) echoModel.Echo {
 	ts, _ := time.Parse("2006-01-02", date)
 	var tg []echoModel.Tag
@@ -21,7 +20,6 @@ func mkStatsEcho(date string, tags ...string) echoModel.Echo {
 	return echoModel.Echo{CreatedAt: ts.Unix(), Tags: tg}
 }
 
-// formatStatsOverview：总条数 / 活跃天数 / 按月分布 / 最活跃月份 / 常用标签 都正确。
 func TestFormatStatsOverview_ZH(t *testing.T) {
 	echos := []echoModel.Echo{
 		mkStatsEcho("2025-01-05", "读书"),
@@ -45,7 +43,6 @@ func TestFormatStatsOverview_ZH(t *testing.T) {
 	}
 }
 
-// 截断时如实标注「仅统计最近 N 条」。
 func TestFormatStatsOverview_TruncatedNote(t *testing.T) {
 	echos := []echoModel.Echo{mkStatsEcho("2025-01-05")}
 	got := formatStatsOverview(echos, 6000, true, time.UTC, "zh-CN")
@@ -57,7 +54,6 @@ func TestFormatStatsOverview_TruncatedNote(t *testing.T) {
 	}
 }
 
-// EN locale 走英文格式。
 func TestFormatStatsOverview_EN(t *testing.T) {
 	echos := []echoModel.Echo{mkStatsEcho("2025-02-01", "books")}
 	got := formatStatsOverview(echos, 1, false, time.UTC, "en-US")
@@ -66,8 +62,6 @@ func TestFormatStatsOverview_EN(t *testing.T) {
 	}
 }
 
-// 时区：跨 UTC 日界的条目按用户时区归到正确的月份/活跃日。
-// UTC 2025-01-31 20:00 在 Asia/Shanghai (UTC+8) 是 2025-02-01 04:00 → 应计入 2025-02。
 func TestFormatStatsOverview_Timezone(t *testing.T) {
 	sh, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {

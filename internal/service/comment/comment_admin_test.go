@@ -16,11 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// errRepoBoom 是一个固定的仓储层错误哨兵，用于断言「原样透传 repo 错误」的分支。
 var errRepoBoom = errors.New("repo boom")
 
-// expectAdmin 让 commonService 对给定 userID 返回一个 owner（管理员）用户，使 requireAdmin 通过。
-// 用 .Once：每个被测方法只调用一次 requireAdmin。
 func expectAdmin(t *testing.T, d deps, userID string) {
 	t.Helper()
 	owner := helpers.NewUser(helpers.AsOwner)
@@ -31,11 +28,9 @@ func expectAdmin(t *testing.T, d deps, userID string) {
 		Once()
 }
 
-// --- requireAdmin 守卫（以 UpdateCommentStatus 为载体）-------------------------
-
 func TestRequireAdminGuard(t *testing.T) {
 	t.Run("anonymous is denied before any IO", func(t *testing.T) {
-		d := newDeps(t) // 无任何 mock 期望：匿名在 requireAdmin 第一步就被拒
+		d := newDeps(t)
 		err := d.service().UpdateCommentStatus(helpers.CtxAnonymous(), "c-1", commentModel.StatusApproved)
 		assertBiz(t, err, commonModel.ErrCodePermissionDenied, commonModel.NO_PERMISSION_DENIED)
 	})
@@ -44,7 +39,7 @@ func TestRequireAdminGuard(t *testing.T) {
 		d := newDeps(t)
 		d.common.EXPECT().
 			CommonGetUserByUserId(mock.Anything, "user-normal").
-			Return(helpers.NewUser(), nil). // 既非 admin 也非 owner
+			Return(helpers.NewUser(), nil).
 			Once()
 		err := d.service().UpdateCommentStatus(helpers.CtxAsUser("user-normal"), "c-1", commentModel.StatusApproved)
 		assertBiz(t, err, commonModel.ErrCodePermissionDenied, commonModel.NO_PERMISSION_DENIED)
@@ -54,14 +49,12 @@ func TestRequireAdminGuard(t *testing.T) {
 		d := newDeps(t)
 		d.common.EXPECT().
 			CommonGetUserByUserId(mock.Anything, "admin-1").
-			Return(helpers.NewUser(), errRepoBoom). // 出错时返回值被忽略，仅校验错误透传
+			Return(helpers.NewUser(), errRepoBoom).
 			Once()
 		err := d.service().UpdateCommentStatus(helpers.CtxAsUser("admin-1"), "c-1", commentModel.StatusApproved)
 		require.ErrorIs(t, err, errRepoBoom)
 	})
 }
-
-// --- UpdateCommentStatus ----------------------------------------------------
 
 func TestUpdateCommentStatus(t *testing.T) {
 	t.Run("invalid status is rejected after admin check", func(t *testing.T) {
@@ -89,12 +82,10 @@ func TestUpdateCommentStatus(t *testing.T) {
 			UpdateCommentStatus(mock.Anything, "c-1", commentModel.StatusApproved).
 			Return(nil).
 			Once()
-		// 状态更新后回读评论用于事件与通知；ID 非空 => 走 emit + notify。
 		d.repo.EXPECT().
 			GetCommentByID(mock.Anything, "c-1").
 			Return(commentModel.Comment{ID: "c-1", Status: commentModel.StatusApproved}, nil).
 			Once()
-		// notifyOwnerAsync 会先读系统设置；EmailNotify.Enabled=false => 不发邮件、无 goroutine。
 		d.expectSetting(t, enabledSetting())
 
 		err := d.service().UpdateCommentStatus(helpers.CtxAsUser("admin-1"), "c-1", commentModel.StatusApproved)
@@ -108,7 +99,6 @@ func TestUpdateCommentStatus(t *testing.T) {
 			UpdateCommentStatus(mock.Anything, "c-1", commentModel.StatusApproved).
 			Return(nil).
 			Once()
-		// 回读到空记录（ID==""）：跳过 emit/notify，但仍返回 nil。无 expectSetting。
 		d.repo.EXPECT().
 			GetCommentByID(mock.Anything, "c-1").
 			Return(commentModel.Comment{}, nil).
@@ -118,8 +108,6 @@ func TestUpdateCommentStatus(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
-
-// --- UpdateCommentHot -------------------------------------------------------
 
 func TestUpdateCommentHot(t *testing.T) {
 	t.Run("anonymous is denied", func(t *testing.T) {
@@ -150,7 +138,7 @@ func TestUpdateCommentHot(t *testing.T) {
 			GetCommentByID(mock.Anything, "c-1").
 			Return(commentModel.Comment{ID: "c-1"}, nil).
 			Once()
-		d.expectSetting(t, enabledSetting()) // notify 读取设置，Enabled=false 不发信
+		d.expectSetting(t, enabledSetting())
 
 		err := d.service().UpdateCommentHot(helpers.CtxAsUser("admin-1"), "c-1", true)
 		require.NoError(t, err)
@@ -159,7 +147,6 @@ func TestUpdateCommentHot(t *testing.T) {
 	t.Run("hot=false skips re-read and notify", func(t *testing.T) {
 		d := newDeps(t)
 		expectAdmin(t, d, "admin-1")
-		// 取消置顶：只更新，不回读、不通知。无 GetCommentByID / 无 expectSetting。
 		d.repo.EXPECT().
 			UpdateCommentHot(mock.Anything, "c-1", false).
 			Return(nil).
@@ -168,8 +155,6 @@ func TestUpdateCommentHot(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
-
-// --- DeleteComment ----------------------------------------------------------
 
 func TestDeleteComment(t *testing.T) {
 	t.Run("anonymous is denied", func(t *testing.T) {
@@ -181,7 +166,6 @@ func TestDeleteComment(t *testing.T) {
 	t.Run("repo delete error is propagated", func(t *testing.T) {
 		d := newDeps(t)
 		expectAdmin(t, d, "admin-1")
-		// 删除前先回读（错误被忽略，仅用于事件载荷）。
 		d.repo.EXPECT().
 			GetCommentByID(mock.Anything, "c-1").
 			Return(commentModel.Comment{ID: "c-1"}, nil).
@@ -212,7 +196,6 @@ func TestDeleteComment(t *testing.T) {
 	t.Run("success when comment missing skips emit", func(t *testing.T) {
 		d := newDeps(t)
 		expectAdmin(t, d, "admin-1")
-		// 回读返回空（ID==""）：删除仍执行，但不 emit。
 		d.repo.EXPECT().
 			GetCommentByID(mock.Anything, "missing").
 			Return(commentModel.Comment{}, errRepoBoom).
@@ -225,8 +208,6 @@ func TestDeleteComment(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
-
-// --- BatchAction ------------------------------------------------------------
 
 func TestBatchAction(t *testing.T) {
 	t.Run("anonymous is denied", func(t *testing.T) {
@@ -266,14 +247,13 @@ func TestBatchAction(t *testing.T) {
 				BatchUpdateStatus(mock.Anything, ids, tc.wantStatus).
 				Return(nil).
 				Once()
-			// 每个 id 回读一次用于 emit + notify。
 			for _, id := range ids {
 				d.repo.EXPECT().
 					GetCommentByID(mock.Anything, id).
 					Return(commentModel.Comment{ID: id, Status: tc.wantStatus}, nil).
 					Once()
 			}
-			d.expectSetting(t, enabledSetting()) // notify 读取设置（>=1 次）
+			d.expectSetting(t, enabledSetting())
 
 			err := d.service().BatchAction(helpers.CtxAsUser("admin-1"), tc.action, ids)
 			require.NoError(t, err)
@@ -295,7 +275,6 @@ func TestBatchAction(t *testing.T) {
 		d := newDeps(t)
 		ids := []string{"c-1", "c-2"}
 		expectAdmin(t, d, "admin-1")
-		// 删除前逐个回读以构造事件载荷；c-2 回读为空将被跳过（不进 beforeDelete）。
 		d.repo.EXPECT().
 			GetCommentByID(mock.Anything, "c-1").
 			Return(commentModel.Comment{ID: "c-1"}, nil).
@@ -328,8 +307,6 @@ func TestBatchAction(t *testing.T) {
 		require.ErrorIs(t, err, errRepoBoom)
 	})
 }
-
-// --- ListPanelComments ------------------------------------------------------
 
 func TestListPanelComments(t *testing.T) {
 	t.Run("anonymous is denied", func(t *testing.T) {
@@ -389,10 +366,6 @@ func TestListPanelComments(t *testing.T) {
 	})
 }
 
-// --- resolveParentID (valid-parent branch, exercised via CreateComment) -----
-
-// resolveParentID 的三个错误分支已在 comment_create_test.go 覆盖；这里补「合法已审核父评论」
-// 的成功分支：返回 &parent.ID 并落到 comment.ParentID。走管理员路径以跳过频率限制噪声。
 func TestResolveParentID_ValidParentSetsParentID(t *testing.T) {
 	helpers.SetJWTSecret(t, testSecret)
 	d := newDeps(t)

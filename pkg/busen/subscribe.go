@@ -12,12 +12,10 @@ import (
 	"github.com/lin-snow/ech0/pkg/busen/router"
 )
 
-// Subscribe registers a type-based subscription.
 func (b *Bus) Subscribe[T any](handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	return b.subscribeWithMatcher(nil, nil, handler, opts...)
 }
 
-// SubscribeTopic registers a type-based subscription constrained by a topic pattern.
 func (b *Bus) SubscribeTopic[T any](pattern string, handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	matcher, err := router.Compile(pattern)
 	if err != nil {
@@ -27,7 +25,6 @@ func (b *Bus) SubscribeTopic[T any](pattern string, handler Handler[T], opts ...
 	return b.subscribeWithMatcher(matcher, nil, handler, opts...)
 }
 
-// SubscribeTopics registers a type-based subscription constrained by multiple topic patterns.
 func (b *Bus) SubscribeTopics[T any](patterns []string, handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	matcher, err := compileMatchers(patterns)
 	if err != nil {
@@ -37,7 +34,6 @@ func (b *Bus) SubscribeTopics[T any](patterns []string, handler Handler[T], opts
 	return b.subscribeWithMatcher(matcher, nil, handler, opts...)
 }
 
-// SubscribeMatch registers a type-based subscription constrained by a predicate filter.
 func (b *Bus) SubscribeMatch[T any](match func(Event[T]) bool, handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	if match == nil {
 		return nil, fmt.Errorf("%w: match predicate is nil", ErrInvalidOption)
@@ -121,7 +117,6 @@ func (b *Bus) subscribeWithMatcher[T any](
 
 type matchAny []router.Matcher
 
-// Match reports whether any compiled topic matcher accepts the topic.
 func (m matchAny) Match(topic string) bool {
 	for _, matcher := range m {
 		if matcher.Match(topic) {

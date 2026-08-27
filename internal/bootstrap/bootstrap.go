@@ -11,8 +11,6 @@ import (
 func initLogger() {
 	cfg := config.Config()
 
-	// dev（ECH0_SERVER_MODE=debug）下默认开彩色控制台（tint）：把 Format 切到 console 并开 Color。
-	// 文件输出始终是 JSON，不受影响；prod 维持配置原样（默认 json → stdout 结构化）。
 	dev := cfg.Server.Mode == "debug"
 	logFormat := cfg.Log.Format
 	if dev && (logFormat == "" || logFormat == "json") {
@@ -46,7 +44,6 @@ func initConfig() {
 	config.Config()
 }
 
-// Bootstrap 执行应用启动阶段所需的基础初始化流程。
 func Bootstrap() {
 	initConfig()
 	initLogger()

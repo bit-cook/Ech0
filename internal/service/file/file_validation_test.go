@@ -14,9 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeMultipartFile adapts a *bytes.Reader to the multipart.File interface
-// (io.Reader + io.ReaderAt + io.Seeker + io.Closer) for unit testing the
-// content sniffer without a real upload.
 type fakeMultipartFile struct {
 	*bytes.Reader
 }
@@ -27,11 +24,8 @@ func newFakeFile(b []byte) multipart.File {
 	return fakeMultipartFile{bytes.NewReader(b)}
 }
 
-// pngMagic is a minimal PNG file header that http.DetectContentType resolves to
-// "image/png".
 var pngMagic = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 0}
 
-// htmlBody triggers the HTML sniffer ("text/html; charset=utf-8").
 var htmlBody = []byte("<!DOCTYPE html><html><body>hi</body></html>")
 
 func TestValidateFileUpload(t *testing.T) {
@@ -42,7 +36,6 @@ func TestValidateFileUpload(t *testing.T) {
 		allowed      []string
 		wantErr      bool
 	}{
-		// --- happy paths ---
 		{
 			name:         "legal png passes",
 			filename:     "photo.png",
@@ -93,11 +86,10 @@ func TestValidateFileUpload(t *testing.T) {
 			wantErr:      false,
 		},
 
-		// --- dangerous extension blacklist (checked first) ---
 		{
 			name:         "html extension rejected",
 			filename:     "evil.html",
-			detectedMIME: "image/png", // even with a benign sniff result
+			detectedMIME: "image/png",
 			allowed:      []string{"image/png"},
 			wantErr:      true,
 		},
@@ -123,7 +115,6 @@ func TestValidateFileUpload(t *testing.T) {
 			wantErr:      true,
 		},
 
-		// --- not in safe whitelist ---
 		{
 			name:         "unknown extension not whitelisted",
 			filename:     "doc.pdf",
@@ -139,7 +130,6 @@ func TestValidateFileUpload(t *testing.T) {
 			wantErr:      true,
 		},
 
-		// --- magic-byte executable content despite safe extension ---
 		{
 			name:         "svg content disguised as png rejected via magic-byte gate",
 			filename:     "fake.png",
@@ -155,7 +145,6 @@ func TestValidateFileUpload(t *testing.T) {
 			wantErr:      true,
 		},
 
-		// --- sniffed mime does not match the extension's expected set ---
 		{
 			name:         "gif content under png extension rejected",
 			filename:     "photo.png",
@@ -164,7 +153,6 @@ func TestValidateFileUpload(t *testing.T) {
 			wantErr:      true,
 		},
 
-		// --- config allowlist gate ---
 		{
 			name:         "extension valid but mime not on admin allowlist",
 			filename:     "photo.png",
@@ -328,8 +316,6 @@ func TestDetectContentType(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "image/png", got)
 
-		// After detection the reader must be rewound so the full body is still
-		// readable for the subsequent upload write.
 		rest, err := io.ReadAll(f)
 		require.NoError(t, err)
 		assert.Equal(t, pngMagic, rest)

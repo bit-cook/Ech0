@@ -13,7 +13,6 @@ import (
 	errorUtil "github.com/lin-snow/ech0/internal/util/err"
 )
 
-// swagger:model Response
 type Response struct {
 	Code int `json:"code"`
 
@@ -27,11 +26,9 @@ type Response struct {
 
 	MessageParams map[string]any `json:"message_params,omitempty"`
 
-	// swagger:ignore
 	Err error `json:"-"`
 }
 
-// Execute 包装器，自动根据 Response 返回统一格式的 HTTP 响应 (仅处理返回类型为JSON的handler)
 func Execute(fn func(ctx *gin.Context) Response) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		res := fn(ctx)
@@ -42,10 +39,8 @@ func Execute(fn func(ctx *gin.Context) Response) gin.HandlerFunc {
 			})
 			localizer := i18nUtil.LocalizerFromGin(ctx)
 
-			// 失败映射阶梯（BizError → key，否则按消息文本映射）与 Huma 路径共用，见 commonModel.ResolveFailureFields。
 			code, messageKey, params := commonModel.ResolveFailureFields(res.Err, msg)
 
-			// gin 路径专有：res.Err 非 BizError 但 handler 在 Response 上显式设了 ErrorCode，用 res 上的字段兜底。
 			if code == "" && res.ErrorCode != "" {
 				code = res.ErrorCode
 				messageKey = strings.TrimSpace(res.MessageKey)

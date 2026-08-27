@@ -71,8 +71,6 @@ func (a *Adapter) RegisterAll(reg *Registry) {
 	a.registerDashboardResources(reg)
 }
 
-// --- Argument helpers ---
-
 func stringArg(args map[string]any, key string) string {
 	if v, ok := args[key]; ok {
 		if s, ok := v.(string); ok {
@@ -170,8 +168,6 @@ func buildExtension(args map[string]any) *echoModel.EchoExtension {
 		Payload: payload,
 	}
 }
-
-// --- Result helpers ---
 
 func jsonResult(v any) (*ToolCallResult, error) {
 	data, err := json.Marshal(v)

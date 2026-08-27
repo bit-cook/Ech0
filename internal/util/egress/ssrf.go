@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package egress is the single home for outbound HTTP policy: client
-// construction (timeout / TLS / pooling / outbound logging), an opt-in SSRF
-// guard for user-supplied URLs, and a small retry helper. Admin-configured
-// infra endpoints (OIDC providers, LLM backends, captcha verifiers) may
-// legitimately live on loopback or private networks, so the SSRF guard is
-// opt-in via Guard() rather than always on.
 package egress
 
 import (
@@ -21,7 +15,7 @@ import (
 )
 
 const (
-	defaultSafeResponseBodyLimitBytes int64 = 1 << 20 // 1 MiB
+	defaultSafeResponseBodyLimitBytes int64 = 1 << 20
 	maxSafeRedirects                        = 3
 )
 
@@ -77,9 +71,6 @@ func isBlockedHostname(hostname string) bool {
 		hostname == "gateway.docker.internal"
 }
 
-// Validate reports whether rawURL is safe to use for an outbound request,
-// rejecting non-http(s) schemes, embedded userinfo, and hosts that are
-// literal private/reserved IPs or known loopback aliases.
 func Validate(rawURL string) error {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
@@ -109,9 +100,6 @@ func Validate(rawURL string) error {
 	return nil
 }
 
-// secureDialContext returns a DialContext that rejects connections to
-// private/reserved IP addresses after DNS resolution, defending against DNS
-// rebinding (the resolved peer IP is checked, not just the hostname).
 func secureDialContext(timeout time.Duration) func(context.Context, string, string) (net.Conn, error) {
 	dialer := &net.Dialer{Timeout: timeout}
 	return func(ctx context.Context, network, address string) (net.Conn, error) {

@@ -2,7 +2,6 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <PanelCard>
-    <!-- Webhook 设置 -->
     <div class="w-full">
       <div class="flex flex-row items-center justify-between mb-4">
         <h1 class="text-[var(--color-text-primary)] font-bold text-lg">
@@ -205,7 +204,6 @@
 
     <TransitionRoot appear :show="detailModalOpen" as="template">
       <Dialog as="div" class="relative z-5000" @close="closeTokenDetail">
-        <!-- 遮罩层 -->
         <TransitionChild
           as="template"
           enter="duration-200 ease-out"
@@ -232,7 +230,6 @@
               <DialogPanel
                 class="w-full max-w-lg transform rounded-[var(--radius-lg)] bg-[var(--dialog-bg-color)] p-5 text-left align-middle shadow-[var(--shadow-md)] ring-1 ring-inset ring-[var(--color-border-subtle)] transition-all"
               >
-                <!-- 标题区 -->
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <DialogTitle class="text-base font-semibold text-[var(--color-text-primary)]">
@@ -252,7 +249,6 @@
                   </button>
                 </div>
 
-                <!-- 概览 -->
                 <section
                   class="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-muted)]/40 p-4"
                 >
@@ -293,7 +289,6 @@
                   </dl>
                 </section>
 
-                <!-- 权限范围 -->
                 <section
                   class="mt-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-bg-muted)]/40 p-4"
                 >
@@ -323,7 +318,6 @@
                   </p>
                 </section>
 
-                <!-- 底部 -->
                 <div class="mt-4 flex justify-end">
                   <BaseButton class="h-9 rounded-md px-4" @click="closeTokenDetail">
                     {{ t('accessTokenSetting.closeDetail') }}
@@ -471,7 +465,6 @@ const scopeLabelMap: Record<string, string> = {
 
 const selectedTokenScopes = computed(() => parseTokenScopes(selectedToken.value?.scopes))
 
-// 详情「概览」展示文案
 const selectedTokenExpiryText = computed(() =>
   selectedToken.value?.expiry
     ? new Date(selectedToken.value.expiry * 1000).toLocaleString()
@@ -481,7 +474,6 @@ const selectedTokenCreatedText = computed(() =>
   selectedToken.value ? new Date(selectedToken.value.created_at * 1000).toLocaleString() : '',
 )
 
-// 详情「权限范围」按既有分组归类，仅保留该 token 实际拥有的分组与条目
 const selectedTokenScopeGroups = computed(() => {
   const owned = new Set(selectedTokenScopes.value)
   return scopeGroups
@@ -531,7 +523,6 @@ function openTokenDetail(item: App.Api.Setting.AccessToken) {
 }
 
 function closeTokenDetail() {
-  // 仅关闭可见性，保留 selectedToken 让离场动画期间仍有内容渲染（重新打开时会被覆盖）
   detailModalOpen.value = false
 }
 
@@ -627,7 +618,6 @@ const copyAccessToken = async (token: string) => {
   }
 }
 
-// 删除 Access Token
 const handleDeleteAccessToken = async (item: App.Api.Setting.AccessToken) => {
   if (!item) return
 

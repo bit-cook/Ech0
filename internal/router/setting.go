@@ -12,12 +12,10 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// registerSetting 注册系统设置路由（全部 JSON）。
 func registerSetting(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	adminSettings := secured(revoker, authModel.ScopeAdminSettings)
 	adminToken := secured(revoker, authModel.ScopeAdminToken)
 
-	// --- 公开 ---
 	route(api, public(), huma.Operation{
 		OperationID: "settings-get",
 		Method:      http.MethodGet,
@@ -50,7 +48,6 @@ func registerSetting(api huma.API, h *handler.Bundle, revoker authService.TokenR
 		Tags:        []string{"Setting"},
 	}, h.SettingHandler.GetAgentInfo)
 
-	// --- admin:settings ---
 	route(api, adminSettings, huma.Operation{
 		OperationID: "settings-update",
 		Method:      http.MethodPut,
@@ -211,7 +208,6 @@ func registerSetting(api huma.API, h *handler.Bundle, revoker authService.TokenR
 		Tags:        []string{"Setting"},
 	}, h.SettingHandler.UpdateEmbeddingSettings)
 
-	// --- admin:token ---
 	route(api, adminToken, huma.Operation{
 		OperationID: "access-token-list",
 		Method:      http.MethodGet,

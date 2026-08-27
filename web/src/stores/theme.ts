@@ -18,7 +18,6 @@ export const useThemeStore = defineStore('themeStore', () => {
   const savedThemeMode = localStg.getItem('themeMode')
   const savedTheme = localStg.getItem('theme')
 
-  // 初始化 themeMode
   const mode = ref<ThemeMode>(
     savedThemeMode === 'light' || savedThemeMode === 'dark' || savedThemeMode === 'sunny'
       ? savedThemeMode
@@ -30,7 +29,6 @@ export const useThemeStore = defineStore('themeStore', () => {
       : 'light',
   )
 
-  // 内部切换主题逻辑
   const applyThemeToggle = () => {
     if (mode.value === 'light') {
       mode.value = 'sunny'
@@ -44,10 +42,8 @@ export const useThemeStore = defineStore('themeStore', () => {
     localStg.setItem('themeMode', mode.value)
   }
 
-  // 防抖标志：防止动画过程中重复触发
   let isTransitioning = false
 
-  // 使用 View Transitions 默认交叉淡化（比 clip-path 圆扩散更省 GPU）
   const toggleTheme = async () => {
     if (isTransitioning) return
 

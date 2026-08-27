@@ -59,7 +59,6 @@ func TestEchoCacheKeyTrackerConcurrentTrackAndClear(t *testing.T) {
 		t.Fatalf("expected %d deleted keys, got %d", 2*n, cache.deletedCount())
 	}
 
-	// 再次清理不应重复删除
 	ClearEchoPageCache(cache)
 	ClearTodayEchosCache(cache)
 	if cache.deletedCount() != 2*n {

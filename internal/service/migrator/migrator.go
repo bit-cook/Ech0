@@ -31,9 +31,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/viewer"
 )
 
-// MigratorService 是迁移领域服务的 HTTP 生命周期编排：导入(start/status/cancel/cleanup)、
-// 导出(start/status/cancel 走 job.Manager;download 同步取回最新产物)。实际导入/导出由引擎执行体
-// (migrator.ImportEngine / migrator.ExportEngine)承担;本层只做 auth + 作业生命周期 + DTO 转发。
 type MigratorService struct {
 	commonService CommonService
 	jobManager    *job.Manager
@@ -52,10 +49,6 @@ func NewMigratorService(
 	}
 }
 
-// DownloadExport 流式下发「上一次导出作业产出的产物」(GET /migration/export/download)。
-// 与导入的 upload 对称:重活(打包/S3)在异步 export 作业里完成,这里只同步取回产物,不再现打包。
-// format 决定取哪个槽位——快照与胶囊各自「只保留最新一份」,混用会互删,详见 migrator/artifact。
-// 无可用产物时报错提示先创建导出。下发后发 SystemExport 事件。
 func (s *MigratorService) DownloadExport(ctx *gin.Context, reqCtx context.Context, format string) error {
 	if _, err := s.ensureAdmin(reqCtx); err != nil {
 		return err
@@ -119,7 +112,6 @@ func (s *MigratorService) UploadSourceZip(
 	if !user.IsAdmin {
 		return migratorModel.UploadMigrationSourceZipResponse{}, errors.New(commonModel.NO_PERMISSION_DENIED)
 	}
-	// 非 idle（存在任何作业行，无论在跑还是终态）则要求先清理，沿用旧语义。
 	if _, err := s.jobManager.Get(ctx, jobModel.TypeMigration); err == nil {
 		return migratorModel.UploadMigrationSourceZipResponse{}, errors.New("请先结束/清理当前迁移")
 	} else if !errors.Is(err, job.ErrNotFound) {
@@ -163,7 +155,6 @@ func (s *MigratorService) UploadSourceZip(
 	}, nil
 }
 
-// StartGlobalMigration 提交一次迁移作业（互斥 + 持久化 + goroutine 生命周期由 job.Manager 负责）。
 func (s *MigratorService) StartGlobalMigration(
 	ctx context.Context,
 	req migratorModel.StartGlobalMigrationRequest,
@@ -190,7 +181,6 @@ func (s *MigratorService) StartGlobalMigration(
 
 	jb, err := s.jobManager.Submit(ctx, jobModel.TypeMigration, raw)
 	if err != nil {
-		// 提交失败（如同类型互斥）：清理刚上传的 tmp，沿用旧「请先结束/清理当前迁移」。
 		_ = coreMigrator.CleanupTmpDirFromPayload(req.SourcePayload)
 		if errors.Is(err, job.ErrAlreadyRunning) {
 			return migratorModel.GlobalMigrationStateDTO{}, errors.New("请先结束/清理当前迁移")
@@ -200,7 +190,6 @@ func (s *MigratorService) StartGlobalMigration(
 	return s.jobToDTO(jb), nil
 }
 
-// GetGlobalMigrationStatus 查询当前状态；查无作业行时合成 idle 哨兵。
 func (s *MigratorService) GetGlobalMigrationStatus(ctx context.Context) (migratorModel.GlobalMigrationStateDTO, error) {
 	if _, err := s.ensureAdmin(ctx); err != nil {
 		return migratorModel.GlobalMigrationStateDTO{}, err
@@ -215,7 +204,6 @@ func (s *MigratorService) GetGlobalMigrationStatus(ctx context.Context) (migrato
 	return s.jobToDTO(jb), nil
 }
 
-// CancelGlobalMigration 协作式取消在跑迁移；返回当前状态（前端轮询收敛到 cancelled）。
 func (s *MigratorService) CancelGlobalMigration(ctx context.Context) (migratorModel.GlobalMigrationStateDTO, error) {
 	if _, err := s.ensureAdmin(ctx); err != nil {
 		return migratorModel.GlobalMigrationStateDTO{}, err
@@ -238,14 +226,13 @@ func (s *MigratorService) CancelGlobalMigration(ctx context.Context) (migratorMo
 	return s.jobToDTO(jb), nil
 }
 
-// CleanupGlobalMigration 清理 tmp 目录并删除作业行（复位 idle）。
 func (s *MigratorService) CleanupGlobalMigration(ctx context.Context) error {
 	if _, err := s.ensureAdmin(ctx); err != nil {
 		return err
 	}
 	jb, err := s.jobManager.Get(ctx, jobModel.TypeMigration)
 	if errors.Is(err, job.ErrNotFound) {
-		return nil // 已是 idle，幂等
+		return nil
 	}
 	if err != nil {
 		return err
@@ -263,9 +250,6 @@ func (s *MigratorService) CleanupGlobalMigration(ctx context.Context) error {
 	return s.jobManager.Delete(ctx, jobModel.TypeMigration)
 }
 
-// StartExport 提交一次导出作业（手动导出的异步出口），格式由请求决定：快照或胶囊。
-// 互斥 + 持久化 + goroutine 生命周期由 job.Manager 负责；快照完成由 ExportRunner 发
-// SystemSnapshot 事件，无需 service 介入。
 func (s *MigratorService) StartExport(
 	ctx context.Context,
 	req migratorModel.StartExportRequest,
@@ -278,9 +262,7 @@ func (s *MigratorService) StartExport(
 		return migratorModel.ExportStateDTO{}, err
 	}
 	raw, err := json.Marshal(migratorModel.ExportPayload{
-		Format: format,
-		// 快照本就整库带走，包含与否无从谈起；只让胶囊携带这个意图，避免落库的 payload 出现
-		// 「快照 + 不含私密」这种读起来自相矛盾的组合。
+		Format:         format,
 		IncludePrivate: format == migratorModel.ExportFormatCapsule && req.IncludePrivate,
 	})
 	if err != nil {
@@ -296,7 +278,6 @@ func (s *MigratorService) StartExport(
 	return s.jobExportToDTO(jb), nil
 }
 
-// GetExportStatus 查询当前导出状态；查无作业行时合成 idle 哨兵（与迁移状态机一致）。
 func (s *MigratorService) GetExportStatus(ctx context.Context) (migratorModel.ExportStateDTO, error) {
 	if _, err := s.ensureAdmin(ctx); err != nil {
 		return migratorModel.ExportStateDTO{}, err
@@ -311,7 +292,6 @@ func (s *MigratorService) GetExportStatus(ctx context.Context) (migratorModel.Ex
 	return s.jobExportToDTO(jb), nil
 }
 
-// CancelExport 协作式取消在跑导出；返回当前状态（前端轮询收敛到 cancelled）。
 func (s *MigratorService) CancelExport(ctx context.Context) (migratorModel.ExportStateDTO, error) {
 	if _, err := s.ensureAdmin(ctx); err != nil {
 		return migratorModel.ExportStateDTO{}, err
@@ -334,8 +314,6 @@ func (s *MigratorService) CancelExport(ctx context.Context) (migratorModel.Expor
 	return s.jobExportToDTO(jb), nil
 }
 
-// jobExportToDTO 把通用 Job 映射回前端契约的 ExportStateDTO。终态成功时 Payload 为
-// migrator.ExportOutcome 的 JSON（含 file_name/size），此处解析补出。
 func (s *MigratorService) jobExportToDTO(jb jobModel.Job) migratorModel.ExportStateDTO {
 	dto := migratorModel.ExportStateDTO{
 		Version:      1,
@@ -346,8 +324,6 @@ func (s *MigratorService) jobExportToDTO(jb jobModel.Job) migratorModel.ExportSt
 		FinishedAt:   jb.FinishedAt,
 	}
 	if jb.Payload != "" {
-		// 作业行的 Payload 列先存输入 ExportPayload、成功后被 ExportOutcome 覆盖。两者都带
-		// format，故一次解析就能覆盖「运行中」与「已完成」两种形态。
 		var outcome struct {
 			FileName string `json:"file_name"`
 			Size     int64  `json:"size"`
@@ -359,7 +335,6 @@ func (s *MigratorService) jobExportToDTO(jb jobModel.Job) migratorModel.ExportSt
 			dto.Format = outcome.Format
 		}
 	}
-	// 改版前落库的作业行没有 format，缺省即快照——下载出口据此取槽位，不能留空。
 	if dto.Format == "" {
 		dto.Format = migratorModel.ExportFormatSnapshot
 	}
@@ -370,7 +345,6 @@ func (s *MigratorService) jobExportToDTO(jb jobModel.Job) migratorModel.ExportSt
 	return dto
 }
 
-// jobToDTO 把通用 Job 映射回前端契约的 GlobalMigrationStateDTO（适配层，不污染框架）。
 func (s *MigratorService) jobToDTO(jb jobModel.Job) migratorModel.GlobalMigrationStateDTO {
 	var payload migratorModel.MigrationPayload
 	if jb.Payload != "" {
@@ -427,8 +401,6 @@ func validateSourceType(sourceType string) error {
 	}
 }
 
-// normalizeExportFormat 收口导出格式：空值即快照，既是缺省语义，也让不带 format 的旧客户端
-// 保持原行为。未知取值直接拒绝而非静默回落——悄悄给出另一种格式的产物，用户会拿错东西。
 func normalizeExportFormat(format string) (string, error) {
 	switch strings.TrimSpace(format) {
 	case "", migratorModel.ExportFormatSnapshot:

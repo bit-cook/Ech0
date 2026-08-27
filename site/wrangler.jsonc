@@ -1,12 +1,8 @@
 {
-  // Cloudflare Workers Static Assets config for the site (ech0.app).
-  // Deployed by .github/workflows/deploy-site.yml via `wrangler deploy`.
   "name": "ech0-site",
   "compatibility_date": "2026-05-27",
   "assets": {
-    // React Router SPA (ssr:false) build output.
     "directory": "./build/client",
-    // Serve index.html for unmatched client routes (replaces _redirects).
     "not_found_handling": "single-page-application"
   }
 }

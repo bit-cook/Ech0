@@ -14,12 +14,10 @@ import (
 	"github.com/lin-snow/ech0/pkg/busen"
 )
 
-// SnapshotExporter 是快照导出执行端，便于测试解耦（由 migrator.ExportEngine 满足）。
 type SnapshotExporter interface {
 	Export(ctx context.Context, report func(phase string, snapshot any)) (coreMigrator.ExportOutcome, error)
 }
 
-// CapsuleExporter 是胶囊导出执行端（由 migrator.CapsuleEngine 满足）。
 type CapsuleExporter interface {
 	Export(
 		ctx context.Context,
@@ -33,9 +31,6 @@ var (
 	_ CapsuleExporter  = (*coreMigrator.CapsuleEngine)(nil)
 )
 
-// ExportRunner 把导出执行包成作业 Runner（手动导出的异步出口），按 payload.Format 在快照与
-// 胶囊之间分派。两种格式共用同一作业类型：它们都是重 IO 的整库打包，互斥跑才不会打满磁盘，
-// 且前端那套轮询与进度卡可以原样复用。
 type ExportRunner struct {
 	exporter        SnapshotExporter
 	capsuleExporter CapsuleExporter
@@ -56,8 +51,6 @@ func (r *ExportRunner) Run(
 	report job.ReportFunc,
 ) (any, error) {
 	if p.Format == migratorModel.ExportFormatCapsule {
-		// 刻意不发 SystemSnapshot：webhook 订阅它来确认「备份已完成」，而胶囊不含账号与凭据、
-		// 不能用于灾难恢复，拿它冒充备份完成会给用户错误的安全感。
 		return r.capsuleExporter.Export(ctx, p.IncludePrivate, report)
 	}
 

@@ -20,14 +20,6 @@ import (
 	uuidUtil "github.com/lin-snow/ech0/internal/util/uuid"
 )
 
-// 快照与胶囊是两种不同的产物：快照是整库 + data 目录的 zip 备份（破坏性整库替换、
-// 不可读、不跨实现），胶囊是可读可编辑的内容交换格式。二者共用动词但语义不同，
-// 因此格式是子命令而不是 flag 值（spec §9 / design Q11）。
-
-// DoExportSnapshot 产出一份整库快照 zip。
-//
-// 复用 Web 端导出作业的同一个引擎：配置了对象存储时会额外后台上传，
-// 本地产物始终落在 data/files/snapshots/ 下。
 func DoExportSnapshot(output string) error {
 	rt, err := newCapsuleRuntime()
 	if err != nil {
@@ -60,10 +52,6 @@ func DoExportSnapshot(output string) error {
 	return nil
 }
 
-// DoImportSnapshot 用一份快照替换当前实例的内容。
-//
-// 破坏性操作，必须显式 --yes。落库语义与 Web 端「全局迁移」完全一致（同一个引擎），
-// 包括「已存在主键则跳过」的批量插入与迁移后配置应用。
 func DoImportSnapshot(path string, yes bool) error {
 	if !yes {
 		return errors.New("importing a snapshot rewrites instance data; pass --yes to confirm")
@@ -80,8 +68,6 @@ func DoImportSnapshot(path string, yes bool) error {
 		return err
 	}
 
-	// 引擎读的是已解包目录，且 resolveTmpDir 只接受 data/files/tmp 之下的相对路径，
-	// 故这里复刻 Web 上传通道的落点约定，而不是随便找个临时目录。
 	folder := "ech0_" + uuidUtil.NewV7()
 	relativeTmpDir := filepath.ToSlash(filepath.Join(migrator.TmpRelativeDir, folder))
 	extractDir := filepath.Join("data", relativeTmpDir)
@@ -93,7 +79,6 @@ func DoImportSnapshot(path string, yes bool) error {
 		return fmt.Errorf("unpack snapshot: %w", err)
 	}
 
-	// Import 自带 tmp 清理（CleanupTmpDirFromPayload）。
 	engine := migrator.NewImportEngine(rt.kv, rt.storage, rt.cache)
 	if _, err := engine.Import(
 		context.Background(),
@@ -114,7 +99,6 @@ func DoImportSnapshot(path string, yes bool) error {
 	return nil
 }
 
-// copyArtifact 把引擎产物复制到用户指定位置（引擎只认自己的 snapshots 目录）。
 func copyArtifact(src, dst string) (string, error) {
 	if !strings.HasSuffix(strings.ToLower(dst), ".zip") {
 		dst += ".zip"

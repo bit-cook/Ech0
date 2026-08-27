@@ -5,7 +5,6 @@ package model
 
 import "fmt"
 
-// ServerError 定义服务器错误信息
 type ServerError struct {
 	Msg string
 	Err error
@@ -42,7 +41,6 @@ func NewBizErrorWithMessageKey(code, msg, messageKey string, params map[string]a
 	}
 }
 
-// 失败相关的常量
 const (
 	INVALID_FILE_PATH      = "无效的文件路径"
 	INVALID_REQUEST_BODY   = "无效的请求体"
@@ -51,7 +49,6 @@ const (
 	INVALID_REQUEST_METHOD = "无效的请求方法"
 )
 
-// 业务错误码
 const (
 	ErrCodeInvalidRequest          = "INVALID_REQUEST"
 	ErrCodeInternal                = "INTERNAL_ERROR"
@@ -72,7 +69,6 @@ const (
 	ErrCodeTokenGenerateFailed     = "TOKEN_GENERATE_FAILED"
 )
 
-// Auth 错误相关常量
 const (
 	USERNAME_OR_PASSWORD_NOT_BE_EMPTY = "用户名或密码不能为空"
 	PASSWORD_INCORRECT                = "密码错误"
@@ -90,7 +86,6 @@ const (
 	USER_REGISTER_NOT_ALLOW           = "当前系统禁止注册新用户"
 )
 
-// Echo 错误相关常量
 const (
 	NO_PERMISSION_DENIED       = "没有权限,请联系系统管理员"
 	ECHO_CAN_NOT_BE_EMPTY      = "ECHO 内容不能为空"
@@ -98,7 +93,6 @@ const (
 	ECHO_MIXED_FILE_CATEGORIES = "一条 Echo 只能包含同一类型的文件"
 )
 
-// Common 错误相关常量
 const (
 	NO_FILE_UPLOAD_ERROR   = "找不到上传的文件"
 	NO_FILE_STORAGE_ERROR  = "未知存储方式"
@@ -115,7 +109,6 @@ const (
 	ONLY_OWNER_CAN_MANAGE  = "仅Owner可管理管理员权限"
 )
 
-// User 错误相关常量
 const (
 	USERNAME_ALREADY_EXISTS      = "用户名已存在"
 	OAUTH2_NOT_CONFIGURED        = "OAuth2 未配置"
@@ -126,36 +119,30 @@ const (
 	NO_PERMISSION_BINDING_CUSTOM = "没有权限绑定自定义 OAuth2 账号"
 )
 
-// Connect 错误相关常量
 const (
 	INVALID_CONNECTION_URL = "connect url不能为空"
 	CONNECT_HAS_EXISTS     = "connect 已经存在"
 )
 
-// Setting 错误相关常量
 const (
 	WEBHOOK_NAME_OR_URL_CANNOT_BE_EMPTY = "未填写 Webhook 名称或 URL"
 	INVALID_WEBHOOK_URL                 = "webhook URL 不合法或不安全"
 	INVALID_CRON_EXPRESSION             = "无效的 Cron 表达式"
 )
 
-// Snapshot 错误相关常量
 const (
 	SNAPSHOT_RESTORE_FAILED = "快照恢复失败"
 	DATABASE_CLOSE_FAILED   = "数据库关闭失败"
 )
 
-// Migration 错误相关常量
 const (
 	MIGRATION_JOB_NOT_FOUND = "迁移任务不存在"
 )
 
-// Dashboard 错误相关常量
 const (
 	CHECK_UPDATE_FAILED = "检查更新失败"
 )
 
-// Agent 错误相关常量
 const (
 	AGENT_NOT_ENABLED        = "未启用 Agent "
 	AGENT_PROTOCOL_NOT_FOUND = "未找到对应的 Agent 接口协议"

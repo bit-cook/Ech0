@@ -16,14 +16,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// newRepo 建一个内存库 + 仓储；返回 repo 与 *gorm.DB 供测试直查。
 func newRepo(t *testing.T) (*commentRepository.CommentRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
 	return commentRepository.NewCommentRepository(func() *gorm.DB { return db }), db
 }
 
-// newComment 构造带合理默认值的评论；用 option 覆写字段。
 func newComment(opts ...func(*model.Comment)) model.Comment {
 	c := model.Comment{
 		EchoID:   "echo-1",
@@ -39,9 +37,6 @@ func newComment(opts ...func(*model.Comment)) model.Comment {
 	return c
 }
 
-// insert 通过仓储写入并断言成功；返回写回的 ID。
-// 注意：CreatedAt 显式非零时 GORM autoCreateTime 会保留该值，
-// 这正是窗口测试得以精确控制时间的前提。
 func insert(t *testing.T, repo *commentRepository.CommentRepository, c model.Comment) string {
 	t.Helper()
 	require.NoError(t, repo.CreateComment(context.Background(), &c))
@@ -56,20 +51,15 @@ func countRows(t *testing.T, db *gorm.DB) int64 {
 	return n
 }
 
-// --- 反作弊：countByFieldWithin 经三个公开包装函数验证 -------------------------
-
 func TestCountWithin_WindowAndFieldMatch(t *testing.T) {
 	repo, _ := newRepo(t)
 	ctx := context.Background()
 	now := time.Now().UTC().Unix()
 
-	// ip1：1 条在窗口内（now-5），1 条在窗口外（now-10000）。
 	insert(t, repo, newComment(func(c *model.Comment) { c.IPHash = "ip1"; c.CreatedAt = now - 5 }))
 	insert(t, repo, newComment(func(c *model.Comment) { c.IPHash = "ip1"; c.CreatedAt = now - 10000 }))
-	// ip2：1 条在窗口内，验证字段过滤不串。
 	insert(t, repo, newComment(func(c *model.Comment) { c.IPHash = "ip2"; c.CreatedAt = now - 5 }))
 
-	// email / user 各 1 条窗口内 + 1 条窗口外。
 	insert(t, repo, newComment(func(c *model.Comment) { c.Email = "bob@example.com"; c.CreatedAt = now - 5 }))
 	insert(t, repo, newComment(func(c *model.Comment) { c.Email = "bob@example.com"; c.CreatedAt = now - 10000 }))
 	insert(t, repo, newComment(func(c *model.Comment) { c.UserID = new("u-1"); c.CreatedAt = now - 5 }))
@@ -109,7 +99,6 @@ func TestCountWithin_TinyWindowExcludesEverything(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC().Unix()
 
-	// 该行在 30 秒前，窗口只有 5 秒 → 应被排除。
 	insert(t, repo, newComment(func(c *model.Comment) { c.IPHash = "ip-tiny"; c.CreatedAt = now - 30 }))
 
 	got, err := repo.CountByIPWithin(ctx, "ip-tiny", 5)
@@ -121,7 +110,6 @@ func TestCountWithin_EmptyValueShortCircuits(t *testing.T) {
 	repo, _ := newRepo(t)
 	ctx := context.Background()
 	now := time.Now().UTC().Unix()
-	// 制造一条空 email 的行：若不短路，空串过滤会把它算进去。
 	insert(t, repo, newComment(func(c *model.Comment) { c.Email = ""; c.CreatedAt = now - 1 }))
 
 	cases := []struct {
@@ -143,14 +131,11 @@ func TestCountWithin_EmptyValueShortCircuits(t *testing.T) {
 	}
 }
 
-// --- ExistsRecentDuplicate -----------------------------------------------------
-
 func TestExistsRecentDuplicate_IdentityPrecedence(t *testing.T) {
 	repo, _ := newRepo(t)
 	ctx := context.Background()
 	now := time.Now().UTC().Unix()
 
-	// 一条同时带 user/email/ip 的近期评论。
 	insert(t, repo, newComment(func(c *model.Comment) {
 		c.EchoID = "echo-dup"
 		c.Content = "duplicate content"
@@ -247,12 +232,9 @@ func TestExistsRecentDuplicate_WindowExcludesOld(t *testing.T) {
 	})
 }
 
-// --- ListComments：过滤 / 分页 / 排序 ------------------------------------------
-
 func seedForList(t *testing.T, repo *commentRepository.CommentRepository) int64 {
 	t.Helper()
 	base := time.Now().UTC().Unix() - 1000
-	// 5 条，created_at 递增，确保 desc 排序确定。
 	insert(t, repo, newComment(func(c *model.Comment) {
 		c.EchoID = "e1"
 		c.Status = model.StatusApproved
@@ -371,7 +353,6 @@ func TestListComments_PaginationAndOrder(t *testing.T) {
 	seedForList(t, repo)
 	ctx := context.Background()
 
-	// desc：fifth, fourth, third, second, first。
 	page1, err := repo.ListComments(ctx, model.ListCommentQuery{Page: 1, PageSize: 2})
 	require.NoError(t, err)
 	assert.Equal(t, int64(5), page1.Total, "Total 是全量而非本页数量")
@@ -390,8 +371,6 @@ func TestListComments_PaginationAndOrder(t *testing.T) {
 	require.Len(t, page3.Items, 1)
 	assert.Equal(t, "first golang post", page3.Items[0].Content)
 }
-
-// --- 批量操作 ------------------------------------------------------------------
 
 func TestBatchUpdateStatus(t *testing.T) {
 	t.Run("empty ids is a no-op", func(t *testing.T) {
@@ -449,8 +428,6 @@ func TestBatchDelete(t *testing.T) {
 	})
 }
 
-// --- 其余 CRUD / 公共投影查询（顺带覆盖） --------------------------------------
-
 func TestCreateGetUpdateDelete(t *testing.T) {
 	repo, _ := newRepo(t)
 	ctx := context.Background()
@@ -478,7 +455,6 @@ func TestListPublicByEchoID(t *testing.T) {
 	ctx := context.Background()
 	base := time.Now().UTC().Unix() - 100
 
-	// 同 echo：两条 approved（asc 顺序）+ 一条 pending（应排除）。
 	insert(t, repo, newComment(func(c *model.Comment) {
 		c.EchoID = "pub-e"
 		c.Status = model.StatusApproved
@@ -497,7 +473,6 @@ func TestListPublicByEchoID(t *testing.T) {
 		c.Content = "hidden"
 		c.CreatedAt = base + 3
 	}))
-	// 别的 echo 的 approved（应排除）。
 	insert(t, repo, newComment(func(c *model.Comment) {
 		c.EchoID = "other-e"
 		c.Status = model.StatusApproved
@@ -529,7 +504,6 @@ func TestListPublicComments(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, out, 2)
 		assert.Equal(t, model.StatusApproved, out[0].Status)
-		// desc：最新（base+2）在前。
 		assert.GreaterOrEqual(t, out[0].CreatedAt, out[1].CreatedAt)
 	})
 

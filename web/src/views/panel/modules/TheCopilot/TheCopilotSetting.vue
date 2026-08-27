@@ -7,7 +7,6 @@
         {{ t('copilotSetting.title') }}
       </h1>
 
-      <!-- Tab 切换 + 当前 tab 的编辑胶囊（同一行） -->
       <div
         class="flex flex-row items-center justify-between gap-2 mb-4 border-b"
         :style="{ borderColor: 'var(--color-border-subtle)' }"
@@ -57,7 +56,6 @@
         />
       </div>
 
-      <!-- Tab 内容 -->
       <KeepAlive>
         <TheAgentSetting v-if="tab === 'model'" ref="agentRef" :edit-mode="modelEdit" />
         <TheEmbeddingSetting v-else ref="embeddingRef" :edit-mode="embeddingEdit" />
@@ -78,7 +76,6 @@ const { t } = useI18n()
 
 const tab = ref<'model' | 'embedding'>('model')
 
-// 每个 tab 独立的编辑态，切换 tab 互不影响
 const modelEdit = ref<boolean>(false)
 const embeddingEdit = ref<boolean>(false)
 

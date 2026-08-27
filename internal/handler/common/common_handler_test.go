@@ -27,15 +27,11 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// ---------------------------------------------------------------------------
-// 框架中立（Huma type-first）handler
-// ---------------------------------------------------------------------------
-
 func TestGetHeatMap(t *testing.T) {
 	cases := []struct {
 		name       string
 		inputTZ    string
-		wantNormTZ string // handler 经 NormalizeTimezone 后传给 service 的值
+		wantNormTZ string
 	}{
 		{name: "valid-iana", inputTZ: "Asia/Shanghai", wantNormTZ: "Asia/Shanghai"},
 		{name: "empty-falls-back-utc", inputTZ: "", wantNormTZ: "UTC"},
@@ -67,12 +63,11 @@ func TestGetHeatMap_ServiceError(t *testing.T) {
 	out, err := h.GetHeatMap(context.Background(), &commonHandler.GetHeatMapInput{Timezone: "UTC"})
 
 	require.ErrorIs(t, err, sentinel)
-	// 错误路径返回零值封套，由 humares.Wrap 负责本地化。
 	assert.Equal(t, commonHandler.HeatmapOutput{}, out)
 }
 
 func TestHelloEch0(t *testing.T) {
-	svc := commonmock.NewMockService(t) // 不应触达 service
+	svc := commonmock.NewMockService(t)
 	h := commonHandler.NewCommonHandler(svc)
 
 	out, err := h.HelloEch0(context.Background(), &commonHandler.HelloInput{})
@@ -82,7 +77,6 @@ func TestHelloEch0(t *testing.T) {
 	assert.Equal(t, commonModel.GET_HELLO_SUCCESS, out.Message)
 	assert.Equal(t, "Hello, Ech0! 👋", out.Data.Hello)
 	assert.Equal(t, versionPkg.Copyright(), out.Data.Copyright)
-	// version.Info 被扁平化到顶层，应与 version.Get 一致。
 	assert.Equal(t, versionPkg.Version, out.Data.Version)
 	assert.Equal(t, versionPkg.RepoURL, out.Data.RepoURL)
 	assert.Equal(t, versionPkg.License, out.Data.License)
@@ -113,10 +107,6 @@ func TestGetWebsiteTitle(t *testing.T) {
 		assert.Equal(t, commonHandler.StringOutput{}, out)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// raw-gin handler（httptest）
-// ---------------------------------------------------------------------------
 
 func TestHealthz(t *testing.T) {
 	svc := commonmock.NewMockService(t)
@@ -270,7 +260,6 @@ func TestGetRss(t *testing.T) {
 		rec := httptest.NewRecorder()
 		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/rss", nil))
 
-		// 错误路径走 commonModel.Fail，状态码仍是 200（错误信息在封套里）。
 		require.Equal(t, http.StatusOK, rec.Code)
 		res := helpers.ParseResult(t, rec)
 		assert.Equal(t, commonModel.DEFAULT_FAILED_CODE, res.Code)

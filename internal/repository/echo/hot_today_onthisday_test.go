@@ -13,7 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// seedComment 插入一条评论（GetHotEchos 的热度由已通过审核的评论数加权）。
 func seedComment(t *testing.T, db *gorm.DB, id, echoID string, status commentModel.Status) {
 	t.Helper()
 	c := commentModel.Comment{
@@ -31,12 +30,11 @@ func seedComment(t *testing.T, db *gorm.DB, id, echoID string, status commentMod
 func TestEchoRepository_GetHotEchos(t *testing.T) {
 	t.Run("ranks by fav_count plus approved-comment weight", func(t *testing.T) {
 		repo, db := newEchoRepo(t)
-		seedEcho(t, db, "e-cold", "cold", false, 0, 100)     // hot = 0
-		seedEcho(t, db, "e-fav", "favored", false, 5, 200)   // hot = 5
-		seedEcho(t, db, "e-cmt", "discussed", false, 0, 300) // hot = 0 + 2*2 = 4
+		seedEcho(t, db, "e-cold", "cold", false, 0, 100)
+		seedEcho(t, db, "e-fav", "favored", false, 5, 200)
+		seedEcho(t, db, "e-cmt", "discussed", false, 0, 300)
 		seedComment(t, db, "c1", "e-cmt", commentModel.StatusApproved)
 		seedComment(t, db, "c2", "e-cmt", commentModel.StatusApproved)
-		// pending 评论不计入热度
 		seedComment(t, db, "c3", "e-cmt", commentModel.StatusPending)
 
 		echos, err := repo.GetHotEchos(5, true)
@@ -47,7 +45,6 @@ func TestEchoRepository_GetHotEchos(t *testing.T) {
 
 	t.Run("non-positive limit defaults to 5", func(t *testing.T) {
 		repo, db := newEchoRepo(t)
-		// 6 条不同 fav_count，limit<=0 应被收敛到 5 → fav 最低的一条被裁掉。
 		for i := 1; i <= 6; i++ {
 			seedEcho(t, db, "e"+string(rune('0'+i)), "c", false, i, int64(i*100))
 		}
@@ -122,7 +119,6 @@ func TestEchoRepository_GetEchosByTagId(t *testing.T) {
 
 	t.Run("search narrows within the tag", func(t *testing.T) {
 		repo, _ := setup(t)
-		// e-pub 内容含 "public golang"，e-prv 不含 —— 验证 search LIKE 在标签命中集内再收窄。
 		echos, total, err := repo.GetEchosByTagId("t1", 1, 10, "public golang", true)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), total)
@@ -154,8 +150,8 @@ func TestEchoRepository_GetTodayEchos(t *testing.T) {
 	loc := time.UTC
 	now := time.Now().In(loc)
 	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-	todayTs := startOfDay.Add(time.Second).Unix()      // 今天（保证落在 [start, end) 内）
-	yesterdayTs := startOfDay.Add(-time.Second).Unix() // 昨天
+	todayTs := startOfDay.Add(time.Second).Unix()
+	yesterdayTs := startOfDay.Add(-time.Second).Unix()
 
 	seedEcho(t, db, "e-today-pub", "today public", false, 0, todayTs)
 	seedEcho(t, db, "e-today-prv", "today private", true, 0, todayTs)

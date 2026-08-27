@@ -21,7 +21,6 @@
             @keyup.enter="($event.target as HTMLInputElement).blur()"
             @blur="handleSearch"
           />
-          <!-- 框内右侧的键帽簇：搜索(⌘K) 在左、对话(⌘J) 在右 -->
           <div class="home-filter__shell-keys">
             <button
               type="button"
@@ -109,7 +108,6 @@ import Chat from '@/components/icons/chat.vue'
 
 withDefaults(
   defineProps<{
-    // 是否展示对话入口（仅桌面侧栏的 TheFilter 开启；移动端用顶栏的入口）
     showChatTrigger?: boolean
   }>(),
   { showChatTrigger: false },
@@ -219,7 +217,6 @@ watch(searchValue, (value) => {
   }
 })
 
-// 有 selectedTagIds 时确保 tag 元数据已载入（用于显示 chip 名字）
 onMounted(() => {
   if (selectedTagIds.value.length > 0) {
     void ensureTagsLoaded()
@@ -234,7 +231,6 @@ watch(selectedTagIds, (ids) => {
 
 <style scoped>
 .home-filter__search-shell {
-  /* kbd 键帽簇所需的右内边距；非 Mac 的 Ctrl+K 文案更宽，按系统在下方调宽 */
   --kbd-reserve: 3.25rem;
 
   position: relative;
@@ -242,19 +238,16 @@ watch(selectedTagIds, (ids) => {
   min-width: 0;
   padding: 0.3rem;
 
-  /* 留出 kbd 徽章所需的右内边距，避免输入内容与按钮视觉重叠 */
   padding-right: var(--kbd-reserve);
   border-radius: var(--radius-xs);
   background: var(--filter-search-shell-bg);
   box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 }
 
-/* 框内同时放对话 + 搜索两个键帽时，右侧留更宽 */
 .home-filter__search-shell--with-chat {
   --kbd-reserve: 5.6rem;
 }
 
-/* 非 macOS：Ctrl+K / Ctrl+J 文案比 ⌘K/⌘J 宽，键帽会撑大，需要更宽的预留，否则长搜索词会钻到键帽下方 */
 .home-filter__search-shell--win {
   --kbd-reserve: 4.5rem;
 }
@@ -263,7 +256,6 @@ watch(selectedTagIds, (ids) => {
   --kbd-reserve: 7rem;
 }
 
-/* 框内右侧的键帽簇：垂直居中，两个键并排 */
 .home-filter__shell-keys {
   position: absolute;
   top: 50%;
@@ -274,7 +266,6 @@ watch(selectedTagIds, (ids) => {
   gap: 0.3rem;
 }
 
-/* kbd 徽章：扩大可点击触摸区域（≥32×28），同时保证 AA 级对比度 */
 .home-filter__kbd-hint {
   box-sizing: border-box;
   display: inline-flex;
@@ -309,7 +300,6 @@ watch(selectedTagIds, (ids) => {
   transform: translateY(1px);
 }
 
-/* 对话入口按钮：和搜索 ⌘K 徽章同尺寸同款键帽材质（bg-muted + 2px 底边立体感），成一对 */
 .home-filter__chat-trigger {
   box-sizing: border-box;
   flex: none;
@@ -340,7 +330,6 @@ watch(selectedTagIds, (ids) => {
   box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
 }
 
-/* 按下：键帽下沉一格（与 ⌘K 一致，不改边框以免行高跳动） */
 .home-filter__chat-trigger:active {
   transform: translateY(1px);
 }

@@ -17,8 +17,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/viewer"
 )
 
-// GetSetting 获取系统设置。缺省值/归一化统一由 setting 引擎处理，启动 seeder 已落库，
-// 故这里只是一次读取。
 func (settingService *SettingService) GetSetting(setting *model.SystemSetting) error {
 	v, err := coreSetting.Get(context.Background(), settingService.durableKV, coreSetting.System)
 	if err != nil {
@@ -28,9 +26,6 @@ func (settingService *SettingService) GetSetting(setting *model.SystemSetting) e
 	return nil
 }
 
-// BootstrapDefaultLocale 在首次部署（站长初始化）时把部署者语言写入站点默认。
-// 启动 seeder 已落库 system_settings，故此处改为「就地更新」：仅当 DefaultLocale 仍为内置
-// 默认（未被站长改过）时才覆盖，避免踩掉后续手动选择。入参为空/解析失败/等于默认时跳过。
 func (settingService *SettingService) BootstrapDefaultLocale(
 	ctx context.Context,
 	locale string,
@@ -49,7 +44,6 @@ func (settingService *SettingService) BootstrapDefaultLocale(
 		if err != nil {
 			return err
 		}
-		// 站长已手动设过非默认 locale 时不覆盖。
 		if i18nUtil.ResolveLocale(current.DefaultLocale) != string(commonModel.DefaultLocale) {
 			return nil
 		}
@@ -58,7 +52,6 @@ func (settingService *SettingService) BootstrapDefaultLocale(
 	})
 }
 
-// UpdateSetting 更新设置
 func (settingService *SettingService) UpdateSetting(
 	ctx context.Context,
 	newSetting *model.SystemSettingDto,
@@ -98,7 +91,6 @@ func (settingService *SettingService) UpdateSetting(
 			return err
 		}
 
-		// 同步派生的 ServerURL 便捷键。
 		if err := settingService.durableKV.Set(ctx, commonModel.ServerURLKey, setting.ServerURL); err != nil {
 			return err
 		}

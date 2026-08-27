@@ -30,7 +30,6 @@ func decodeJSON(r *http.Request, out any, opts decodeOptions) error {
 	if err := dec.Decode(out); err != nil {
 		return err
 	}
-	// Reject multiple JSON values.
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		return core.NewBadRequest("Malformed JSON body")
 	}

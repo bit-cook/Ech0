@@ -33,12 +33,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// fileTestUserID matches helpers.NewUser's default ID so the viewer context and
-// the mocked CommonRepository lookup agree on the acting user.
 const fileTestUserID = "user-test-0001"
 
-// fileFix bundles a FileService wired to a real in-memory DB + real local
-// storage manager + real gorm transactor, with only the user lookup mocked.
 type fileFix struct {
 	svc    *fileService.FileService
 	common *commonmock.MockCommonRepository
@@ -59,9 +55,6 @@ func newFileFix(t *testing.T) *fileFix {
 	return &fileFix{svc: svc, common: common, repo: repo, db: db, mgr: mgr}
 }
 
-// expectAdmin registers a single user lookup that resolves to an admin user.
-// One expectation matches any number of calls, so callers that invoke several
-// admin-gated methods on the same fixture only register it once.
 func (f *fileFix) expectAdmin() {
 	f.common.EXPECT().
 		GetUserByUserId(mock.Anything, fileTestUserID).
@@ -75,8 +68,6 @@ func (f *fileFix) expectNonAdmin() {
 }
 
 func (f *fileFix) adminCtx() context.Context { return helpers.CtxAsUser(fileTestUserID) }
-
-// --- low-level fixtures -----------------------------------------------------
 
 func makeFileHeader(t *testing.T, filename string, content []byte) *multipart.FileHeader {
 	t.Helper()
@@ -104,9 +95,6 @@ func pngBytes(t *testing.T, w, h int) []byte {
 	return buf.Bytes()
 }
 
-// flacBytes returns binary content that http.DetectContentType resolves to
-// application/octet-stream (FLAC has no entry in Go's sniff table), exercising
-// the octet-stream acceptance branch for whitelisted extensions.
 func flacBytes() []byte {
 	b := make([]byte, 64)
 	copy(b, "fLaC")
@@ -150,7 +138,6 @@ func storedExists(t *testing.T, mgr *storage.Manager, key string) bool {
 	return true
 }
 
-// uploadPNG uploads a valid PNG via the service and returns the resulting DTO.
 func (f *fileFix) uploadPNG(t *testing.T, filename string, w, h int) commonModel.FileDto {
 	t.Helper()
 	f.expectAdmin()
@@ -159,8 +146,6 @@ func (f *fileFix) uploadPNG(t *testing.T, filename string, w, h int) commonModel
 	require.NoError(t, err)
 	return dto
 }
-
-// --- UploadFile -------------------------------------------------------------
 
 func TestFileService_UploadFile(t *testing.T) {
 	t.Run("image success persists and resolves local url", func(t *testing.T) {
@@ -188,7 +173,6 @@ func TestFileService_UploadFile(t *testing.T) {
 		assert.True(t, strings.HasPrefix(dto.URL, "/api/files/images/"))
 		assert.True(t, strings.HasSuffix(dto.URL, dto.Key))
 
-		// File + tracking temp rows are persisted, and the blob landed on disk.
 		assert.Equal(t, int64(1), countFiles(t, fix.db))
 		assert.Equal(t, int64(1), countTemps(t, fix.db))
 		assert.True(t, storedExists(t, fix.mgr, dto.Key))
@@ -309,8 +293,6 @@ func TestFileService_UploadFile(t *testing.T) {
 	})
 }
 
-// --- CreateExternalFile -----------------------------------------------------
-
 func TestFileService_CreateExternalFile(t *testing.T) {
 	t.Run("explicit image category then dedup returns same record", func(t *testing.T) {
 		fix := newFileFix(t)
@@ -323,17 +305,13 @@ func TestFileService_CreateExternalFile(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "external", dto.StorageType)
 		assert.Equal(t, "image", dto.Category)
-		assert.Equal(t, "image/png", dto.ContentType) // inferred from .png extension
+		assert.Equal(t, "image/png", dto.ContentType)
 		assert.Equal(t, "pic.png", dto.Name)
 		assert.Equal(t, "https://example.com/pic.png", dto.URL)
 		assert.True(t, strings.HasPrefix(dto.Key, "external/image/"))
 		assert.Equal(t, int64(1), countFiles(t, fix.db))
-		// A fresh external record is temp-tracked so an abandoned draft
-		// reference gets reaped by CleanupOrphanFiles instead of lingering.
 		assert.Equal(t, int64(1), countTemps(t, fix.db))
 
-		// Identical URL is deduplicated to the existing row; the reused row must
-		// NOT gain a second temp record (it may already back published echos).
 		again, err := fix.svc.CreateExternalFile(fix.adminCtx(), commonModel.CreateExternalFileDto{
 			URL:      "https://example.com/pic.png",
 			Category: "image",
@@ -353,7 +331,7 @@ func TestFileService_CreateExternalFile(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "file", dto.Category)
-		assert.Equal(t, "application/octet-stream", dto.ContentType) // unknown ext fallback
+		assert.Equal(t, "application/octet-stream", dto.ContentType)
 		assert.True(t, strings.HasPrefix(dto.Key, "external/file/"))
 	})
 
@@ -400,8 +378,6 @@ func TestFileService_CreateExternalFile(t *testing.T) {
 	})
 }
 
-// --- GetFileByID ------------------------------------------------------------
-
 func TestFileService_GetFileByID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		fix := newFileFix(t)
@@ -431,8 +407,6 @@ func TestFileService_GetFileByID(t *testing.T) {
 		assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
-
-// --- UpdateFileMeta ---------------------------------------------------------
 
 func TestFileService_UpdateFileMeta(t *testing.T) {
 	newObjectFile := func(t *testing.T, fix *fileFix) *fileModel.File {
@@ -498,7 +472,7 @@ func TestFileService_UpdateFileMeta(t *testing.T) {
 
 	t.Run("non-object storage rejected", func(t *testing.T) {
 		fix := newFileFix(t)
-		uploaded := fix.uploadPNG(t, "photo.png", 5, 5) // local
+		uploaded := fix.uploadPNG(t, "photo.png", 5, 5)
 		fix.expectAdmin()
 		_, err := fix.svc.UpdateFileMeta(fix.adminCtx(), uploaded.ID, commonModel.UpdateFileMetaDto{Size: 10})
 		require.Error(t, err)
@@ -513,8 +487,6 @@ func TestFileService_UpdateFileMeta(t *testing.T) {
 		assert.Equal(t, commonModel.NO_PERMISSION_DENIED, err.Error())
 	})
 }
-
-// --- ListFiles --------------------------------------------------------------
 
 func TestFileService_ListFiles(t *testing.T) {
 	t.Run("returns uploaded files with default pagination", func(t *testing.T) {
@@ -557,15 +529,12 @@ func TestFileService_ListFiles(t *testing.T) {
 	})
 }
 
-// --- ListFileTree -----------------------------------------------------------
-
 func TestFileService_ListFileTree(t *testing.T) {
 	t.Run("root lists category folders", func(t *testing.T) {
 		fix := newFileFix(t)
 		fix.uploadPNG(t, "a.png", 2, 2)
 		fix.expectAdmin()
 
-		// upload an audio too so two folders exist
 		fix.expectAdmin()
 		_, err := fix.svc.UploadFile(
 			fix.adminCtx(),
@@ -624,8 +593,6 @@ func TestFileService_ListFileTree(t *testing.T) {
 	})
 }
 
-// --- StreamFileByID ---------------------------------------------------------
-
 func TestFileService_StreamFileByID(t *testing.T) {
 	t.Run("serves local content", func(t *testing.T) {
 		fix := newFileFix(t)
@@ -669,15 +636,11 @@ func TestFileService_StreamFileByID(t *testing.T) {
 
 		c, rec := newGinCtx(t, nil)
 		fix.svc.StreamFileByID(c, ext.ID)
-		// gin buffers the status until a body write; the redirect writes no body
-		// (Content-Type is preset), so flush it explicitly before asserting.
 		c.Writer.WriteHeaderNow()
 		assert.Equal(t, http.StatusTemporaryRedirect, rec.Code)
 		assert.Equal(t, "https://example.com/x.png", rec.Header().Get("Location"))
 	})
 }
-
-// --- StreamFileByPath -------------------------------------------------------
 
 func TestFileService_StreamFileByPath(t *testing.T) {
 	t.Run("serves by storage path", func(t *testing.T) {
@@ -748,8 +711,6 @@ func TestFileService_StreamFileByPath(t *testing.T) {
 	})
 }
 
-// --- GetFilePresignURL ------------------------------------------------------
-
 func TestFileService_GetFilePresignURL(t *testing.T) {
 	t.Run("object storage disabled surfaces error", func(t *testing.T) {
 		fix := newFileFix(t)
@@ -758,7 +719,7 @@ func TestFileService_GetFilePresignURL(t *testing.T) {
 			FileName:    "pic.png",
 			ContentType: "image/png",
 		})
-		require.Error(t, err) // local-only manager has no presign backend
+		require.Error(t, err)
 	})
 
 	t.Run("empty filename rejected", func(t *testing.T) {
@@ -799,8 +760,6 @@ func TestFileService_GetFilePresignURL(t *testing.T) {
 		assert.Equal(t, commonModel.NO_PERMISSION_DENIED, err.Error())
 	})
 }
-
-// --- DeleteFile / DeleteStoredFile / DeleteFileRecord -----------------------
 
 func TestFileService_DeleteFile(t *testing.T) {
 	t.Run("local file removes record and blob", func(t *testing.T) {
@@ -882,11 +841,8 @@ func TestFileService_DeleteFileRecord(t *testing.T) {
 	dto := fix.uploadPNG(t, "photo.png", 3, 3)
 	require.NoError(t, fix.svc.DeleteFileRecord(context.Background(), dto.ID))
 	assert.Equal(t, int64(0), countFiles(t, fix.db))
-	// Blob is intentionally left untouched by DeleteFileRecord.
 	assert.True(t, storedExists(t, fix.mgr, dto.Key))
 }
-
-// --- ConfirmTempFiles -------------------------------------------------------
 
 func TestFileService_ConfirmTempFiles(t *testing.T) {
 	t.Run("removes temp tracking but keeps file", func(t *testing.T) {
@@ -906,8 +862,6 @@ func TestFileService_ConfirmTempFiles(t *testing.T) {
 		assert.Equal(t, int64(0), countTemps(t, fix.db))
 	})
 }
-
-// --- CleanupOrphanFiles -----------------------------------------------------
 
 func TestFileService_CleanupOrphanFiles(t *testing.T) {
 	expireTemp := func(t *testing.T, fix *fileFix, fileID string) {

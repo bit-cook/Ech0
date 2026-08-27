@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露 Echo（动态）与 Tag（标签）相关的 HTTP 接口（Huma type-first）。
 package handler
 
 import (
@@ -96,7 +95,6 @@ func (echoHandler *EchoHandler) DeleteEcho(ctx context.Context, in *EchoIDInput)
 	return commonModel.OK[any](nil, commonModel.DELETE_ECHO_SUCCESS), nil
 }
 
-// LikeEcho 为指定 Echo 点赞（匿名可访问，限速 + 去重）。
 func (echoHandler *EchoHandler) LikeEcho(ctx context.Context, in *LikeEchoInput) (EmptyOutput, error) {
 	if err := echoHandler.echoService.LikeEcho(ctx, in.ID); err != nil {
 		return EmptyOutput{}, err

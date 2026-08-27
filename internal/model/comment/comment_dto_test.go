@@ -53,7 +53,6 @@ func TestToPublicComment(t *testing.T) {
 	t.Run("parent_id_pointer_is_carried_through", func(t *testing.T) {
 		c := newFullComment()
 		got := ToPublicComment(c)
-		// Same pointer identity: projection copies the pointer, not the target.
 		require.NotNil(t, got.ParentID)
 		assert.Same(t, c.ParentID, got.ParentID)
 	})

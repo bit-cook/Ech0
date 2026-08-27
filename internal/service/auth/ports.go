@@ -40,7 +40,6 @@ type UserRepo interface {
 	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 }
 
-// LocalAuthRepo 负责本地密码认证行（user_local_auth）的读取与惰性升级写入。
 type LocalAuthRepo interface {
 	GetLocalAuthByUserID(ctx context.Context, userID string) (model.UserLocalAuth, error)
 	UpdateLocalAuthPassword(ctx context.Context, userID, passwordHash, passwordAlgo string) error

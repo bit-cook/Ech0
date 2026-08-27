@@ -38,21 +38,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// oidcHTTPClient is the shared client for outbound OIDC/OAuth2 requests. It
-// carries a timeout — the previous http.DefaultClient had none, so a hung
-// provider could pin the request goroutine indefinitely. It is intentionally
-// NOT SSRF-guarded: self-hosted identity providers may legitimately live on a
-// private network or loopback.
 var oidcHTTPClient = egress.NewClient(egress.Timeout(10 * time.Second))
 
 type AuthService struct {
-	transactor transaction.Transactor
-	repository Repository
-	authRepo   AuthRepo
-	durableKV  kvstore.Store
-	// resolveAdapter 解析 OAuth provider 适配器；默认 getOAuthProviderAdapter，
-	// 测试可注入返回 canned identity 的 fake，从而覆盖 HandleOAuthCallback/resolveOAuthCallback
-	// 全流程而不触发真实 OAuth token/userinfo HTTP。
+	transactor     transaction.Transactor
+	repository     Repository
+	authRepo       AuthRepo
+	durableKV      kvstore.Store
 	resolveAdapter func(provider string) (oauthProviderAdapter, error)
 }
 
@@ -79,8 +71,6 @@ func (authService *AuthService) IsTokenRevoked(jti string) bool {
 	return authService.authRepo.IsTokenRevoked(jti)
 }
 
-// PasskeyBoundary 返回管理员配置的 WebAuthn RP ID 与允许来源（取自 passkey_setting，
-// 经 setting 引擎归一化）。读取失败或未配置时返回空值，由 handler 回退到请求来源。
 func (authService *AuthService) PasskeyBoundary(ctx context.Context) (rpID string, origins []string) {
 	setting, err := coreSetting.Get(ctx, authService.durableKV, coreSetting.Passkey)
 	if err != nil {
@@ -106,8 +96,6 @@ func (authService *AuthService) Login(loginDto *authModel.LoginDto) (*authModel.
 
 	localAuth, err := authService.repository.GetLocalAuthByUserID(ctx, user.ID)
 	if err != nil {
-		// 无本地密码认证行（纯外部身份账号）→ 统一按凭证错误处理，不泄露"无本地密码"。
-		// 但真实 DB 故障要留痕：否则瞬时故障会被误显示为"密码错误"，且无从排障。
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			logUtil.GetLogger().Warn(
 				"load local auth failed",
@@ -122,8 +110,6 @@ func (authService *AuthService) Login(loginDto *authModel.LoginDto) (*authModel.
 		return nil, errors.New(commonModel.PASSWORD_INCORRECT)
 	}
 
-	// 惰性升级：存量非 bcrypt 口令校验通过后，就地换算为 bcrypt 落库。
-	// best-effort —— 升级写失败只告警，绝不阻断这次已认证成功的登录。
 	if localAuth.PasswordAlgo != cryptoUtil.AlgoBcrypt {
 		if newHash, hashErr := cryptoUtil.HashPassword(loginDto.Password); hashErr == nil {
 			if upErr := authService.repository.UpdateLocalAuthPassword(ctx, user.ID, newHash, cryptoUtil.AlgoBcrypt); upErr != nil {
@@ -180,8 +166,6 @@ func (authService *AuthService) BindOAuth(
 		return "", err
 	}
 
-	// 在签发 state JWT 前校验，避免非法 redirect 进入 state 后只能在回调阶段才被发现
-	// （GHSA-p64j-f4x9-wq66）。空值保留旧行为：在回调阶段统一拦截。
 	if redirectURI != "" {
 		if _, err := authService.parseAndValidateClientRedirect(redirectURI); err != nil {
 			return "", err
@@ -212,8 +196,6 @@ func (authService *AuthService) GetOAuthLoginURL(provider string, redirectURI st
 		return "", err
 	}
 
-	// 在签发 state JWT 前校验，避免非法 redirect 进入 state 后只能在回调阶段才被发现
-	// （GHSA-p64j-f4x9-wq66）。空值保留旧行为：在回调阶段统一拦截。
 	if redirectURI != "" {
 		if _, err := authService.parseAndValidateClientRedirect(redirectURI); err != nil {
 			return "", err
@@ -539,9 +521,6 @@ func (authService *AuthService) parseAndValidateClientRedirect(redirect string) 
 			if len(oauthSetting.AuthRedirectAllowedReturnURLs) > 0 {
 				allowed = oauthSetting.AuthRedirectAllowedReturnURLs
 			}
-			// 隐式放行 SPA 写死的本站回跳落点（绑定页 /panel、登录页 /auth）：从 OAuth2 回调地址
-			// 推导本站 origin 后拼出这两条固定路径。它们由前端硬编码、不接受任意路径注入，不违反
-			// GHSA-p64j-f4x9-wq66 的精确比对意图，同时让单域名自托管无需手配白名单即可绑定/登录。
 			implicitSelf = selfClientReturnURLs(oauthSetting.RedirectURI)
 		}
 	}
@@ -551,11 +530,6 @@ func (authService *AuthService) parseAndValidateClientRedirect(redirect string) 
 	if len(candidates) == 0 {
 		return nil, errors.New(commonModel.INVALID_PARAMS)
 	}
-	// 按 RFC 6749 §3.1.2 进行 scheme+host+path 的精确比对：仅校验 scheme+host
-	// 会让攻击者把同源任意路径塞进 state（GHSA-p64j-f4x9-wq66），事后通过 Referer
-	// 泄漏、第三方分析脚本、宿主上的 open-redirect 链路把一次性 exchange code 转给
-	// 攻击者。query/fragment 不参与比对：服务器会在校验通过后向 redirect URL 追加
-	// ?code=...，允许调用方携带额外查询参数。
 	redirectNorm := strings.ToLower(redirectURL.Scheme) + "://" +
 		strings.ToLower(redirectURL.Host) +
 		redirectURL.Path
@@ -580,9 +554,6 @@ func (authService *AuthService) parseAndValidateClientRedirect(redirect string) 
 	return redirectURL, nil
 }
 
-// selfClientReturnURLs 从 OAuth2 回调地址（形如 https://host/oauth/<provider>/callback）推导本站
-// origin，返回 SPA 写死的本站客户端回跳落点（绑定页 /panel、登录页 /auth）。这些固定路径作为
-// 隐式放行项并入重定向白名单比对，使单域名自托管开箱即用，无需手动配置 Redirect Allowlist。
 func selfClientReturnURLs(oauthRedirectURI string) []string {
 	u, err := url.Parse(strings.TrimSpace(oauthRedirectURI))
 	if err != nil || u == nil || u.Host == "" {
@@ -1244,8 +1215,6 @@ func exchangeOAuthCode(setting *settingModel.OAuth2Setting, code string) (*oauth
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	// 让 oauth2 走我们带超时的共享客户端（而非无超时的 http.DefaultClient）；
-	// 同时这是测试用的注入点：白盒测试覆写包级 oidcHTTPClient 即可把 token 交换打到 httptest。
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, oidcHTTPClient)
 	token, err := config.Exchange(ctx, code)
 	if err != nil {

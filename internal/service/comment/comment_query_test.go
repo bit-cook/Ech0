@@ -18,12 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// --- GetFormMeta ------------------------------------------------------------
-
 func TestGetFormMeta(t *testing.T) {
 	t.Run("setting read error is propagated", func(t *testing.T) {
 		d := newDeps(t)
-		// 非 ErrNotFound 的 kv 错误会被 setting 引擎原样上抛 -> GetSystemSetting 返回它。
 		d.kv.EXPECT().
 			Get(mock.Anything, commentModel.CommentSystemSettingKey).
 			Return("", errRepoBoom).
@@ -35,7 +32,7 @@ func TestGetFormMeta(t *testing.T) {
 	t.Run("captcha disabled still returns a signed token and flags", func(t *testing.T) {
 		helpers.SetJWTSecret(t, testSecret)
 		d := newDeps(t)
-		d.expectSetting(t, enabledSetting()) // CaptchaEnabled=false
+		d.expectSetting(t, enabledSetting())
 		meta, err := d.service().GetFormMeta(helpers.CtxAnonymous(), testIP, "https://host")
 		require.NoError(t, err)
 		assert.NotEmpty(t, meta.FormToken)
@@ -46,7 +43,6 @@ func TestGetFormMeta(t *testing.T) {
 	})
 
 	t.Run("captcha ready when enabled with base url and secret", func(t *testing.T) {
-		// SetJWTSecret 让 captcha.Secret() 回退到 sha256(JWTSecret) 非空，满足 captchaReady。
 		helpers.SetJWTSecret(t, testSecret)
 		d := newDeps(t)
 		s := enabledSetting()
@@ -58,8 +54,6 @@ func TestGetFormMeta(t *testing.T) {
 		assert.Contains(t, meta.CaptchaAPIEndpoint, "https://host/api/cap/")
 	})
 }
-
-// --- ListPublicByEchoID -----------------------------------------------------
 
 func TestListPublicByEchoID(t *testing.T) {
 	t.Run("setting read error is propagated", func(t *testing.T) {
@@ -109,8 +103,6 @@ func TestListPublicByEchoID(t *testing.T) {
 		assert.Equal(t, "c-1", got[0].ID)
 	})
 }
-
-// --- ListPublicComments -----------------------------------------------------
 
 func TestListPublicComments(t *testing.T) {
 	t.Run("setting read error is propagated", func(t *testing.T) {
@@ -171,8 +163,6 @@ func TestListPublicComments(t *testing.T) {
 	})
 }
 
-// --- GetCommentByID ---------------------------------------------------------
-
 func TestGetCommentByID(t *testing.T) {
 	t.Run("anonymous is denied before any IO", func(t *testing.T) {
 		d := newDeps(t)
@@ -205,8 +195,6 @@ func TestGetCommentByID(t *testing.T) {
 	})
 }
 
-// --- UpdateSystemSetting ----------------------------------------------------
-
 func TestUpdateSystemSetting(t *testing.T) {
 	t.Run("anonymous is denied", func(t *testing.T) {
 		d := newDeps(t)
@@ -217,7 +205,6 @@ func TestUpdateSystemSetting(t *testing.T) {
 	t.Run("applies port default and preserves blank password before persist", func(t *testing.T) {
 		d := newDeps(t)
 		expectAdmin(t, d, "admin-1")
-		// 现有设置带已存密码；入参密码留空 => 应沿用旧密码。
 		current := enabledSetting()
 		current.EmailNotify.SMTPPassword = "old-secret"
 		d.expectSetting(t, current)
@@ -232,8 +219,8 @@ func TestUpdateSystemSetting(t *testing.T) {
 		in := commentModel.SystemSetting{
 			EnableComment: true,
 			EmailNotify: commentModel.EmailNotifySetting{
-				SMTPPort:     0,  // -> 587
-				SMTPPassword: "", // -> 沿用 old-secret
+				SMTPPort:     0,
+				SMTPPassword: "",
 			},
 		}
 		err := d.service().UpdateSystemSetting(helpers.CtxAsUser("admin-1"), in)
@@ -261,8 +248,6 @@ func TestUpdateSystemSetting(t *testing.T) {
 	})
 }
 
-// --- SendTestEmail ----------------------------------------------------------
-
 func validEmailNotify() commentModel.EmailNotifySetting {
 	return commentModel.EmailNotifySetting{
 		Enabled:      true,
@@ -284,10 +269,10 @@ func TestSendTestEmail(t *testing.T) {
 	t.Run("missing owner email fails before sending", func(t *testing.T) {
 		d := newDeps(t)
 		expectAdmin(t, d, "admin-1")
-		d.expectSetting(t, enabledSetting()) // getSystemSettingRaw (密码保留)
+		d.expectSetting(t, enabledSetting())
 		d.common.EXPECT().
 			GetOwner().
-			Return(helpers.NewUser(), nil). // Email 为空 -> resolveOwnerEmail 失败
+			Return(helpers.NewUser(), nil).
 			Once()
 		err := d.service().SendTestEmail(helpers.CtxAsUser("admin-1"), commentModel.SystemSetting{
 			EmailNotify: validEmailNotify(),
@@ -305,7 +290,6 @@ func TestSendTestEmail(t *testing.T) {
 		d.kv.EXPECT().
 			Get(mock.Anything, commonModel.ServerURLKey).
 			Return("https://example.com", nil)
-		// Host 为空 => validateEmailNotifySetting 失败 => 包装成 InvalidRequest BizError。
 		bad := validEmailNotify()
 		bad.SMTPHost = ""
 		err := d.service().SendTestEmail(helpers.CtxAsUser("admin-1"), commentModel.SystemSetting{
@@ -334,8 +318,6 @@ func TestSendTestEmail(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
-
-// --- ParseOptionalUserIDFromAuthHeader -------------------------------------
 
 func TestParseOptionalUserIDFromAuthHeader(t *testing.T) {
 	helpers.SetJWTSecret(t, testSecret)

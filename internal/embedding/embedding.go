@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package embedding 封装向量 Embedding 的外部 API 调用（OpenAI 兼容 /v1/embeddings）。
-// 与 internal/agent 平级：agent 负责文本生成，embedding 负责向量化。
 package embedding
 
 import (
@@ -16,22 +14,13 @@ import (
 )
 
 var (
-	// ErrNotEnabled 表示 Embedding 功能未启用
-	ErrNotEnabled = errors.New("embedding: not enabled")
-	// ErrModelMissing 表示未配置 Embedding 模型
-	ErrModelMissing = errors.New("embedding: model missing")
-	// ErrEmptyResponse 表示服务端返回空结果
+	ErrNotEnabled    = errors.New("embedding: not enabled")
+	ErrModelMissing  = errors.New("embedding: model missing")
 	ErrEmptyResponse = errors.New("embedding: empty response")
 )
 
-// defaultBatchSize 是未配置批次大小时，单次 /v1/embeddings 请求的文本条数上限。
-// 取 64 是因为不少国产提供商（如 Qwen/DashScope）限制 input 数组最多 64 条；
-// OpenAI 等可承受更多，但 64 作为保守默认对所有人都安全，用户可在设置里调大/调小。
 const defaultBatchSize = 64
 
-// Embed 批量生成文本向量（OpenAI 兼容 /v1/embeddings）。
-// 返回的切片顺序与 inputs 一一对应；inputs 超过批次上限时自动分多次请求，
-// 避免触发提供商对单次 input 数组条数的限制（如 "input数组最大不得超过64条"）。
 func Embed(
 	ctx context.Context,
 	setting settingModel.EmbeddingSetting,
@@ -54,15 +43,10 @@ func Embed(
 
 	cfg := openai.DefaultConfig(setting.ApiKey)
 	if setting.BaseURL != "" {
-		// base_url 按字面量透传，由 go-openai 统一拼接 "/embeddings" 后缀
-		// （对齐 OpenAI / go-openai 惯例）。用户应填到 ".../v4"，不要带 /embeddings。
 		cfg.BaseURL = setting.BaseURL
 	}
 	client := openai.NewClientWithConfig(cfg)
 
-	// sendDim 跟踪是否向 API 传 dimensions 参数。初始值为用户配置的维度；
-	// 若 provider 不支持该参数（首批请求报错），自动降级为 0（omitempty 省略），
-	// 后续批次复用该结论，不再重试。
 	sendDim := setting.Dim
 
 	out := make([][]float32, 0, len(inputs))
@@ -103,12 +87,10 @@ func Embed(
 	return out, nil
 }
 
-// isDimensionsRejected 判断 API 错误是否因 provider 不接受 dimensions 参数导致。
 func isDimensionsRejected(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "dimension")
 }
 
-// EmbedOne 生成单条文本向量。
 func EmbedOne(
 	ctx context.Context,
 	setting settingModel.EmbeddingSetting,
@@ -124,16 +106,12 @@ func EmbedOne(
 	return vecs[0], nil
 }
 
-// Client 把包级 Embed/EmbedOne 暴露为可注入依赖（默认实现）。service 层通过
-// embedding 域的 Embedder 接口持有它，测试时可替换为 mock，从而覆盖"取向量"之后的逻辑。
 type Client struct{}
 
-// Embed 委托给包级 Embed。
 func (Client) Embed(ctx context.Context, setting settingModel.EmbeddingSetting, inputs []string) ([][]float32, error) {
 	return Embed(ctx, setting, inputs)
 }
 
-// EmbedOne 委托给包级 EmbedOne。
 func (Client) EmbedOne(ctx context.Context, setting settingModel.EmbeddingSetting, input string) ([]float32, error) {
 	return EmbedOne(ctx, setting, input)
 }

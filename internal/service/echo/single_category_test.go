@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// echoWithFileIDs 构造一条带若干 EchoFile（仅填 FileID）的 echo，用于覆盖单类别校验。
 func echoWithFileIDs(ids ...string) *echoModel.Echo {
 	files := make([]fileModel.EchoFile, 0, len(ids))
 	for i, id := range ids {
@@ -40,8 +39,6 @@ func fileDto(id, category string) commonModel.FileDto {
 	return commonModel.FileDto{ID: id, Category: category}
 }
 
-// TestValidateSingleFileCategory_Reject 覆盖 PostEcho 在进入事务前因文件类别不合法而快速失败：
-// 混合类别、多个音频、多个视频均被拒，且不触达 transactor / repo 写入。
 func TestValidateSingleFileCategory_Reject(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -91,8 +88,6 @@ func TestValidateSingleFileCategory_Reject(t *testing.T) {
 	}
 }
 
-// TestValidateSingleFileCategory_MultipleImagesAllowed 确认同类别多图不被拒，
-// 校验通过后走完整成功路径（事务 / 建 echo / 缓存失效 / 回查 / 确认临时文件）。
 func TestValidateSingleFileCategory_MultipleImagesAllowed(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -129,7 +124,6 @@ func TestValidateSingleFileCategory_MultipleImagesAllowed(t *testing.T) {
 	assert.Len(t, created.EchoFiles, 2)
 }
 
-// TestUpdateEcho_MixedFileCategoriesRejected 确认更新路径同样在进入事务前拒绝混合类别。
 func TestUpdateEcho_MixedFileCategoriesRejected(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)

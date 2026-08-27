@@ -25,14 +25,10 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// ---------------------------------------------------------------------------
-// GetRecent（框架中立）
-// ---------------------------------------------------------------------------
-
 func TestGetRecent(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		summary := copilotmock.NewMockSummaryService(t)
-		chat := copilotmock.NewMockChatService(t) // 不应触达
+		chat := copilotmock.NewMockChatService(t)
 		summary.EXPECT().GetRecent(mock.Anything).Return("近期总结文本", nil).Once()
 
 		h := NewCopilotHandler(summary, chat)
@@ -54,14 +50,9 @@ func TestGetRecent(t *testing.T) {
 		out, err := h.GetRecent(context.Background(), &GetRecentInput{})
 
 		require.ErrorIs(t, err, sentinel)
-		// 错误路径返回零值封套，由 humares.Wrap 负责本地化。
 		assert.Equal(t, RecentOutput{}, out)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// GetSession（框架中立）
-// ---------------------------------------------------------------------------
 
 func TestGetSession(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
@@ -96,10 +87,6 @@ func TestGetSession(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// ClearSession（框架中立，成功 data 为 nil）
-// ---------------------------------------------------------------------------
-
 func TestClearSession(t *testing.T) {
 	t.Run("success-returns-nil-data", func(t *testing.T) {
 		summary := copilotmock.NewMockSummaryService(t)
@@ -129,10 +116,6 @@ func TestClearSession(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Ask（裸 gin SSE）：断 header → timezone 归一化 + AskStream 被调用
-// ---------------------------------------------------------------------------
-
 func TestAsk_TimezoneNormalizationAndStream(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -147,7 +130,6 @@ func TestAsk_TimezoneNormalizationAndStream(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			summary := copilotmock.NewMockSummaryService(t)
 			chat := copilotmock.NewMockChatService(t)
-			// 未跑 i18n 中间件，LocaleFromGin 回退 "zh-CN"。
 			chat.EXPECT().
 				AskStream(mock.Anything, "今天怎么样", "zh-CN", tc.wantNormTZ, mock.Anything).
 				Return(nil).Once()
@@ -166,12 +148,10 @@ func TestAsk_TimezoneNormalizationAndStream(t *testing.T) {
 			r.ServeHTTP(rec, req)
 
 			require.Equal(t, http.StatusOK, rec.Code)
-			// AskStream 的调用断言由 mock 在 Cleanup 时校验。
 		})
 	}
 }
 
-// 非法 JSON body 被吞掉（ShouldBindJSON 错误忽略），question 退化为空串，仍调 AskStream。
 func TestAsk_InvalidBodyStillStreamsEmptyQuestion(t *testing.T) {
 	summary := copilotmock.NewMockSummaryService(t)
 	chat := copilotmock.NewMockChatService(t)

@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// userMocks 聚合 UserService 的全部协作者 mock，便于按用例选择性设置期望。
 type userMocks struct {
 	repo *usermock.MockRepository
 	tx   *txmock.MockTransactor
@@ -35,8 +34,6 @@ type userMocks struct {
 	file *filemock.MockService
 }
 
-// newUserSvc 构造被测 UserService 及其 mock 协作者。bus 用真实的空总线（无订阅者，
-// Notify 即 no-op 返回 nil），避免引入异步/日志噪声，仍保留事件发布路径的真实编译。
 func newUserSvc(t *testing.T) (*userService.UserService, *userMocks) {
 	t.Helper()
 	m := &userMocks{
@@ -50,8 +47,6 @@ func newUserSvc(t *testing.T) (*userService.UserService, *userMocks) {
 	return svc, m
 }
 
-// expectTxPassthrough 让 Transactor.Run 真正执行其回调（return fn(ctx)），
-// 使事务内的守卫/仓储调用得以被测。
 func (m *userMocks) expectTxPassthrough() {
 	m.tx.EXPECT().
 		Run(mock.Anything, mock.Anything).
@@ -60,22 +55,16 @@ func (m *userMocks) expectTxPassthrough() {
 		})
 }
 
-// withID 是 helpers.NewUser 的 option，用于覆盖默认 ID。
 func withID(id string) func(*userModel.User) {
 	return func(u *userModel.User) { u.ID = id }
 }
 
-// mustMarshalSystem 把 SystemSetting 序列化为 setting 引擎可解码的 JSON。
 func mustMarshalSystem(t *testing.T, s settingModel.SystemSetting) string {
 	t.Helper()
 	raw, err := json.Marshal(s)
 	require.NoError(t, err)
 	return string(raw)
 }
-
-// ---------------------------------------------------------------------------
-// InitOwner：首次安装守卫
-// ---------------------------------------------------------------------------
 
 func TestInitOwner_InputGuards(t *testing.T) {
 	cases := []struct {
@@ -108,7 +97,6 @@ func TestInitOwner_InputGuards(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc, _ := newUserSvc(t)
-			// 输入守卫在事务外返回，Transactor/Repository 均不应被调用。
 			err := svc.InitOwner(&tc.dto)
 			require.EqualError(t, err, tc.want)
 		})
@@ -164,19 +152,13 @@ func TestInitOwner_Success(t *testing.T) {
 	err := svc.InitOwner(&authModel.RegisterDto{Username: "owner", Password: "secret", Email: " owner@ech0.com "})
 	require.NoError(t, err)
 
-	// 首位用户必须被提权为 Owner+Admin，邮箱被 trim。
 	assert.True(t, created.IsOwner, "first user must be owner")
 	assert.True(t, created.IsAdmin, "owner must be admin")
 	assert.Equal(t, "owner@ech0.com", created.Email)
-	// 密码以 bcrypt 存入 user_local_auth，并绑定到新建 owner 的 ID。
 	assert.Equal(t, "owner-id", localAuth.UserID)
 	assert.Equal(t, cryptoUtil.AlgoBcrypt, localAuth.PasswordAlgo)
 	assert.True(t, cryptoUtil.CheckPassword(localAuth.PasswordAlgo, localAuth.PasswordHash, "secret"))
 }
-
-// ---------------------------------------------------------------------------
-// Register：allow-register 开关 + 用户数闸门
-// ---------------------------------------------------------------------------
 
 func TestRegister_NotInitialized(t *testing.T) {
 	svc, m := newUserSvc(t)
@@ -194,7 +176,6 @@ func TestRegister_UserCountExceedLimit(t *testing.T) {
 	svc, m := newUserSvc(t)
 	m.repo.EXPECT().IsInitialized(mock.Anything).Return(true, nil).Once()
 
-	// 闸门为 len(users) > MAX_USER_COUNT(5)，故需 6 个用户触发。
 	over := make([]userModel.User, authModel.MAX_USER_COUNT+1)
 	m.repo.EXPECT().GetAllUsers(mock.Anything).Return(over, nil).Once()
 
@@ -206,7 +187,6 @@ func TestRegister_UsernameExists(t *testing.T) {
 	svc, m := newUserSvc(t)
 	m.repo.EXPECT().IsInitialized(mock.Anything).Return(true, nil).Once()
 	m.repo.EXPECT().GetAllUsers(mock.Anything).Return(nil, nil).Once()
-	// 用户名已存在的判断早于 setting 读取，故 kv 不应被触达。
 	m.repo.EXPECT().GetUserByUsername(mock.Anything, "dup").
 		Return(helpers.NewUser(withID("u-existing")), nil).Once()
 
@@ -218,7 +198,6 @@ func TestRegister_InvalidEmail(t *testing.T) {
 	svc, m := newUserSvc(t)
 	m.repo.EXPECT().IsInitialized(mock.Anything).Return(true, nil).Once()
 	m.repo.EXPECT().GetAllUsers(mock.Anything).Return(nil, nil).Once()
-	// 邮箱格式校验早于 GetUserByUsername，故后者不应被调用。
 
 	err := svc.Register(&authModel.RegisterDto{Username: "u", Password: "pw", Email: "bad-email"})
 	require.EqualError(t, err, "邮箱格式无效")
@@ -259,10 +238,8 @@ func TestRegister_Success(t *testing.T) {
 	err := svc.Register(&authModel.RegisterDto{Username: "newbie", Password: "pw"})
 	require.NoError(t, err)
 
-	// 普通注册用户绝不能携带管理员/站长身份（提权守卫）。
 	assert.False(t, created.IsAdmin, "registered user must not be admin")
 	assert.False(t, created.IsOwner, "registered user must not be owner")
-	// 密码以 bcrypt 存入 user_local_auth。
 	assert.Equal(t, "newbie-id", localAuth.UserID)
 	assert.Equal(t, cryptoUtil.AlgoBcrypt, localAuth.PasswordAlgo)
 	assert.True(t, cryptoUtil.CheckPassword(localAuth.PasswordAlgo, localAuth.PasswordHash, "pw"))
@@ -272,7 +249,6 @@ func TestRegister_PasswordTooLong(t *testing.T) {
 	svc, m := newUserSvc(t)
 	m.repo.EXPECT().IsInitialized(mock.Anything).Return(true, nil).Once()
 	m.repo.EXPECT().GetAllUsers(mock.Anything).Return(nil, nil).Once()
-	// 超过 bcrypt 72 字节上限应在哈希/建号前被拦下（GetUserByUsername/CreateUser 都不应被触达）。
 
 	longPw := strings.Repeat("a", cryptoUtil.MaxPasswordBytes+1)
 	err := svc.Register(&authModel.RegisterDto{Username: "u", Password: longPw})
@@ -281,7 +257,6 @@ func TestRegister_PasswordTooLong(t *testing.T) {
 
 func TestUpdateUser_PasswordTooLong(t *testing.T) {
 	svc, m := newUserSvc(t)
-	// 操作者为 admin，改自己的资料；超长密码应在写库前被拒。
 	m.repo.EXPECT().GetUserByID(mock.Anything, "admin-1").
 		Return(helpers.NewUser(withID("admin-1"), helpers.AsAdmin), nil).Once()
 
@@ -289,10 +264,6 @@ func TestUpdateUser_PasswordTooLong(t *testing.T) {
 	err := svc.UpdateUser(helpers.CtxAsUser("admin-1"), userModel.UserInfoDto{Password: longPw})
 	require.EqualError(t, err, commonModel.PASSWORD_TOO_LONG)
 }
-
-// ---------------------------------------------------------------------------
-// UpdateUserAdmin：owner-only、不可改自己/owner
-// ---------------------------------------------------------------------------
 
 func TestUpdateUserAdmin_OperatorLookupError(t *testing.T) {
 	svc, m := newUserSvc(t)
@@ -305,7 +276,6 @@ func TestUpdateUserAdmin_OperatorLookupError(t *testing.T) {
 
 func TestUpdateUserAdmin_NotOwner(t *testing.T) {
 	svc, m := newUserSvc(t)
-	// 操作者仅为 admin（非 owner）→ 拒绝。
 	m.repo.EXPECT().GetUserByID(mock.Anything, "admin-1").
 		Return(helpers.NewUser(withID("admin-1"), helpers.AsAdmin), nil).Once()
 
@@ -327,7 +297,6 @@ func TestUpdateUserAdmin_TargetLookupError(t *testing.T) {
 
 func TestUpdateUserAdmin_CannotChangeSelf(t *testing.T) {
 	svc, m := newUserSvc(t)
-	// 操作者即目标（同一 ID），GetUserByID 被调用两次且返回同一 owner。
 	m.repo.EXPECT().GetUserByID(mock.Anything, "owner-1").
 		Return(helpers.NewUser(withID("owner-1"), helpers.AsOwner), nil)
 
@@ -339,7 +308,6 @@ func TestUpdateUserAdmin_CannotChangeOwner(t *testing.T) {
 	svc, m := newUserSvc(t)
 	m.repo.EXPECT().GetUserByID(mock.Anything, "owner-1").
 		Return(helpers.NewUser(withID("owner-1"), helpers.AsOwner), nil).Once()
-	// 目标也是 owner（异常态）→ 仍须拒绝。
 	m.repo.EXPECT().GetUserByID(mock.Anything, "owner-2").
 		Return(helpers.NewUser(withID("owner-2"), helpers.AsOwner), nil).Once()
 
@@ -364,10 +332,6 @@ func TestUpdateUserAdmin_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, updated.IsAdmin, "普通用户应被提升为 admin（取反）")
 }
-
-// ---------------------------------------------------------------------------
-// DeleteUser：事务内 self/owner 守卫
-// ---------------------------------------------------------------------------
 
 func TestDeleteUser_NotOwner(t *testing.T) {
 	svc, m := newUserSvc(t)
@@ -427,10 +391,6 @@ func TestDeleteUser_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// ---------------------------------------------------------------------------
-// GetAllUsers：owner 字段/密码剥离
-// ---------------------------------------------------------------------------
-
 func TestGetAllUsers_CallerLookupError(t *testing.T) {
 	svc, m := newUserSvc(t)
 	sentinel := errors.New("caller gone")
@@ -458,7 +418,6 @@ func TestGetAllUsers_StripsOwner(t *testing.T) {
 	admin := helpers.NewUser(withID("admin-1"), helpers.AsAdmin)
 	normal := helpers.NewUser(withID("u-2"))
 
-	// 调用者为 admin。
 	m.repo.EXPECT().GetUserByID(mock.Anything, "admin-1").Return(admin, nil).Once()
 	m.repo.EXPECT().GetAllUsers(mock.Anything).
 		Return([]userModel.User{owner, admin, normal}, nil).Once()

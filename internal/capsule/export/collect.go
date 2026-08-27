@@ -18,11 +18,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// dataset 是一次导出的全部库内容快照。先整体读出再整体写盘，避免边读边写时
-// 「Echo 已写、其引用的 file 行刚被删」这类撕裂。
 type dataset struct {
 	echoes   []echoModel.Echo
-	files    []fileModel.File // 需要写进胶囊的 files 表记录（含 external 行）
+	files    []fileModel.File
 	comments []capsule.Comment
 	site     capsule.Site
 	owner    capsule.Owner
@@ -54,8 +52,6 @@ func collect(ctx context.Context, deps Deps, opts Options) (*dataset, error) {
 	return data, collectConnects(db, data)
 }
 
-// collectEchoes 按创建时间升序读全量 Echo。EchoFiles 必须带 sort_order 排序读出——
-// 展示顺序在胶囊里由 files 数组顺序表达（spec §4.2），预加载的顺序就是胶囊的顺序。
 func collectEchoes(db *gorm.DB, opts Options, data *dataset) error {
 	query := db.
 		Preload("EchoFiles", func(d *gorm.DB) *gorm.DB {
@@ -82,8 +78,6 @@ func collectEchoes(db *gorm.DB, opts Options, data *dataset) error {
 	return nil
 }
 
-// collectFiles 以 files 表记录为准挑出待导出的媒体（spec §6：记录驱动，禁止盲拷
-// DataRoot）。未被任何 Echo 引用的悬空文件照常导出——它合法，check 侧只告警。
 func collectFiles(db *gorm.DB, opts Options, data *dataset) error {
 	var files []fileModel.File
 	if err := db.Find(&files).Error; err != nil {
@@ -114,8 +108,6 @@ func collectFiles(db *gorm.DB, opts Options, data *dataset) error {
 	return nil
 }
 
-// privateOnlyFiles 返回「仅被 private Echo 引用」的文件 id 集合。这些字节不能随
-// 公开胶囊出门；只要还有任一公开 Echo 引用它，它就是公开内容的一部分，必须导出。
 func privateOnlyFiles(db *gorm.DB) (map[string]struct{}, error) {
 	var refs []struct {
 		FileID  string
@@ -143,9 +135,6 @@ func privateOnlyFiles(db *gorm.DB) (map[string]struct{}, error) {
 	return privateOnly, nil
 }
 
-// collectComments 只导出已通过审核的评论，且只保留指向本次导出 Echo 集合的那些：
-// private Echo 被排除后，它名下的评论就是孤儿，带出去只会让消费者报警告。
-// 出胶囊前必过 Public 投影，隐私字段（email/ip_hash/user_agent/user_id）在此剥离。
 func collectComments(db *gorm.DB, data *dataset) error {
 	var comments []commentModel.Comment
 	if err := db.
@@ -180,8 +169,6 @@ func collectComments(db *gorm.DB, data *dataset) error {
 	return nil
 }
 
-// collectSite 逐字段拷贝站点设置的公开子集。这里不用整体序列化：AllowRegister 是
-// 运维行为开关，必须留在库里（spec §3）；逐字段列出让「哪些进了胶囊」一眼可查。
 func collectSite(ctx context.Context, deps Deps, data *dataset) error {
 	system, err := coreSetting.Get(ctx, deps.KV, coreSetting.System)
 	if err != nil {
@@ -203,8 +190,6 @@ func collectSite(ctx context.Context, deps Deps, data *dataset) error {
 	return nil
 }
 
-// collectOwner 取站长。owner.username 是清单的必须字段（Echo 未标 username 时的
-// 归属兜底），取不到就没有合法胶囊可产，直接失败而非留空。
 func collectOwner(db *gorm.DB, data *dataset) error {
 	var owner userModel.User
 	if err := db.Where("is_owner = ?", true).First(&owner).Error; err != nil {

@@ -14,35 +14,21 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// clientConfig holds the resolved options for NewClient.
 type clientConfig struct {
 	timeout time.Duration
 	guard   bool
 }
 
-// Option configures a client built by NewClient.
 type Option func(*clientConfig)
 
-// Timeout sets the whole-request timeout (http.Client.Timeout). It covers the
-// entire exchange including reading the response body, so it is appropriate for
-// short request/response calls but not for long-lived streaming responses.
 func Timeout(d time.Duration) Option {
 	return func(c *clientConfig) { c.timeout = d }
 }
 
-// Guard enables SSRF protection: a dialer that rejects private/reserved
-// destination IPs (defending against DNS rebinding) plus redirect validation.
-// Use it only for user/peer-supplied URLs. Admin-configured infra endpoints
-// (OIDC providers, LLM backends, captcha verifiers) may legitimately live on
-// loopback or private networks, so they must NOT enable it.
 func Guard() Option {
 	return func(c *clientConfig) { c.guard = true }
 }
 
-// NewClient builds an *http.Client with a hardened transport (TLS >= 1.2, a
-// bounded idle-connection pool, and outbound request logging). Apply Guard()
-// to add SSRF protection. The returned *http.Client also satisfies the
-// Do(*http.Request) interfaces expected by the OpenAI / Anthropic SDKs.
 func NewClient(opts ...Option) *http.Client {
 	cfg := clientConfig{}
 	for _, opt := range opts {
@@ -74,9 +60,6 @@ func NewClient(opts ...Option) *http.Client {
 	return client
 }
 
-// loggingRoundTripper logs each outbound request (method/host/status/latency)
-// at debug level. Errors are logged then returned unchanged for the caller to
-// handle, so no error information is swallowed.
 type loggingRoundTripper struct {
 	base http.RoundTripper
 }
@@ -107,10 +90,6 @@ func (l *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 	return resp, err
 }
 
-// Retry runs fn up to maxAttempts times, sleeping with exponential backoff
-// between attempts (starting at initialBackoff). It returns nil on the first
-// success and the last error otherwise. It does not sleep after the final
-// attempt.
 func Retry(maxAttempts int, initialBackoff time.Duration, fn func() error) error {
 	var err error
 	delay := initialBackoff
@@ -126,14 +105,11 @@ func Retry(maxAttempts int, initialBackoff time.Duration, fn func() error) error
 	return err
 }
 
-// Header is an optional single request header for Fetch.
 type Header struct {
 	Header  string
 	Content string
 }
 
-// Fetch performs an SSRF-guarded request and returns the response body,
-// size-limited to 1 MiB. The default timeout is 2s unless overridden.
 func Fetch(url, method string, h Header, timeout ...time.Duration) ([]byte, error) {
 	if err := Validate(url); err != nil {
 		return nil, err

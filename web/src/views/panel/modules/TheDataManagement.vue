@@ -2,10 +2,8 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2">
-    <!-- 分段控件：导入 / 导出 / 快照 -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- 内容 -->
     <PanelCard>
       <TheMigrationSetting v-if="tab === 'import'" />
       <TheExportSetting v-else-if="tab === 'export'" />

@@ -2,7 +2,6 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="base-combobox">
-    <!-- Label -->
     <label
       v-if="label"
       :for="id"
@@ -11,7 +10,6 @@
       {{ label }}
     </label>
 
-    <!-- Combobox Wrapper -->
     <Combobox
       :modelValue="internalValue"
       :by="by"
@@ -20,7 +18,6 @@
       @update:model-value="onSelect"
     >
       <div class="relative">
-        <!-- Input -->
         <div
           :class="[
             'flex items-center px-3 py-2 rounded-[var(--radius-md)] bg-[var(--input-bg-color)] border border-[var(--combobox-border-color)] shadow-[var(--shadow-sm)] focus-within:ring-2 focus-within:ring-[var(--input-focus-ring-color)] transition duration-150 ease-in-out',
@@ -42,24 +39,16 @@
             ]"
           />
 
-          <!-- 可选的 suffix slot -->
           <slot name="suffix">
             <ComboboxButton
               class="ml-1 text-[var(--color-text-muted)]"
               aria-label="展开选项列表"
               v-tooltip="'展开选项列表'"
             >
-              <!-- <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">
-                <path
-                  fill="#888888"
-                  d="m12 19.15l3.875-3.875q.3-.3.7-.3t.7.3t.3.713t-.3.712l-3.85 3.875q-.575.575-1.425.575t-1.425-.575L6.7 16.7q-.3-.3-.288-.712t.313-.713t.713-.3t.712.3zm0-14.3L8.15 8.7q-.3.3-.7.288t-.7-.288q-.3-.3-.312-.712t.287-.713l3.85-3.85Q11.15 2.85 12 2.85t1.425.575l3.85 3.85q.3.3.288.713t-.313.712q-.3.275-.7.288t-.7-.288z"
-                />
-              </svg> -->
             </ComboboxButton>
           </slot>
         </div>
 
-        <!-- Dropdown -->
         <Transition
           enter="transition ease-out duration-100"
           enter-from="opacity-0 translate-y-1"
@@ -143,7 +132,7 @@ const internalValue = ref(props.modelValue)
 const labelField = props.labelField || 'name'
 const allowCreate = props.allowCreate ?? false
 const multiple = props.multiple ?? false
-const isUserClicking = ref(false) // 标记用户是否正在主动点击选项
+const isUserClicking = ref(false)
 
 watch(
   () => props.modelValue,
@@ -158,7 +147,6 @@ watch(internalValue, (val) => {
 const onSelect = (val: object | string) => {
   const selectedLabel = getOptionLabel(val)
 
-  // 只有当用户主动点击选项时才接受选择并关闭下拉框
   if (isUserClicking.value) {
     internalValue.value = val
     query.value = selectedLabel
@@ -167,22 +155,17 @@ const onSelect = (val: object | string) => {
     return
   }
 
-  // 自动选择（非用户点击）：只有精确匹配时才接受
   if (query.value && selectedLabel.toLowerCase() === query.value.toLowerCase()) {
     internalValue.value = val
     query.value = selectedLabel
-    // 不关闭下拉框
     return
   }
-
-  // 不精确匹配，忽略这次选择，不做任何改变
 }
 
 const onInputChange = (e: Event) => {
   const value = ((e.target as HTMLInputElement | null)?.value ?? '').trim()
   query.value = value
 
-  // 输入框被清空时 -> 清空绑定值
   if (value === '') {
     internalValue.value = multiple ? [] : ''
     emit('update:modelValue', internalValue.value)
@@ -190,7 +173,6 @@ const onInputChange = (e: Event) => {
     return
   }
 
-  // 如果输入内容刚好匹配某个现有选项 -> 自动选择该项
   const matched = props.options.find(
     (option) => getOptionLabel(option).toLowerCase() === value.toLowerCase(),
   )
@@ -198,13 +180,11 @@ const onInputChange = (e: Event) => {
     internalValue.value = matched
     emit('update:modelValue', matched)
   } else {
-    // 否则表示用户正在输入新的标签
     internalValue.value = value
-    emit('create', value) // 可选：通知外部准备创建
+    emit('create', value)
     emit('update:modelValue', internalValue.value)
   }
 
-  // 无论如何都保持下拉框打开
   dropdownOpen.value = true
 }
 
@@ -213,7 +193,6 @@ const onFocusInput = () => {
 }
 
 const onBlurOutside = (e: FocusEvent) => {
-  // 确保焦点确实离开整个 Combobox（不是内部选项）
   const currentTarget = e.currentTarget as HTMLElement
   if (!currentTarget.contains(e.relatedTarget as Node)) {
     dropdownOpen.value = false

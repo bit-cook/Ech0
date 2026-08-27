@@ -16,7 +16,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/viewer"
 )
 
-// GetRecent 返回站点作者近期活动的 AI 自然语言总结（带缓存 + singleflight 防击穿）。
 func (s *CopilotService) GetRecent(ctx context.Context) (string, error) {
 	const cacheKey = string(agent.GEN_RECENT)
 
@@ -105,7 +104,6 @@ func (s *CopilotService) buildRecentSummary(ctx context.Context) (string, error)
 
 	in = append(in, memos...)
 
-	// 与 Chat 共用同一规范加载器（尊重 ctx、无写副作用；缺配置直接报错，不静默写默认行）。
 	setting, err := s.agentSetting(ctx)
 	if err != nil {
 		return "", err

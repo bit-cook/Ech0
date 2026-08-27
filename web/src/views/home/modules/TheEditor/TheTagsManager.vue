@@ -151,8 +151,6 @@ onMounted(() => {
 const { openConfirm } = useBaseDialog()
 
 const listRef = ref<HTMLElement | null>(null)
-// 浮层开合方向按标签的真实位置计算：flex-wrap 换行后「下标」无法反映标签在某行的左右位置，
-// 这里以标签容器为边界，保证面板始终落在容器水平范围内，不被 home-main 的 overflow 裁切。
 const panelSides = reactive<Record<string, 'left' | 'center' | 'right'>>({})
 
 const resolvePanelSide = (event: MouseEvent, tagId: string) => {
@@ -164,7 +162,6 @@ const resolvePanelSide = (event: MouseEvent, tagId: string) => {
   }
   const buttonRect = button.getBoundingClientRect()
   const containerRect = container.getBoundingClientRect()
-  // 估算面板宽度上界（登录态：过滤 + 分隔线 + 删除），取一半并留余量做边界判断
   const halfPanel = 96 / 2
   const buttonCenter = buttonRect.left + buttonRect.width / 2
   if (buttonCenter - halfPanel < containerRect.left) {
@@ -183,18 +180,15 @@ const getPopoverPanelClass = (tagId: string) => {
   return 'absolute left-1/2 z-[60] mt-1 -translate-x-1/2 transform'
 }
 
-// 按标签过滤内容
 const handleFilterByTag = (tag: App.Api.Ech0.Tag) => {
   if (!tag) return
 
   echoStore.filteredTag = tag
   echoStore.isFilteringMode = true
-  // 从标签管理页切回首页时，时间线组件尚未挂载；这里先主动刷新一次，避免过滤状态丢失。
   echoStore.refreshEchos()
   router.push({ name: 'home' })
 }
 
-// 删除标签
 const handleDeleteTag = (tagId: string) => {
   openConfirm({
     title: String(t('editor.deleteTagConfirmTitle')),

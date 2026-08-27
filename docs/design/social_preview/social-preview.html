@@ -4,17 +4,6 @@
 <meta charset="utf-8" />
 <title>Ech0 — Social Preview</title>
 <style>
-  /*
-    Ech0 GitHub social preview source.
-
-    Design canvas: 1280 x 640 (GitHub's recommended ratio).
-    Open this file in a browser, set viewport to 1280x640, and capture.
-
-    Referenced assets (relative paths):
-      - ../../web/public/Ech0.svg         (brand mark)
-      - ../imgs/screenshot.png            (timeline view, macOS chrome included)
-      - ../imgs/screenshot_dashboard.png  (admin dashboard, macOS chrome included)
-  */
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -38,7 +27,6 @@
     overflow: hidden;
   }
 
-  /* subtle dotted texture, fading toward bottom-right */
   .canvas::before {
     content: "";
     position: absolute;
@@ -51,7 +39,6 @@
     pointer-events: none;
   }
 
-  /* brand-orange accent dots echoing the logo language */
   .accent-dot {
     position: absolute;
     width: 18px; height: 18px;
@@ -63,7 +50,6 @@
   .accent-dot.tl { top: 70px;  left: 88px; }
   .accent-dot.br { bottom: 60px; right: 80px; opacity: 0.45; }
 
-  /* ─── left column: brand + headline + tags + footer ─── */
   .left {
     width: 580px;
     padding: 56px 0 48px 96px;
@@ -147,7 +133,6 @@
   }
   .footer .repo { color: #2a2a2a; }
 
-  /* ─── right column: stacked screenshots, no bounding frames ─── */
   .right {
     flex: 1;
     height: 100%;
@@ -158,13 +143,9 @@
     position: absolute;
     height: auto;
     width: auto;
-    /* drop-shadow follows the image's actual shape (not a bounding box),
-       so screenshot edges aren't clipped by any frame */
     filter:
       drop-shadow(0 22px 36px rgba(120, 60, 0, 0.22))
       drop-shadow(0 6px 12px rgba(120, 60, 0, 0.14));
-    /* Quality hints — without these, rotate + drop-shadow rasterize the
-       image into a low-quality compositor layer at 1x DPI and look soft. */
     image-rendering: -webkit-optimize-contrast;
     image-rendering: high-quality;
     will-change: transform;
@@ -172,7 +153,6 @@
     -webkit-backface-visibility: hidden;
   }
 
-  /* dashboard sits behind, tilted right */
   .shot.dashboard {
     top: 70px;
     right: -10px;
@@ -182,7 +162,6 @@
     z-index: 1;
   }
 
-  /* timeline sits in front, tilted left, overlapping the dashboard */
   .shot.timeline {
     top: 200px;
     left: 30px;

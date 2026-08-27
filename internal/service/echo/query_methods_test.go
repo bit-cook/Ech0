@@ -19,8 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// readMethod 描述一个「按 viewer 解析 showPrivate 后转发给仓储」的只读方法：
-// expectRepo 用解析出的 showPrivate 设置仓储期望，invoke 触发该方法。
 type readMethod struct {
 	name       string
 	expectRepo func(repo *echomock.MockRepository, showPrivate bool)
@@ -72,9 +70,6 @@ func readMethods() []readMethod {
 	}
 }
 
-// TestReadEchos_ShowPrivateResolution 锁定四个只读方法共享的可见性解析：
-// 匿名 / 非管理员 → showPrivate=false（不查私密）；管理员 → showPrivate=true。
-// 匿名分支不应触达 commonService。
 func TestReadEchos_ShowPrivateResolution(t *testing.T) {
 	viewerCases := []struct {
 		name        string
@@ -129,12 +124,11 @@ func TestReadEchos_ShowPrivateResolution(t *testing.T) {
 	}
 }
 
-// TestReadEchos_UserLookupError 确认已认证调用方解析用户失败时原样上抛，且不触达仓储。
 func TestReadEchos_UserLookupError(t *testing.T) {
 	boom := errors.New("user lookup failed")
 	for _, m := range readMethods() {
 		t.Run(m.name, func(t *testing.T) {
-			repo := echomock.NewMockRepository(t) // 无任何期望：仓储不应被调用
+			repo := echomock.NewMockRepository(t)
 			common := commonmock.NewMockService(t)
 			common.EXPECT().
 				CommonGetUserByUserId(mock.Anything, adminID).
@@ -147,7 +141,6 @@ func TestReadEchos_UserLookupError(t *testing.T) {
 	}
 }
 
-// TestReadEchos_RepoErrorPropagates 确认带错误返回的只读方法把仓储错误上抛。
 func TestReadEchos_RepoErrorPropagates(t *testing.T) {
 	boom := errors.New("db down")
 
@@ -172,8 +165,6 @@ func TestReadEchos_RepoErrorPropagates(t *testing.T) {
 	})
 }
 
-// TestQueryEchos_ViewerResolution 覆盖 QueryEchos 的 showPrivate 解析：
-// 管理员可见私密；已认证用户解析失败时上抛错误且不查询。
 func TestQueryEchos_ViewerResolution(t *testing.T) {
 	t.Run("admin queries with showPrivate true", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
@@ -194,7 +185,7 @@ func TestQueryEchos_ViewerResolution(t *testing.T) {
 	})
 
 	t.Run("user lookup error propagates", func(t *testing.T) {
-		repo := echomock.NewMockRepository(t) // 不应触达 QueryEchos
+		repo := echomock.NewMockRepository(t)
 		common := commonmock.NewMockService(t)
 		boom := errors.New("lookup failed")
 		common.EXPECT().
@@ -219,7 +210,6 @@ func TestQueryEchos_ViewerResolution(t *testing.T) {
 	})
 }
 
-// TestGetEchosByPage_DelegatesToQuery 确认弃用的分页接口透传 Page/PageSize/Search 给 QueryEchos。
 func TestGetEchosByPage_DelegatesToQuery(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -244,7 +234,6 @@ func TestGetEchosByPage_DelegatesToQuery(t *testing.T) {
 	assert.Empty(t, captured.TagIDs)
 }
 
-// TestGetEchosByTagId_DelegatesToQuery 确认弃用的按标签接口把 tagId 放进 TagIDs 转发给 QueryEchos。
 func TestGetEchosByTagId_DelegatesToQuery(t *testing.T) {
 	repo := echomock.NewMockRepository(t)
 	common := commonmock.NewMockService(t)
@@ -264,7 +253,6 @@ func TestGetEchosByTagId_DelegatesToQuery(t *testing.T) {
 	assert.Equal(t, []string{"tag-7"}, captured.TagIDs)
 }
 
-// TestGetAllTags 确认标签列表直通仓储并传播错误。
 func TestGetAllTags(t *testing.T) {
 	t.Run("returns repository tags", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)

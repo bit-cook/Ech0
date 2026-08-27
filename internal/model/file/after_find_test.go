@@ -10,8 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// afterFindParent stands in for echo.Echo: it owns EchoFiles, exercising the
-// exact two-level Preload("EchoFiles.File") path the echo repository uses.
 type afterFindParent struct {
 	ID        string     `gorm:"type:char(36);primaryKey"`
 	EchoFiles []EchoFile `gorm:"foreignKey:EchoID"`
@@ -44,7 +42,6 @@ func TestAfterFindRecomputesManagedURL(t *testing.T) {
 		t.Fatalf("create external: %v", err)
 	}
 
-	// 1) Direct load — URL refreshed from the current resolver, not the snapshot.
 	var direct File
 	if err := db.First(&direct, "id = ?", local.ID).Error; err != nil {
 		t.Fatalf("load local: %v", err)
@@ -53,7 +50,6 @@ func TestAfterFindRecomputesManagedURL(t *testing.T) {
 		t.Fatalf("direct load: want recomputed url, got %q", direct.URL)
 	}
 
-	// 2) External — stored URL is the source of truth, must stay untouched.
 	var ext File
 	if err := db.First(&ext, "id = ?", external.ID).Error; err != nil {
 		t.Fatalf("load external: %v", err)
@@ -62,8 +58,6 @@ func TestAfterFindRecomputesManagedURL(t *testing.T) {
 		t.Fatalf("external load: want stored url kept, got %q", ext.URL)
 	}
 
-	// 3) Nested preload — the production path. This is the load-bearing case:
-	// it proves AfterFind fires for preloaded associations, not just top-level.
 	parent := &afterFindParent{ID: "p1"}
 	if err := db.Create(parent).Error; err != nil {
 		t.Fatalf("create parent: %v", err)
@@ -83,8 +77,6 @@ func TestAfterFindRecomputesManagedURL(t *testing.T) {
 	}
 }
 
-// TestAfterFindNoResolverKeepsSnapshot guards the fallback: without a resolver
-// (CLI/tests), reads must return the stored snapshot verbatim.
 func TestAfterFindNoResolverKeepsSnapshot(t *testing.T) {
 	db := openAfterFindDB(t)
 	RegisterURLResolver(nil)

@@ -107,7 +107,6 @@ func (h *AuthHandler) GetOAuthInfo(ctx context.Context, in *GetOAuthInfoInput) (
 		provider = string(commonModel.OAuth2GITHUB)
 	}
 
-	// 与旧实现一致：忽略查询错误，返回（可能为空的）绑定信息。
 	oauthInfo, _ := h.authService.GetOAuthInfo(ctx, provider)
 	return commonModel.OK(oauthInfo, commonModel.GET_OAUTH_INFO_SUCCESS), nil
 }

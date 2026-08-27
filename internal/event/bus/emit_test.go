@@ -58,7 +58,6 @@ func TestEmit_KeyedEventCarriesOrderingKey(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(unsub)
 
-		// ResourceUploaded.OrderingKey() == Key, which is empty here -> no WithKey.
 		require.NoError(t, eventbus.Emit(context.Background(), b, event.ResourceUploaded{FileName: "a.png"}))
 		assert.Empty(t, key)
 	})
@@ -77,7 +76,6 @@ func TestEmit_KeyedEventCarriesOrderingKey(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(unsub)
 
-		// SystemSnapshot does not implement event.Keyed.
 		require.NoError(t, eventbus.Emit(context.Background(), b, event.SystemSnapshot{Info: "ok"}))
 		assert.True(t, delivered)
 		assert.Empty(t, key)
@@ -94,7 +92,6 @@ func TestEmit_PropagatesHandlerError(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(unsub)
 
-	// Synchronous subscriber error is joined into the publish result and surfaced by Emit.
 	err = eventbus.Emit(context.Background(), b, event.EchoCreated{Echo: echoModel.Echo{ID: "x"}})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, sentinel)
@@ -116,8 +113,6 @@ func TestNotify_DeliversBestEffort(t *testing.T) {
 }
 
 func TestNotify_SwallowsPublishError(t *testing.T) {
-	// A closed bus makes the underlying Publish return ErrClosed; Notify must
-	// swallow it (warn-log only) and never panic or propagate.
 	b := busen.New()
 	require.NoError(t, b.Close(context.Background()))
 

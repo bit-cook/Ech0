@@ -367,8 +367,7 @@
     "localeSyncFailed": "Spracheinstellung konnte nicht synchronisiert werden",
     "themeLight": "Hell",
     "themeDark": "Dunkel",
-    "themeSunny": "Sonnig",
-    "githubAction": "GitHub"
+    "themeSunny": "Sonnig"
   },
   "homeTop": {
     "searchTitle": "Suche",

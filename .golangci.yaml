@@ -1,39 +1,22 @@
-# Defines the configuration version.
-# The only possible value is "2".
 version: "2"
 
 linters:
-  # Default set of linters.
-  # The value can be:
-  # - `standard`: https://golangci-lint.run/docs/linters/#enabled-by-default
-  # - `all`: enables all linters by default.
-  # - `none`: disables all linters by default.
-  # - `fast`: enables only linters considered as "fast" (`golangci-lint help linters --json | jq '[ .[] | select(.fast==true) ] | map(.name)'`).
-  # Default: standard
   default: standard
   exclusions:
     rules:
-      # pkg/virefs 内化自上游 VireFS，沿用其原有的 errcheck 习惯（defer Close() 等惯用法）。
       - path: ^pkg/virefs/
         linters:
           - errcheck
-      # pkg/log/tint 是 verbatim vendored 的第三方库（lmittmann/tint, MIT），不按本仓 lint 习惯改。
       - path: ^pkg/log/tint/
         linters:
           - errcheck
           - staticcheck
-      # go-openai 把 ChatCompletionRequest.MaxTokens 标为 deprecated（推荐 MaxCompletionTokens），
-      # 但 max_completion_tokens 是 OpenAI 自家的新字段：本仓的 OpenAI 兼容路径主要面向
-      # DeepSeek / Qwen / Moonshot / Ollama 等只认 max_tokens 的服务端，换过去会让这些端点
-      # 报错或直接忽略上限。故刻意保留 max_tokens，仅屏蔽这一条弃用告警（见 provider_openai.go 注释）。
       - path: ^internal/agent/provider_openai\.go$
         linters:
           - staticcheck
         text: SA1019.*MaxTokens
 
 formatters:
-  # Enable specific formatter.
-  # Default: [] (uses standard Go formatting)
   enable:
     - gci
     - gofmt

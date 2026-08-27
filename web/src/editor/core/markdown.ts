@@ -8,10 +8,6 @@ type HighlightJsModule = (typeof import('./markdown-highlight'))['default']
 let hljsInstance: HighlightJsModule | null = null
 let hljsPromise: Promise<HighlightJsModule> | null = null
 
-/**
- * 按需加载 highlight.js 及其语言包。首屏无代码块的 Echo 将完全跳过这块体积
- * （约 120KB 未压缩），只在渲染到 ``` 围栏时才触发动态导入。
- */
 async function ensureHighlighter(): Promise<HighlightJsModule> {
   if (hljsInstance) return hljsInstance
   if (!hljsPromise) {
@@ -143,16 +139,11 @@ function setRenderCache(key: string, value: string): void {
 
 const markdown: MarkdownIt = markdownit({
   html: false,
-  // markdown-it 15 的 linkify-it v6 只把带协议的地址（http://、https://、ftp://、mailto:）与
-  // 邮箱自动成链，裸域名（含 www. 前缀）不再成链——要链接就用 [文本](链接) 语法。跟随上游默认值。
   linkify: true,
   typographer: false,
   langPrefix: 'language-',
   highlight(str: string, lang: string): string {
     const language = lang?.trim()
-    // hljs 是按需加载的；如果渲染时尚未就绪就退化到转义输出。
-    // renderMarkdown 会在调用 markdown.render 之前 await ensureHighlighter，
-    // 所以进入这里时 hljsInstance 应当已就位（除非完全没有代码块）。
     if (hljsInstance && language && hljsInstance.getLanguage(language)) {
       try {
         const rendered = hljsInstance.highlight(str, {
@@ -160,9 +151,7 @@ const markdown: MarkdownIt = markdownit({
           ignoreIllegals: true,
         }).value
         return renderCodeBlock(str, rendered, language)
-      } catch {
-        // 降级到默认转义输出
-      }
+      } catch {}
     }
 
     return renderCodeBlock(str, escapeHtml(str))
@@ -179,7 +168,6 @@ const originalLinkOpen: LinkOpenRule =
 markdown.renderer.rules.link_open = (...args: Parameters<LinkOpenRule>) => {
   const [tokens, idx, options, env, self] = args
   const token = tokens[idx]
-  // markdown-it 15 起 attrGet 返回 string | number | null（属性值允许数字）。
   const href = String(token.attrGet('href') ?? '')
 
   if (/^https?:\/\//i.test(href)) {
@@ -210,7 +198,6 @@ export async function renderMarkdown(
   const cached = getFromRenderCache(cacheKey)
   if (cached) return cached
 
-  // 只在出现围栏代码块时才加载 hljs。纯文本/链接型 Echo 完全跳过这块体积。
   if (CODE_FENCE_RE.test(source)) {
     await ensureHighlighter()
   }

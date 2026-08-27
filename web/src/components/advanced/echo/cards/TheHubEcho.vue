@@ -164,7 +164,6 @@ const handleLikeEcho = async () => {
   content: '';
   position: absolute;
 
-  /* 与头像水平居中对齐：card padding-top (p-3 = 0.75rem) + header mt-1 (0.25rem) + (avatar 1.5rem - bar 1rem) / 2 */
   top: 1.25rem;
   left: 0;
   width: 2px;
@@ -176,7 +175,6 @@ const handleLikeEcho = async () => {
 
 @media (width >= 640px) {
   .hub-echo-card::before {
-    /* sm: padding-top 0.875rem + mt-1 0.25rem + (avatar 1.75rem - bar 1.125rem) / 2 */
     top: 1.4375rem;
     height: 1.125rem;
   }
@@ -196,8 +194,6 @@ const handleLikeEcho = async () => {
   margin-bottom: 0;
 }
 
-/* Gallery 各 layout 内部硬编码了 w-[88%] mx-auto + mb-4，
-   在 hub 卡片里需要拉满到与正文同宽，并去掉外层多余的下边距（外部已用 mt/mb 控制） */
 .hub-echo-body :deep(.image-gallery-container) > div {
   width: 100%;
   margin-left: 0;

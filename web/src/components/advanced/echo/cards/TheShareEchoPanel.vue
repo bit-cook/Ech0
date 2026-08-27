@@ -143,9 +143,7 @@ const handleSystemShare = async () => {
       text: props.echoContent ?? '',
       url: shareUrl.value,
     })
-  } catch {
-    // user cancellation is a rejected promise — ignore silently
-  }
+  } catch {}
 }
 </script>
 

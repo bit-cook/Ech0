@@ -153,7 +153,6 @@ func (s *CommentService) CreateComment(
 	if validUser && (user.IsAdmin || user.IsOwner) {
 		comment.Source = model.SourceSystem
 		comment.Nickname = user.Username
-		// 内部成员评论允许邮箱为空，不再自动填充占位邮箱。
 		comment.Email = ""
 		comment.UserID = &user.ID
 		comment.Status = model.StatusApproved
@@ -210,8 +209,6 @@ func (s *CommentService) CreateComment(
 		return model.CreateCommentResult{}, err
 	}
 	s.emitCommentCreated(ctx, comment)
-	// 站长/管理员自己发的评论（SourceSystem），收件人就是站长本人，无需再给自己发「有新评论」提醒；
-	// 但若是回复访客，仍要走 notifyReplyTargetAsync 通知被回复者。
 	if shouldNotifyOwnerOnCreate(comment.Source) {
 		s.notifyOwnerAsync(ctx, "created", comment)
 	}
@@ -222,9 +219,6 @@ func (s *CommentService) CreateComment(
 	}, nil
 }
 
-// resolveParentID 校验回复目标并返回其真实父评论 ID。
-// 不做压平——前端按祖先链把回复归到「楼」下渲染，并据此展示「回复 @某人」。
-// rawParentID 为空表示顶层评论，返回 nil。
 func (s *CommentService) resolveParentID(ctx context.Context, echoID, rawParentID string) (*string, error) {
 	parentID := strings.TrimSpace(rawParentID)
 	if parentID == "" {
@@ -255,7 +249,6 @@ func (s *CommentService) CreateIntegrationComment(
 			commonModel.NewBizError(commonModel.ErrCodeInvalidRequest, "评论功能未启用")
 	}
 
-	// MustFromContext 永不返回 nil（缺身份时回落 NoopViewer），故这里不再判空。
 	v := viewer.MustFromContext(ctx)
 	userID := strings.TrimSpace(v.UserID())
 	tokenID := strings.TrimSpace(v.TokenID())
@@ -542,7 +535,6 @@ func (s *CommentService) GetSystemSetting(ctx context.Context) (model.SystemSett
 }
 
 func (s *CommentService) getSystemSettingRaw(ctx context.Context) (model.SystemSetting, error) {
-	// 缺省值（EnableComment 等 + SMTPPort）与归一化统一由 setting 引擎处理，启动 seeder 已落库。
 	return coreSetting.Get(ctx, s.durableKV, coreSetting.Comment)
 }
 
@@ -636,8 +628,6 @@ func (s *CommentService) notifyOwnerAsync(ctx context.Context, kind string, comm
 	})
 }
 
-// notifyReplyTargetAsync 在「回复」创建后提醒被回复评论的作者，复用评论邮件通知总开关。
-// 去重：自己回复自己、被回复者邮箱无效、被回复者即 owner（已由「有新评论」覆盖）时跳过。
 func (s *CommentService) notifyReplyTargetAsync(ctx context.Context, comment model.Comment) {
 	if comment.ParentID == nil || strings.TrimSpace(*comment.ParentID) == "" {
 		return
@@ -682,9 +672,6 @@ func useCommentRecipient(kind string) bool {
 	return kind == "status" || kind == "hot"
 }
 
-// shouldNotifyOwnerOnCreate 判断「有新评论」邮件是否应发给站长。
-// 站长/管理员在后台自己发的评论（SourceSystem），收件人就是站长本人，发给自己没有意义，跳过；
-// 访客评论（SourceGuest）与外部集成投递（SourceIntegration）仍需通知站长。
 func shouldNotifyOwnerOnCreate(source model.SourceType) bool {
 	return source != model.SourceSystem
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package repository 实现 Embedding 的向量存储（sqlite-vec vec0 虚表 + 元数据表）。
 package repository
 
 import (
@@ -17,7 +16,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// vecTable 是 sqlite-vec 的向量虚表名（懒建，维度由配置决定）。
 const vecTable = "vec_echo"
 
 type EmbeddingRepository struct {
@@ -50,7 +48,6 @@ func (r *EmbeddingRepository) DropVecTable(ctx context.Context) error {
 	return r.getDB(ctx).Exec("DROP TABLE IF EXISTS " + vecTable).Error
 }
 
-// vecToJSON 把向量序列化为 sqlite-vec 可解析的 JSON 文本（如 "[0.1,0.2]"）。
 func vecToJSON(vec []float32) string {
 	var b strings.Builder
 	b.WriteByte('[')
@@ -67,7 +64,6 @@ func vecToJSON(vec []float32) string {
 func (r *EmbeddingRepository) Upsert(ctx context.Context, meta *model.EchoEmbedding, vector []float32) error {
 	db := r.getDB(ctx)
 
-	// 元数据 upsert（含内容快照）
 	if err := db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "echo_id"}},
 		UpdateAll: true,
@@ -75,7 +71,6 @@ func (r *EmbeddingRepository) Upsert(ctx context.Context, meta *model.EchoEmbedd
 		return err
 	}
 
-	// 向量：vec0 不支持 UPSERT，先删后插
 	if err := db.Exec("DELETE FROM "+vecTable+" WHERE echo_id = ?", meta.EchoID).Error; err != nil {
 		return err
 	}
@@ -93,7 +88,6 @@ func (r *EmbeddingRepository) Delete(ctx context.Context, echoID string) error {
 	if err := db.Where("echo_id = ?", echoID).Delete(&model.EchoEmbedding{}).Error; err != nil {
 		return err
 	}
-	// vec_echo 可能尚未创建，忽略删除错误
 	_ = db.Exec("DELETE FROM "+vecTable+" WHERE echo_id = ?", echoID).Error
 	return nil
 }
@@ -110,11 +104,8 @@ func (r *EmbeddingRepository) GetMeta(ctx context.Context, echoID string) (*mode
 	return &m, true, nil
 }
 
-// searchOverfetchFactor：按作者过滤时 KNN 的超额取数倍数。vec0 虚表无法在 MATCH 里
-// 带元数据过滤，只能先按距离取一批再按 username 筛，故多取几倍以尽量凑满 k 条本人命中。
 const searchOverfetchFactor = 8
 
-// searchOverfetchCap：超额取数的硬上限，防止 k 较大时 KNN 拉太多（本地 sqlite-vec 便宜，但仍封顶）。
 const searchOverfetchCap = 200
 
 func (r *EmbeddingRepository) Search(ctx context.Context, vector []float32, k int, authorUsername string) ([]model.SearchResult, error) {
@@ -122,7 +113,6 @@ func (r *EmbeddingRepository) Search(ctx context.Context, vector []float32, k in
 		k = 6
 	}
 
-	// 限定作者时按距离超额取数，过滤后再裁到 k；不限定作者时按原 k 取。
 	fetch := k
 	if authorUsername != "" {
 		fetch = min(k*searchOverfetchFactor, searchOverfetchCap)
@@ -161,7 +151,6 @@ func (r *EmbeddingRepository) Search(ctx context.Context, vector []float32, k in
 		metaByID[m.EchoID] = m
 	}
 
-	// 保持 KNN 的距离顺序，裁到 k 条（限定作者时过滤掉非本人命中后取前 k）。
 	results := make([]model.SearchResult, 0, min(k, len(rows)))
 	for _, row := range rows {
 		m, ok := metaByID[row.EchoID]

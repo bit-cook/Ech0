@@ -49,18 +49,8 @@ func newBundle() *goi18n.Bundle {
 	return b
 }
 
-// maxAcceptLanguageSeparators caps the number of `-` plus `_` characters in any
-// single locale value before it reaches language.ParseAcceptLanguage. That
-// parser is quadratic on long lists of malformed subtags; the CVE-2022-32149
-// guard caps `-` at 1000 but ignores `_`, even though the parser aliases `_`
-// to `-` internally. A real browser sends fewer than 10 separators, so 32
-// leaves ample headroom while making the O(N^2) blow-up impossible.
 const maxAcceptLanguageSeparators = 32
 
-// sanitizeAcceptLanguage drops an absurdly separator-heavy value, so neither the
-// Accept-Language / X-Locale headers nor the `lang` query (all funneled through
-// ResolveLocale / NewLocalizer below) can drive the BCP 47 parser into its
-// O(N^2) gobble path.
 func sanitizeAcceptLanguage(v string) string {
 	if strings.Count(v, "-")+strings.Count(v, "_") > maxAcceptLanguageSeparators {
 		return ""
@@ -81,8 +71,6 @@ func ResolveLocale(raw ...string) string {
 	}
 	tag, _, _ := language.ParseAcceptLanguage(strings.Join(parts, ","))
 	best, _, confidence := matcher.Match(tag...)
-	// 没有任何被支持的语言能匹配上时（matcher 会返回列表中的第一项作占位），
-	// 用 FallbackLocale = en-US 作为更国际化的兜底，而不是默默退到 zh-CN。
 	if confidence == language.No {
 		return string(commonModel.FallbackLocale)
 	}
@@ -161,7 +149,6 @@ func explicitLocaleFromRequest(ctx *gin.Context) string {
 	return strings.TrimSpace(ctx.GetHeader("X-Locale"))
 }
 
-// SystemDefaultLocale 返回站点默认 locale（读 system_settings.default_locale）。
 func SystemDefaultLocale() string { return systemDefaultLocale() }
 
 func systemDefaultLocale() string {

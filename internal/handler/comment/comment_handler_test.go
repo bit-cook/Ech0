@@ -17,17 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// errBoom 是各错误透传用例共用的哨兵错误。
 var errBoom = errors.New("boom")
 
-// bg 返回一个不含 commentMeta 的裸 context；这些框架中立函数在缺少
-// StashMeta/OptionalViewer 中间件时应优雅降级为空元数据。
 func bg() context.Context { return context.Background() }
 
 func TestCommentHandler_GetFormMeta(t *testing.T) {
 	t.Run("success with empty meta when no middleware ran", func(t *testing.T) {
 		svc := commentmock.NewMockService(t)
-		// 缺少 StashMeta 时 clientIP / baseURL 为零值空串。
 		svc.EXPECT().GetFormMeta(mock.Anything, "", "").
 			Return(model.FormMeta{FormToken: "tok", EnableComment: true}, nil).Once()
 

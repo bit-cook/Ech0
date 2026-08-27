@@ -34,7 +34,6 @@ func TestEchoRepository_IncrementTagUsageCount(t *testing.T) {
 	})
 
 	t.Run("missing tag is a no-op without error", func(t *testing.T) {
-		// UpdateColumn 命中 0 行不报错，是幂等的容错路径。
 		err := repo.IncrementTagUsageCount(context.Background(), "does-not-exist")
 		require.NoError(t, err)
 	})

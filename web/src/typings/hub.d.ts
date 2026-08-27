@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Hub（实例广场）相关类型（通过命名空间合并扩展 App.Api）。
 declare namespace App {
   namespace Api {
     namespace Hub {

@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0130)file:///Users/l1nsn0w/Desktop/Projects/open-design/.od/projects/8fbd9d71-26ae-47ae-b2d3-701f0e038654/ech0-architecture-poster.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
 <link href="./Ech0 Architecture Atlas · Master System Diagram_files/css2" rel="stylesheet">
 <style>
-/* ─── Neutral Modern tokens (pasted verbatim) ─────────────────────────── */
 :root {
   --bg: #fafafa;
   --surface: #ffffff;
@@ -69,7 +67,6 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* ─── derived poster tokens (color-mix of base tokens only, no raw hex) ── */
 :root {
   --ink-02: color-mix(in oklab, var(--fg), transparent 98%);
   --ink-03: color-mix(in oklab, var(--fg), transparent 97%);
@@ -85,7 +82,6 @@
   --accent-soft: color-mix(in oklab, var(--accent), var(--surface) 86%);
 }
 
-/* ── square-by-default: square corners, no radii ─────────────────────── */
 * , *::before, *::after { box-sizing: border-box; border-radius: 0; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -101,7 +97,6 @@ body {
 h1, h2, h3 { margin: 0; text-wrap: balance; }
 p { margin: 0; text-wrap: pretty; }
 
-/* ─── fit-to-width stage ─────────────────────────────────────────────── */
 .stage { padding: 40px; }
 .fitbox { margin: 0 auto; overflow: hidden; }
 .poster {
@@ -111,7 +106,6 @@ p { margin: 0; text-wrap: pretty; }
   transform-origin: top left;
 }
 
-/* ─── header ─────────────────────────────────────────────────────────── */
 .poster-head { padding: 50px 56px 30px; border-bottom: 1.5px solid var(--line-3); position: relative; }
 .poster-head::before { content: ""; position: absolute; top: 0; left: 0; width: 200px; height: 4px; background: var(--accent); }
 .kicker {
@@ -138,10 +132,8 @@ p { margin: 0; text-wrap: pretty; }
 .legend .sw.key   { width: 14px; height: 14px; border: 1.5px solid var(--accent-line); background: var(--accent-06); }
 .legend .sw.star  { width: auto; height: auto; color: var(--accent); font-size: 13px; }
 
-/* ─── diagram canvas ─────────────────────────────────────────────────── */
 .diagram { padding: 34px 56px 44px; }
 
-/* region heading */
 .rgn { display: flex; align-items: center; gap: 13px; margin: 26px 0 14px; }
 .rgn:first-child { margin-top: 0; }
 .rgn .ix {
@@ -153,7 +145,6 @@ p { margin: 0; text-wrap: pretty; }
 .rgn .d { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); flex: none; }
 .rgn .rule { flex: 1; height: 1px; background: var(--border); min-width: 24px; }
 
-/* ─── primitives ─────────────────────────────────────────────────────── */
 .node { background: var(--surface); border: 1px solid var(--border); padding: 12px 15px; }
 .node .nt { font-weight: 600; font-size: var(--text-sm); letter-spacing: -0.005em; line-height: 1.3; }
 .node .ns { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
@@ -172,7 +163,6 @@ p { margin: 0; text-wrap: pretty; }
 .star { color: var(--accent); font-weight: 700; }
 .harrow { font-family: var(--font-mono); color: var(--line-2); font-size: 17px; line-height: 1; padding: 0 1px; align-self: center; }
 
-/* vertical connector */
 .down { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 0; }
 .down .t { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.02em; text-align: center; }
 .down .l { width: 2px; height: 15px; background: var(--line-2); }
@@ -182,10 +172,8 @@ p { margin: 0; text-wrap: pretty; }
 .down.sync .h { border-top-color: var(--accent); }
 .down.sync .t { color: var(--accent); }
 
-/* ─── clients ────────────────────────────────────────────────────────── */
 .clients4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
-/* ─── host / binary frames (blueprint dot-grid — the single flourish) ─── */
 .hostframe {
   position: relative; border: 1.5px solid var(--line-3);
   background-color: color-mix(in oklab, var(--surface), var(--bg) 70%);
@@ -202,7 +190,6 @@ p { margin: 0; text-wrap: pretty; }
 .binary { position: relative; border: 1.5px solid var(--line-2); background: color-mix(in oklab, var(--surface), transparent 6%); padding: 40px 26px 28px; }
 .binary .frame-tab { left: 24px; border-color: var(--line-2); }
 
-/* ─── entry gate: routes + middleware ────────────────────────────────── */
 .gate { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .gatecard { border: 1px solid var(--border); background: var(--surface); padding: 14px 16px; }
 .gatecard.mw { background: var(--ink-03); }
@@ -210,7 +197,6 @@ p { margin: 0; text-wrap: pretty; }
 .gate-n { font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg); font-weight: 600; }
 .gate-d { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
 
-/* ─── domain clusters ────────────────────────────────────────────────── */
 .clusters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .cluster { border: 1px solid var(--border); background: var(--surface); padding: 13px 14px; }
 .cluster .ch { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 11px; display: flex; align-items: center; gap: 7px; }
@@ -219,13 +205,11 @@ p { margin: 0; text-wrap: pretty; }
 .cluster .chips { gap: 6px; }
 .cluster .chip { padding: 5px 10px; font-size: 12.5px; }
 
-/* ═══ SPINE + WINGS — the load-bearing composition ════════════════════ */
 .core { border: 1px dashed var(--line-2); background: var(--ink-02); padding: 16px; }
 .core3 {
   display: grid; grid-template-columns: 1.04fr 58px 1.46fr 58px 1.04fr;
   align-items: stretch;
 }
-/* wing = a peer subsystem hanging off the spine */
 .wing { border: 1.5px solid var(--line-2); background: var(--surface); padding: 30px 16px 16px; position: relative; display: flex; flex-direction: column; gap: 9px; }
 .wing-tab {
   position: absolute; top: -12px; left: 14px; padding: 4px 11px;
@@ -248,14 +232,12 @@ p { margin: 0; text-wrap: pretty; }
 .wmini.out .h { border-top-color: var(--accent); }
 .wdiv { border-top: 1px dashed var(--border); margin: 5px 0 2px; padding-top: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
 
-/* the two gap columns carry the connectors that bind wing → spine */
 .bind { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-align: center; }
 .bind .glyph { font-family: var(--font-mono); font-size: 22px; line-height: 1; color: var(--accent); }
 .bind .glyph.evt { color: var(--line-2); }
 .bind .lbl { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); line-height: 1.35; max-width: 56px; }
 .bind .lbl b { color: var(--fg); font-weight: 600; }
 
-/* center spine */
 .spine { display: flex; flex-direction: column; }
 .spine-cap { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 600; text-align: center; margin-bottom: 9px; }
 .snode { border: 1px solid var(--line-2); background: var(--surface); padding: 11px 14px; text-align: center; }
@@ -273,7 +255,6 @@ p { margin: 0; text-wrap: pretty; }
 .sflow .h { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--accent); }
 .sflow .t { font-family: var(--font-mono); font-size: 10px; color: var(--accent); letter-spacing: 0.02em; }
 
-/* cache-aside protection band — visible cache protection in front of repo */
 .shield { border: 1.5px solid var(--accent-line); background: var(--accent-06); padding: 11px 13px; margin: 6px 0; position: relative; }
 .shield::before {
   content: "cache-aside band"; position: absolute; top: -10px; left: 12px;
@@ -287,7 +268,6 @@ p { margin: 0; text-wrap: pretty; }
 .shield .sh-tx { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted); margin-top: 8px; border-top: 1px dashed var(--accent-line); padding-top: 7px; line-height: 1.4; }
 .shield .sh-tx b { color: var(--fg); font-weight: 600; }
 
-/* ─── foundation bands — full-width substrate under the binary ────────── */
 .fdn { display: grid; grid-template-columns: 156px 1fr; border: 1px solid var(--line-2); background: var(--ink-03); margin-top: 11px; }
 .fdn + .fdn { margin-top: 9px; }
 .fdn-tab { background: var(--fg); color: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 5px; justify-content: center; }
@@ -305,7 +285,6 @@ p { margin: 0; text-wrap: pretty; }
 .fdn-note { font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.5; }
 .fdn-note b { color: var(--fg); font-weight: 600; }
 
-/* persistence base sits OUTSIDE the binary (on the host disk) — two tiers: high-level abstraction OVER physical substrate */
 .persist { display: grid; grid-template-columns: 156px 1fr; border: 1.5px solid var(--line-3); background: var(--surface); }
 .persist .fdn-tab { background: var(--fg); }
 .persist .fdn-body { gap: 0; }
@@ -327,7 +306,6 @@ p { margin: 0; text-wrap: pretty; }
 .impl .im-to { color: var(--accent); margin-left: auto; letter-spacing: 0.02em; white-space: nowrap; }
 .impl.mem .im-to { color: var(--muted); }
 
-/* mapping connector band between abstraction and substrate tiers */
 .pmap { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px 0; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .pmap .gl { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; }
 .pmap .gl .l { width: 2px; height: 13px; background: var(--line-2); }
@@ -335,7 +313,6 @@ p { margin: 0; text-wrap: pretty; }
 .pmap .mp-t { max-width: 76ch; line-height: 1.5; text-align: center; }
 .pmap .mp-t b { color: var(--fg); font-weight: 600; }
 
-/* physical substrate cards — the dark bedrock everything rests on */
 .pcard.sub { background: var(--fg); border-color: var(--fg); gap: 6px; }
 .pcard.sub .pc-tag { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: color-mix(in oklab, var(--surface), transparent 55%); }
 .pcard.sub .pc-n { color: var(--surface); font-size: 13.5px; }
@@ -343,7 +320,6 @@ p { margin: 0; text-wrap: pretty; }
 .pcard.sub .pc-from { font-family: var(--font-mono); font-size: 9.5px; color: color-mix(in oklab, var(--surface), transparent 30%); line-height: 1.6; margin-top: 2px; }
 .pcard.sub .pc-from b { color: var(--surface); font-weight: 600; }
 
-/* ─── runtime / lifecycle orchestration strip ────────────────────────── */
 .runtime { border: 1px solid var(--line-2); background: var(--ink-03); padding: 16px 20px; }
 .rt-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rt-comp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 13px; }
@@ -356,14 +332,12 @@ p { margin: 0; text-wrap: pretty; }
 .rt-note b { color: var(--fg); font-weight: 600; }
 .rt-note .star { color: var(--accent); }
 
-/* ─── outbound external services ─────────────────────────────────────── */
 .out-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 11px; }
 .outcell { border: 1px solid var(--border); background: var(--surface); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .outcell .ot { font-weight: 600; font-size: 13px; letter-spacing: -0.005em; line-height: 1.25; }
 .outcell .os { font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.45; }
 .outcell .ofrom { font-family: var(--font-mono); font-size: 9.5px; color: var(--accent); margin-top: auto; letter-spacing: 0.02em; }
 
-/* ─── footer ─────────────────────────────────────────────────────────── */
 .poster-foot {
   padding: 22px 56px 34px; border-top: 1.5px solid var(--line-3);
   display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;
@@ -371,7 +345,6 @@ p { margin: 0; text-wrap: pretty; }
 }
 .poster-foot .brand { color: var(--fg); font-weight: 600; letter-spacing: 0.05em; }
 
-/* ─── print ──────────────────────────────────────────────────────────── */
 @media print {
   body { background: var(--surface); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .stage { padding: 0 !important; }
@@ -386,7 +359,6 @@ p { margin: 0; text-wrap: pretty; }
   <div class="fitbox" style="width: 1600px; height: 3715px;">
     <div class="poster" data-od-id="poster" style="transform: scale(1);">
 
-      <!-- ═══ HEADER ═══ -->
       <header class="poster-head" data-od-id="poster-head">
         <p class="kicker">Master System Diagram · System Architecture</p>
         <h1 class="poster-title">Ech0 Architecture Atlas <span>/ Single Go Binary · Self-Hosted Timeline Platform</span></h1>
@@ -415,10 +387,8 @@ p { margin: 0; text-wrap: pretty; }
         </div>
       </header>
 
-      <!-- ═══ SINGLE COMPREHENSIVE DIAGRAM ═══ -->
       <section class="diagram" data-od-id="diagram">
 
-        <!-- entry points -->
         <div class="rgn">
           <span class="ix">1</span><span class="t">Entry points / clients</span>
           <span class="d">Three inbound classes + one outbound delivery</span><span class="rule"></span>
@@ -432,15 +402,12 @@ p { margin: 0; text-wrap: pretty; }
 
         <div class="down"><span class="t">HTTP + SSE · WebSocket /ws · JSON-RPC /mcp</span><span class="l"></span><span class="h"></span></div>
 
-        <!-- HOST FRAME -->
         <div class="hostframe" data-od-id="host">
           <span class="frame-tab">Host / container · self-hosted <span class="dim">· data/ persistent volume · :6277</span></span>
 
-          <!-- BINARY FRAME -->
           <div class="binary" data-od-id="binary">
             <span class="frame-tab">Single Go binary <span class="dim">· cmd/ech0 · Gin</span></span>
 
-            <!-- ingress / routing + middleware -->
             <div class="rgn">
               <span class="ix">2</span><span class="t">Ingress / routing · cross-cutting middleware</span>
               <span class="d">internal/server · router.SetupRouter assembles by module</span><span class="rule"></span>
@@ -472,7 +439,6 @@ p { margin: 0; text-wrap: pretty; }
 
             <div class="down"><span class="t">handler.Bundle dispatch · 14 domain handlers + MCP</span><span class="l"></span><span class="h"></span></div>
 
-            <!-- domains -->
             <div class="rgn">
               <span class="ix">3</span><span class="t">Business domains · 15 domains / 4 clusters</span>
               <span class="d">Each domain spans handler / service / repository / model · cross-layer imports use aliases</span><span class="rule"></span>
@@ -511,11 +477,9 @@ p { margin: 0; text-wrap: pretty; }
 
             <div class="down sync"><span class="t">Request axis · synchronous ↓ &nbsp;domains descend through four layers, subsystems hang on the wings</span><span class="l"></span><span class="h"></span></div>
 
-            <!-- ═══ SPINE + TWO WINGS ═══ -->
             <div class="core" data-od-id="core">
               <div class="core3">
 
-                <!-- LEFT WING · Agent subsystem (peer, not "the capability layer") -->
                 <div class="wing agent" data-od-id="agent">
                   <span class="wing-tab">Agent subsystem</span>
                   <div class="wing-sub">internal/agent · zero domain deps · tools injected by copilot</div>
@@ -531,13 +495,11 @@ p { margin: 0; text-wrap: pretty; }
                   <div class="wn"><div class="wt">/mcp → viewer → Registry</div><div class="wd">Reads scope/audience, then dispatches <b>back to domain services</b></div></div>
                 </div>
 
-                <!-- bind: agent ↔ spine -->
                 <div class="bind">
                   <span class="glyph">⇄</span>
                   <span class="lbl"><b>copilot</b> injects tools<br>MCP back to services</span>
                 </div>
 
-                <!-- CENTER SPINE · synchronous request -->
                 <div class="spine" data-od-id="spine">
                   <div class="spine-cap">Request spine · handler → service → repository → DB</div>
                   <div class="snode"><div class="st">handler/&lt;x&gt;</div><div class="ss">Thin shell · parse request / auth context / build DTO</div></div>
@@ -546,7 +508,6 @@ p { margin: 0; text-wrap: pretty; }
                     <span class="port l"></span><span class="port r"></span>
                     <div class="st">service/&lt;x&gt;</div><div class="ss">Orchestration hub · transactions / cache / cross-domain / emit events</div>
                   </div>
-                  <!-- cache-aside protection band: cache sits in front of repo -->
                   <div class="shield" data-od-id="cache-shield">
                     <div class="sh-top">cache · Ristretto · ICache[K,V] · in-process</div>
                     <div class="sh-rules">
@@ -562,13 +523,11 @@ p { margin: 0; text-wrap: pretty; }
                   <div class="snode term"><div class="st">database → SQLite · sqlite-vec</div><div class="ss">Write lock · auto-migrate · HotChangeDatabase hot-swap → ↓ persistence base</div></div>
                 </div>
 
-                <!-- bind: spine ↔ events -->
                 <div class="bind">
                   <span class="glyph evt">⇢</span>
                   <span class="lbl">service <b>Notify[T]</b><br>best-effort</span>
                 </div>
 
-                <!-- RIGHT WING · event-driven subsystem (peer) -->
                 <div class="wing" data-od-id="events">
                   <span class="wing-tab">Event-driven subsystem</span>
                   <div class="wing-sub">Prefer emitting events for side effects over calling services directly in the handler</div>
@@ -590,13 +549,11 @@ p { margin: 0; text-wrap: pretty; }
 
             <div class="down"><span class="t">data access · storage.Manager / kvstore / migrator ↓ &nbsp;service persists state into the four foundations</span><span class="l"></span><span class="h"></span></div>
 
-            <!-- ═══ FOUNDATIONS — config & tools ═══ -->
             <div class="rgn">
               <span class="ix">4</span><span class="t">System foundations · config / tools / in-house libraries</span>
               <span class="d">Cross-cutting substrate consumed by every layer, not a row of peer singletons</span><span class="rule"></span>
             </div>
 
-            <!-- config foundation · setting -->
             <div class="fdn" data-od-id="fdn-setting">
               <div class="fdn-tab"><span class="ft">Config foundation</span><span class="fp">internal/setting · system settings hub</span></div>
               <div class="fdn-body">
@@ -610,7 +567,6 @@ p { margin: 0; text-wrap: pretty; }
               </div>
             </div>
 
-            <!-- tooling foundation · util + pkg -->
             <div class="fdn" data-od-id="fdn-util">
               <div class="fdn-tab"><span class="ft">Tooling foundation</span><span class="fp">util/* + pkg/ in-house libraries</span></div>
               <div class="fdn-body">
@@ -629,11 +585,10 @@ p { margin: 0; text-wrap: pretty; }
               </div>
             </div>
 
-          </div><!-- /binary -->
+          </div>
 
           <div class="down"><span class="t">Local-first persistence · service targets only the abstraction layer (database/GORM · storage.Manager★ · kvstore · migrator) ↓ &nbsp;abstractions then land bytes on the physical substrate</span><span class="l"></span><span class="h"></span></div>
 
-          <!-- ═══ PERSISTENCE BASE (on host disk) — abstraction OVER physical substrate ═══ -->
           <div class="rgn">
             <span class="ix">5</span><span class="t">Persistence base · high-level abstraction over physical storage</span>
             <span class="d">Only three physical substrates exist: SQLite · local FS · S3; VireFS / kvstore / snapshot are merely abstractions on top</span><span class="rule"></span>
@@ -642,7 +597,6 @@ p { margin: 0; text-wrap: pretty; }
             <div class="fdn-tab"><span class="ft">Persistence data/</span><span class="fp">Host persistent volume · single-process local-first · no separate backup (all via snapshot export)</span></div>
             <div class="fdn-body">
 
-              <!-- high-level abstraction tier -->
               <div class="ptier-lbl"><b>High-level abstraction</b>&nbsp;&nbsp;addressing / routing / serialization — holds no bytes itself</div>
               <div class="ptier-cells">
                 <div class="pcard">
@@ -668,14 +622,12 @@ p { margin: 0; text-wrap: pretty; }
                 </div>
               </div>
 
-              <!-- mapping connector -->
               <div class="pmap">
                 <span class="gl"><span class="l"></span><span class="h"></span></span>
                 <span class="mp-t">The abstraction layer only handles <b>addressing · routing · serialization</b>; storage.Manager ★ decides whether VireFS uses LocalFS or ObjectFS. Bytes ultimately land on the <b>three physical substrates</b> below</span>
                 <span class="gl"><span class="l"></span><span class="h"></span></span>
               </div>
 
-              <!-- physical substrate tier -->
               <div class="ptier-lbl"><b>Physical substrate</b>&nbsp;&nbsp;actually holds bytes · to disk / to object store</div>
               <div class="ptier-cells">
                 <div class="pcard sub">
@@ -702,7 +654,6 @@ p { margin: 0; text-wrap: pretty; }
             </div>
           </div>
 
-          <!-- outbound dependencies -->
           <div class="rgn">
             <span class="ix">6</span><span class="t">Outbound dependencies · external services</span>
             <span class="d">Connect on demand · outbound HTTPS · failures don't block the main request</span><span class="rule"></span>
@@ -715,7 +666,6 @@ p { margin: 0; text-wrap: pretty; }
             <div class="outcell"><div class="ot">Federated Ech0 instances</div><div class="os">discovery / health check / aggregated timeline</div><div class="ofrom">← connect</div></div>
           </div>
 
-          <!-- runtime / lifecycle -->
           <div class="rgn">
             <span class="ix">7</span><span class="t">Runtime / lifecycle orchestration</span>
             <span class="d">Wire assembles the dependency graph · app.App starts/stops Components uniformly · ★ three shared singletons injected once</span><span class="rule"></span>
@@ -740,11 +690,10 @@ p { margin: 0; text-wrap: pretty; }
             </div>
           </div>
 
-        </div><!-- /hostframe -->
+        </div>
 
       </section>
 
-      <!-- ═══ FOOTER ═══ -->
       <footer class="poster-foot" data-od-id="poster-foot">
         <span class="brand">ECH0 · MASTER ARCHITECTURE MAP</span>
         <span>Spine + two wings + four foundations · source architecture-overview.md · single master map · static view · 2026-06-14</span>

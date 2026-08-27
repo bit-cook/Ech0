@@ -2,12 +2,9 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2">
-    <!-- 分段控件：OAuth2 / Passkey -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- OAuth2（设置 + 账号绑定） -->
     <TheOAuth2Setting v-if="tab === 'oauth2'" />
-    <!-- Passkey -->
     <ThePasskeySetting v-else />
   </div>
 </template>

@@ -13,7 +13,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// setupCopilotRoutes 仅保留 Chat 流式问答（SSE）走裸 gin。
 func setupCopilotRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	appRouterGroup.AuthRouterGroup.POST(
 		"/chat",
@@ -22,7 +21,6 @@ func setupCopilotRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	)
 }
 
-// registerCopilot 注册 Copilot 的 JSON 端点。
 func registerCopilot(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, public(), huma.Operation{
 		OperationID: "copilot-recent",

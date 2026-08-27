@@ -15,7 +15,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// newInitRepo 构造一个绑定到测试内存库的 InitRepository。
 func newInitRepo(t *testing.T) (*InitRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDB(t)

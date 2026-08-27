@@ -22,7 +22,6 @@ type Engine struct {
 	cfg     config
 }
 
-// New builds an Engine with the provided options.
 func New(opts ...Option) (*Engine, error) {
 	cfg := defaultConfig()
 	for _, opt := range opts {
@@ -60,19 +59,10 @@ func New(opts ...Option) (*Engine, error) {
 	}, nil
 }
 
-// Handler returns the HTTP handler exposing challenge/redeem/siteverify endpoints.
 func (e *Engine) Handler() http.Handler {
 	return e.handler
 }
 
-// SiteVerify validates and consumes a redeem token in-process, bypassing the
-// HTTP transport. It shares the engine's backing store with Handler(), so a
-// token issued through the HTTP challenge/redeem flow can be consumed here.
-//
-// A true result means the token was valid and is now spent. A false result
-// with a nil error means the token was rejected (bad secret, unknown site, or
-// a missing/expired/already-used token). A non-nil error signals an unexpected
-// backing-store failure, so callers should fail closed.
 func (e *Engine) SiteVerify(siteKey, secret, response string) (bool, error) {
 	resp, err := e.service.SiteVerify(siteKey, core.SiteVerifyRequest{
 		Secret:   secret,
@@ -88,7 +78,6 @@ func (e *Engine) SiteVerify(siteKey, secret, response string) (bool, error) {
 	return resp.Success, nil
 }
 
-// RegisterSite registers or updates one site configuration in the backing store.
 func (e *Engine) RegisterSite(site SiteRegistration) error {
 	if site.SiteKey == "" {
 		return fmt.Errorf("site key is required")
@@ -135,12 +124,10 @@ func (e *Engine) RegisterSite(site SiteRegistration) error {
 	})
 }
 
-// RemoveSite removes a site configuration from the backing store.
 func (e *Engine) RemoveSite(siteKey string) error {
 	return e.store.DeleteSite(siteKey)
 }
 
-// Close releases resources owned by the engine.
 func (e *Engine) Close() error {
 	return e.store.Close()
 }

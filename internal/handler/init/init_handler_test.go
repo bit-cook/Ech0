@@ -81,7 +81,6 @@ func TestInitOwner(t *testing.T) {
 		out, err := h.InitOwner(context.Background(), &initHandler.InitOwnerInput{Body: authModel.RegisterDto{Username: "x", Password: "y"}})
 
 		require.Error(t, err)
-		// 透传原始 BizError，由 humares.Wrap 负责 i18n 映射。
 		var got *commonModel.BizError
 		require.ErrorAs(t, err, &got)
 		assert.Equal(t, commonModel.ErrCodeInitOwnerExists, got.Code)

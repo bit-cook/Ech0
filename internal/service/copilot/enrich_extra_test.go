@@ -15,8 +15,6 @@ import (
 	"github.com/lin-snow/ech0/internal/storage"
 )
 
-// enrichEchoSvc 是 EchoService 的测试替身，只覆写 GetEchoById 返回带指定附件的 Echo，
-// 其余方法未实现（嵌入 nil 接口，未调用即不 panic）。enrichHits 只用到 GetEchoById。
 type enrichEchoSvc struct {
 	EchoService
 	echo *echoModel.Echo
@@ -26,8 +24,6 @@ func (f *enrichEchoSvc) GetEchoById(_ context.Context, _ string) (*echoModel.Ech
 	return f.echo, nil
 }
 
-// enrichHits：命中回查时图片/视频/音频都进 results.Files（供前端展示），pdf/file 等非媒体排除；
-// 多模态关闭时不产出 base64 图片。锁住「sources 带媒体类型标志、但不把非媒体塞给前端」的契约。
 func TestEnrichHits_MediaCategoriesToFiles(t *testing.T) {
 	echoFile := func(cat string) fileModel.EchoFile {
 		return fileModel.EchoFile{File: fileModel.File{Category: cat, URL: "https://f/" + cat}}
@@ -60,7 +56,6 @@ func TestEnrichHits_MediaCategoriesToFiles(t *testing.T) {
 	}
 }
 
-// formatExtension：覆盖各扩展类型的渲染分支与缺字段/空值降级。
 func TestFormatExtension(t *testing.T) {
 	ext := func(typ string, kv map[string]any) *echoModel.EchoExtension {
 		return &echoModel.EchoExtension{Type: typ, Payload: kv}
@@ -93,9 +88,8 @@ func TestFormatExtension(t *testing.T) {
 	}
 }
 
-// loadImagePart：external 直链命中、缺 URL 跳过、非图片跳过——这些分支不触碰底层存储。
 func TestLoadImagePart_NonStorageBranches(t *testing.T) {
-	s := &CopilotService{} // storage 为 nil：以下分支均不访问它
+	s := &CopilotService{}
 
 	t.Run("external image uses URL", func(t *testing.T) {
 		part, ok := s.loadImagePart(context.Background(), fileModel.File{
@@ -130,24 +124,19 @@ func TestLoadImagePart_NonStorageBranches(t *testing.T) {
 	})
 }
 
-// aggregateBudgetTokens / chatContextBudgetTokens：窗口推算与下限保护。
 func TestAggregateBudgetTokens(t *testing.T) {
-	// 未配置窗口 → 走默认窗口（256k）→ 远高于下限。
 	def := aggregateBudgetTokens(settingModel.AgentSetting{ContextWindow: 0})
 	if def <= minAggregateBudget {
 		t.Fatalf("default-window budget should exceed the floor, got %d", def)
 	}
-	// 极小窗口 → clamp 到下限。
 	if got := aggregateBudgetTokens(settingModel.AgentSetting{ContextWindow: 1000}); got != minAggregateBudget {
 		t.Fatalf("tiny window should clamp to floor %d, got %d", minAggregateBudget, got)
 	}
-	// chatContextBudgetTokens 与聚合预算同口径。
 	if chatContextBudgetTokens(settingModel.AgentSetting{ContextWindow: 1000}) != minAggregateBudget {
 		t.Fatalf("chat budget should mirror aggregate budget")
 	}
 }
 
-// runStringsFor：中英 locale 各自取到对应文案集（非空且区分语言）。
 func TestRunStringsFor(t *testing.T) {
 	zh := runStringsFor("zh-CN")
 	if zh.ToolError == "" || zh.UnknownTool == "" {

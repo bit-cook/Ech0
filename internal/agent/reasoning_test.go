@@ -60,7 +60,6 @@ func TestStripReasoning(t *testing.T) {
 	}
 }
 
-// runSplitter 把若干 chunk 依次喂进拆分器，返回累计的答案与推理（含 flush 收尾）。
 func runSplitter(chunks ...string) (answer, reasoning string) {
 	r := &reasoningSplitter{}
 	var ans, rea strings.Builder

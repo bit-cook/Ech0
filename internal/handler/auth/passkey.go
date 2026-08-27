@@ -33,7 +33,6 @@ type (
 )
 
 func (h *AuthHandler) getPasskeyOriginAndRPID(ctx *gin.Context) (origin string, rpID string) {
-	// 管理员在面板配置的固定 RP（passkey_setting）优先；未配置则回退到请求来源。
 	rpID, origins := h.authService.PasskeyBoundary(ctx.Request.Context())
 	if rpID != "" && len(origins) > 0 {
 		return strings.TrimSpace(origins[0]), rpID

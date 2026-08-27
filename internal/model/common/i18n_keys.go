@@ -75,12 +75,6 @@ func MessageKeyFromMessage(msg string) string {
 	}
 }
 
-// ResolveFailureFields 解析失败响应的稳定 wire 字段（error_code / message_key / params），
-// 不做本地化。这是 humares.Err（Huma 路径）与 response.Execute（gin 路径）共用的优先级阶梯，
-// 收敛到一处避免两套响应契约各自维护时漂移。base 是已 HandleError 过的回退消息文本。
-//
-//  1. *BizError：取 Code；MessageKey 缺失时按 Code 映射；带 Params。
-//  2. 其余 error：无 error_code，按消息文本 base 映射 message_key。
 func ResolveFailureFields(err error, base string) (code, messageKey string, params map[string]any) {
 	if bizErr, ok := errors.AsType[*BizError](err); ok {
 		key := strings.TrimSpace(bizErr.MessageKey)

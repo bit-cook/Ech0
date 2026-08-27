@@ -85,8 +85,6 @@ func (userRepository *UserRepository) CreateUser(ctx context.Context, user *mode
 	return nil
 }
 
-// UpsertLocalAuth 写入或更新用户的本地密码认证行（user_local_auth），user_id 冲突时覆盖
-// 哈希/算法/更新时间。用于注册、初始化 owner 和管理员改密。
 func (userRepository *UserRepository) UpsertLocalAuth(ctx context.Context, localAuth *model.UserLocalAuth) error {
 	return userRepository.getDB(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
@@ -216,7 +214,6 @@ func (userRepository *UserRepository) DeleteUser(ctx context.Context, id string)
 		return err
 	}
 
-	// 一并清理本地密码认证行，避免遗留孤儿。
 	if err := userRepository.getDB(ctx).
 		Where("user_id = ?", id).
 		Delete(&model.UserLocalAuth{}).Error; err != nil {

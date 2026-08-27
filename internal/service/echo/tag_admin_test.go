@@ -20,8 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCreateTag 覆盖管理员守卫、名称清洗（trim/#-strip）、安全校验、命中已存在标签的短路，
-// 以及新建标签走事务的完整路径与错误传播。
 func TestCreateTag(t *testing.T) {
 	t.Run("non-admin is denied", func(t *testing.T) {
 		repo := echomock.NewMockRepository(t)
@@ -55,8 +53,6 @@ func TestCreateTag(t *testing.T) {
 	})
 
 	t.Run("blank or hash-only name is invalid", func(t *testing.T) {
-		// 注意清洗顺序是 TrimPrefix("#") 再 TrimSpace：仅当字符串以 "#" 开头才会被剥前缀。
-		// "#"->""、"   "->""（不以#开头，TrimSpace 后空）都判定为空 -> INVALID_PARAMS。
 		cases := []string{"", "   ", "#"}
 		for _, name := range cases {
 			t.Run("name="+name, func(t *testing.T) {
@@ -99,12 +95,10 @@ func TestCreateTag(t *testing.T) {
 			Return(helpers.NewUser(helpers.AsAdmin), nil).
 			Once()
 		existing := &echoModel.Tag{ID: "tag-go", Name: "golang", UsageCount: 7}
-		// 以 "#" 开头 + 尾随空白，应在查询前清洗成 "golang"（TrimPrefix 再 TrimSpace）。
 		repo.EXPECT().
 			GetTagsByNames(mock.Anything, []string{"golang"}).
 			Return([]*echoModel.Tag{existing}, nil).
 			Once()
-		// 不应触达 transactor / CreateTag。
 
 		svc := echoService.NewEchoService(nil, common, nil, repo, nilBus)
 		got, err := svc.CreateTag(helpers.CtxAsUser(adminID), "#golang  ")
@@ -141,7 +135,7 @@ func TestCreateTag(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		assert.Equal(t, "vue", got.Name)
-		assert.Equal(t, 0, got.UsageCount) // CreateTag 以 UsageCount=0 建标签
+		assert.Equal(t, 0, got.UsageCount)
 		assert.Equal(t, "vue", created.Name)
 	})
 
@@ -183,7 +177,6 @@ func TestCreateTag(t *testing.T) {
 	})
 }
 
-// TestDeleteTag 覆盖管理员守卫与删除走事务的路径及错误传播。
 func TestDeleteTag(t *testing.T) {
 	const tagID = "tag-to-delete"
 

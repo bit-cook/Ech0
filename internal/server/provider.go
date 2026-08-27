@@ -15,9 +15,7 @@ import (
 func ProvideGinEngine() *gin.Engine {
 	if config.Config().Server.Mode == "debug" {
 		gin.SetMode(gin.DebugMode)
-		// Air 把二进制 stdout 接成非 TTY 管道，gin 默认关色；强制开彩色访问日志。
 		gin.ForceConsoleColor()
-		// 抑制启动时冗长的 [GIN-debug] 路由注册刷屏，保持 dev 终端干净。
 		gin.DebugPrintRouteFunc = func(_, _, _ string, _ int) {}
 	} else {
 		gin.SetMode(gin.ReleaseMode)

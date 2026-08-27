@@ -273,10 +273,8 @@ const {
   visibilityFilter,
 } = storeToRefs(echoStore)
 
-// 可见性过滤仅对具备私密可见权限的 admin 展示；未登录/非 admin 不渲染该段。
 const canFilterVisibility = computed(() => userStore.isLogin && userStore.user?.is_admin === true)
 
-// 草稿状态：Apply 前不写入 store，便于取消
 const draftKeyword = ref<string>('')
 const draftFrom = ref<number | null>(null)
 const draftTo = ref<number | null>(null)
@@ -349,7 +347,6 @@ const activePreset = computed<string | null>(() => {
 })
 
 const applyPreset = (key: string) => {
-  // 点击已激活的预设 → 退出 / 清空日期范围
   if (activePreset.value === key) {
     draftFrom.value = null
     draftTo.value = null
@@ -484,13 +481,10 @@ const handleApply = () => {
   echoStore.dateTo = draftTo.value
   echoStore.visibilityFilter = draftVisibility.value
 
-  // 面板统一接管 tag 过滤：apply 后 selectedTagIds 是唯一来源，
-  // tap-filter 状态一律清空，避免 UI 里出现重复 chip。
   echoStore.selectedTagIds = [...draftTagIds.value]
   echoStore.isFilteringMode = false
   echoStore.filteredTag = null
 
-  // 搜索模式退出由 store 内 watcher 自动刷新；其他情况显式刷新
   const searchingBefore = (searchValue.value ?? '').length > 0
   const searchingAfter = trimmed.length > 0
   const exitsSearchMode = searchingBefore && !searchingAfter
@@ -509,9 +503,6 @@ const handleReset = () => {
   draftTagIds.value = []
 }
 
-// Panel-level Enter handler so the keyword input doesn't have to be focused
-// to apply. Buttons keep their native Enter behavior — Enter on a focused
-// button still activates that button instead of submitting.
 const onPanelKeydown = (e: KeyboardEvent) => {
   if (e.key !== 'Enter' || e.isComposing) return
   if (e.target instanceof HTMLButtonElement) return
@@ -602,7 +593,6 @@ watch(
   font-weight: 400;
 }
 
-/* 隐藏浏览器自带搜索清除按钮，统一用底部 reset */
 .palette__search-input::-webkit-search-cancel-button {
   appearance: none;
 }
@@ -739,7 +729,6 @@ watch(
   transform: scale(0.97);
 }
 
-/* 激活态：柔化 accent（soft tint），避免和 Apply 主按钮撞色 */
 .palette__pill--active {
   color: var(--color-accent, #e07020);
   background: color-mix(in srgb, var(--color-accent, #e07020) 12%, transparent);
@@ -862,15 +851,11 @@ watch(
   outline: none;
 }
 
-/* iOS Safari: appearance:none 会让 ::-webkit-date-and-time-value 塌陷，
-   导致空值时 "年/月/日" 占位文案不可见，这里显式撑开并左对齐。 */
 .palette__date-input::-webkit-date-and-time-value {
   text-align: left;
   min-height: 1.2em;
 }
 
-/* The native indicator stays useful (click-to-open native picker) but
-   blends into the row; on hover it tints to accent for affordance. */
 .palette__date-input::-webkit-calendar-picker-indicator {
   opacity: 0.55;
   cursor: pointer;
@@ -967,8 +952,6 @@ watch(
   cursor: not-allowed;
 }
 
-/* 主按钮文字固定为白色：主题里 --btn-text-color 在浅色皮肤下是深灰，
- * 踩到 --color-accent 的饱和暖色背景上对比度不足。 */
 .palette__btn--primary {
   color: #fff;
   background: var(--color-accent, #e07020);
@@ -996,7 +979,6 @@ watch(
     max-height: calc(100vh - 4rem);
   }
 
-  /* 窄屏下键盘提示隐藏，触屏用户用不到 */
   .palette__kbd-row {
     display: none;
   }

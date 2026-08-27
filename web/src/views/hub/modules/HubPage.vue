@@ -4,7 +4,6 @@
   <div
     class="w-full px-2 pb-4 py-2 mt-4 sm:mt-0 mb-10 sm:mb-0 mx-auto flex justify-center items-start"
   >
-    <!-- Ech0s Hub -->
     <div ref="mainColumn" class="mx-auto px-2 text-[var(--color-text-muted)] w-full">
       <template v-if="!embedded">
         <h1
@@ -14,7 +13,6 @@
         </h1>
 
         <div class="w-full max-w-sm mx-auto">
-          <!-- 返回首页 -->
           <BaseButton
             @click="router.push('/')"
             :class="getButtonClasses('', true)"
@@ -27,7 +25,6 @@
         </div>
       </template>
 
-      <!-- 独立页面：虚拟滚动渲染（音乐卡已改为原生播放器，可安全参与回收） -->
       <div v-if="echoList.length > 0 && !isPreparing && !props.embedded">
         <DynamicScroller
           class="hub-dynamic-scroller"
@@ -57,7 +54,6 @@
         </DynamicScroller>
       </div>
 
-      <!-- 嵌入模式：宿主自带滚动容器，退回普通列表 -->
       <div v-else-if="echoList.length > 0 && !isPreparing" class="w-full">
         <div
           v-for="item in echoList"
@@ -86,7 +82,6 @@
         </p>
       </div>
 
-      <!-- 触底哨兵：IntersectionObserver 检测可见性来触发加载 -->
       <div ref="sentinelRef" class="h-1" />
     </div>
 
@@ -225,7 +220,6 @@ const { runWithBfCacheGuard } = useBfCacheRestore({
   },
 })
 
-// --- 触底加载（IntersectionObserver） ---
 const onSentinelVisible = () => {
   if (isLoading.value || isPreparing.value || !hasMore.value) return
   hubStore.loadEchoListPage()
@@ -254,12 +248,10 @@ const teardownSentinelObserver = () => {
   sentinelObserver = null
 }
 
-// DynamicScroller 的 @update 事件仍用于回顶按钮等
 const onScrollerUpdate = () => {
   updateShowBackTop()
 }
 
-// --- 滚动位置保存（仅用于回顶按钮 + 位置恢复） ---
 let scrollListenerBound = false
 const onScrollForBackTop = () => {
   updateShowBackTop()
@@ -311,7 +303,6 @@ onMounted(async () => {
   schedulePositionUpdate()
   window.addEventListener('resize', schedulePositionUpdate)
 
-  // 获取 Hub 数据
   await hubStore.getHubList()
   await hubStore.getHubInfoList()
   await hubStore.loadEchoListPage()
@@ -324,7 +315,6 @@ onMounted(async () => {
   bindScrollListenerForBackTop()
 })
 
-// scrollTarget 变化时重建 observer（root 可能变了）
 watch(
   () => props.scrollTarget,
   async () => {
@@ -335,7 +325,6 @@ watch(
   },
 )
 
-// isLoading 恢复后重新检查哨兵是否可见（防止用户已停止滚动导致卡住）
 watch(isLoading, (loading) => {
   if (loading || !hasMore.value) return
   nextTick(() => {
@@ -343,7 +332,6 @@ watch(isLoading, (loading) => {
   })
 })
 
-// echoList 变化后重新设置 observer（列表增长后哨兵位置变了）
 watch(
   echoList,
   () => {

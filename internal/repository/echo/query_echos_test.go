@@ -14,14 +14,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// newEchoRepo 构造一个绑定到测试内存库的 EchoRepository（含确定性 cache）。
 func newEchoRepo(t *testing.T) (*EchoRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
 	return NewEchoRepository(func() *gorm.DB { return db }, helpers.NewTestCache()), db
 }
 
-// seedEcho 插入一条 echo 行（显式 ID / created_at，绕开 autoCreateTime 以保证排序确定）。
 func seedEcho(
 	t *testing.T,
 	db *gorm.DB,
@@ -43,19 +41,16 @@ func seedEcho(
 	return e
 }
 
-// seedTag 插入一条标签行。
 func seedTag(t *testing.T, db *gorm.DB, id, name string) {
 	t.Helper()
 	require.NoError(t, db.Create(&echoModel.Tag{ID: id, Name: name}).Error)
 }
 
-// linkTag 直接写 echo_tags 关系行（避免 many2many 关联保存的隐式 upsert 干扰）。
 func linkTag(t *testing.T, db *gorm.DB, echoID, tagID string) {
 	t.Helper()
 	require.NoError(t, db.Create(&echoModel.EchoTag{EchoID: echoID, TagID: tagID}).Error)
 }
 
-// echoIDs 抽取 echo 切片的 ID 顺序，便于断言排序。
 func echoIDs(echos []echoModel.Echo) []string {
 	ids := make([]string, len(echos))
 	for i, e := range echos {
@@ -122,7 +117,6 @@ func TestEchoRepository_QueryEchos_PrivateFilter(t *testing.T) {
 
 func TestEchoRepository_QueryEchos_TagJoinDistinctCount(t *testing.T) {
 	repo, db := newEchoRepo(t)
-	// 单条 echo 同时挂 2 个被过滤的标签 —— JOIN 会放大成 2 行，DISTINCT 必须把它收敛回 1。
 	seedEcho(t, db, "e1", "tagged twice", false, 0, 100)
 	seedEcho(t, db, "e2", "untagged", false, 0, 200)
 	seedTag(t, db, "t1", "alpha")
@@ -138,7 +132,6 @@ func TestEchoRepository_QueryEchos_TagJoinDistinctCount(t *testing.T) {
 	assert.Equal(t, int64(1), total, "DISTINCT 应把同一 echo 的多标签命中收敛为 1")
 	require.Len(t, echos, 1)
 	assert.Equal(t, "e1", echos[0].ID)
-	// 关联预载：Tags 被 Preload 出来
 	assert.Len(t, echos[0].Tags, 2)
 }
 
@@ -197,7 +190,6 @@ func TestEchoRepository_QueryEchos_DateRange(t *testing.T) {
 
 func TestEchoRepository_QueryEchos_Pagination(t *testing.T) {
 	repo, db := newEchoRepo(t)
-	// 5 条，created_at 升序 100..500，默认排序 created_at DESC → 500,400,300,200,100
 	for i := 1; i <= 5; i++ {
 		seedEcho(t, db, "e"+string(rune('0'+i)), "c", false, 0, int64(i*100))
 	}
@@ -228,7 +220,6 @@ func TestEchoRepository_QueryEchos_Pagination(t *testing.T) {
 
 func TestEchoRepository_QueryEchos_SortWhitelist(t *testing.T) {
 	repo, db := newEchoRepo(t)
-	// created_at 与 fav_count 故意反向排列，便于区分排序字段。
 	seedEcho(t, db, "e-low-fav-new", "a", false, 1, 300)
 	seedEcho(t, db, "e-mid-fav-mid", "b", false, 5, 200)
 	seedEcho(t, db, "e-high-fav-old", "c", false, 9, 100)
@@ -243,7 +234,6 @@ func TestEchoRepository_QueryEchos_SortWhitelist(t *testing.T) {
 		{"created_at asc", "created_at", "asc", []string{"e-high-fav-old", "e-mid-fav-mid", "e-low-fav-new"}},
 		{"fav_count desc", "fav_count", "desc", []string{"e-high-fav-old", "e-mid-fav-mid", "e-low-fav-new"}},
 		{"fav_count asc", "fav_count", "asc", []string{"e-low-fav-new", "e-mid-fav-mid", "e-high-fav-old"}},
-		// 白名单外的 sortBy 回落到 created_at；非法 sortOrder 回落到 DESC。
 		{"unknown sortBy falls back to created_at", "bogus_column", "desc", []string{"e-low-fav-new", "e-mid-fav-mid", "e-high-fav-old"}},
 		{"unknown sortOrder falls back to desc", "fav_count", "sideways", []string{"e-high-fav-old", "e-mid-fav-mid", "e-low-fav-new"}},
 	}
@@ -263,7 +253,6 @@ func TestEchoRepository_QueryEchos_EmptyTagShortCircuit(t *testing.T) {
 	repo, db := newEchoRepo(t)
 	seedEcho(t, db, "e1", "no tags here", false, 0, 100)
 	seedTag(t, db, "t-real", "real")
-	// 注意：t-real 没有任何 echo 关联。
 
 	t.Run("tag filter with zero matches returns empty non-nil slice", func(t *testing.T) {
 		echos, total, err := repo.QueryEchos(

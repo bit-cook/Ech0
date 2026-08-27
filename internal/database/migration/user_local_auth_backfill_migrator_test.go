@@ -17,8 +17,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// newLocalAuthTestDB 打开内存 sqlite 并跑 AutoMigrate。注意：新 User 结构体已无 password 字段，
-// 故此时 users 表**没有** password 列 —— 模拟旧库需另行 addLegacyPasswordColumn。
 func newLocalAuthTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
@@ -83,7 +81,6 @@ func TestUserLocalAuthBackfillMigrator_BackfillsLegacyPassword(t *testing.T) {
 	assert.Equal(t, "5f4dcc3b5aa765d61d8327deb882cf99", row.PasswordHash)
 	assert.Equal(t, "md5", row.PasswordAlgo)
 
-	// 幂等标记应写入。
 	var marker commonModel.KeyValue
 	require.NoError(t, db.Where("key = ?", commonModel.UserLocalAuthBackfilledKey).First(&marker).Error)
 }
@@ -96,13 +93,11 @@ func TestUserLocalAuthBackfillMigrator_Idempotent(t *testing.T) {
 	m := dbMigration.NewUserLocalAuthBackfillMigrator()
 	require.NoError(t, m.Migrate(db))
 
-	// 模拟该用户登录后已惰性升级为 bcrypt。
 	require.NoError(t, db.Exec(
 		`UPDATE user_local_auth SET password_hash = ?, password_algo = ? WHERE user_id = ?`,
 		"$2a$10$bcrypthashplaceholdervalueaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bcrypt", "u1",
 	).Error)
 
-	// 二次回填（INSERT OR IGNORE）不得覆盖已升级的 bcrypt 哈希，也不得产生重复行。
 	require.NoError(t, m.Migrate(db))
 
 	assert.Equal(t, int64(1), countLocalAuth(t, db))
@@ -112,7 +107,7 @@ func TestUserLocalAuthBackfillMigrator_Idempotent(t *testing.T) {
 }
 
 func TestUserLocalAuthBackfillMigrator_NoOpWhenNoPasswordColumn(t *testing.T) {
-	db := newLocalAuthTestDB(t) // 新库：users 没有 password 列
+	db := newLocalAuthTestDB(t)
 	require.NoError(t, db.Exec(
 		`INSERT INTO users (id, username, is_admin, is_owner, locale) VALUES ('u1','alice',0,0,'zh-CN')`,
 	).Error)
@@ -134,6 +129,5 @@ func TestUsersPasswordDropMigrator_DropsColumn(t *testing.T) {
 
 	assert.False(t, db.Migrator().HasColumn("users", "password"), "password 列应被删除")
 
-	// 新库无该列时应为幂等 no-op。
 	require.NoError(t, dbMigration.NewUsersPasswordDropMigrator().Migrate(db))
 }

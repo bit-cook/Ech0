@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Command openapi-gen 从 Huma type-first operation 定义离线生成 OpenAPI spec，
-// 写入 internal/openapi/openapi.yaml。由 `make openapi` 调用；`make openapi-check`
-// 在生成后 git diff，确保提交的 spec 与代码一致（镜像 make wire-check）。
 package main
 
 import (

@@ -57,8 +57,6 @@ const menuEl = ref<HTMLElement | null>(null)
 
 const currentLocale = computed(() => locale.value)
 
-// 选项统一取自 @/locales 的 endonym 表（头部与设置页共用同一份，全站一致）：
-// 各语言永远以自身名字展示，不随当前界面语言翻译。
 const options = LOCALE_OPTIONS
 
 onClickOutside(
@@ -73,9 +71,6 @@ async function select(target: AppLocale) {
   open.value = false
   if (target === currentLocale.value) return
   await setI18nLocale(target)
-  // 登录用户：把偏好落到后端 user.locale，实现跨设备同步。
-  // 构造完整 UserInfo 与 TheUserSetting 的更新契约保持一致（store 的 user 同源自
-  // fetchGetCurrentUser，故 password/avatar 取值与设置页等价）。
   if (isLogin.value && user.value) {
     user.value.locale = target
     const payload: App.Api.User.UserInfo = {

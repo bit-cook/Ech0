@@ -32,7 +32,6 @@ func TestOn_SubscribesAndUnsubscribes(t *testing.T) {
 	require.NoError(t, eventbus.Emit(context.Background(), b, event.EchoCreated{Echo: echoModel.Echo{ID: "on-1"}}))
 	assert.Equal(t, 1, count)
 
-	// After unsubscribe the handler must no longer fire.
 	unsub()
 	require.NoError(t, eventbus.Emit(context.Background(), b, event.EchoCreated{Echo: echoModel.Echo{ID: "on-1"}}))
 	assert.Equal(t, 1, count, "handler should not run after unsubscribe")
@@ -50,7 +49,6 @@ func TestOnWithMeta_ForwardsMetadata(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(unsub)
 
-	// Metadata is supplied at publish time; OnWithMeta must forward the envelope Meta.
 	require.NoError(t, b.Publish(context.Background(),
 		event.EchoCreated{Echo: echoModel.Echo{ID: "meta-1"}},
 		busen.WithMetadata(map[string]string{"source": "ech0", "trace_id": "t-9"})))
@@ -60,9 +58,6 @@ func TestOnWithMeta_ForwardsMetadata(t *testing.T) {
 	assert.Equal(t, "t-9", gotMeta["trace_id"])
 }
 
-// TestOn_DropsMetadata documents that On exposes only the value: even when an
-// envelope carries metadata, the On handler signature has no Meta parameter, so
-// metadata is structurally dropped while the value is still delivered.
 func TestOn_DropsMetadata(t *testing.T) {
 	b := helpers.NewTestBus(t)
 

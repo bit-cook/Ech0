@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// 认证 / 登录 / Passkey 相关类型（通过命名空间合并扩展 App.Api）。
 declare namespace App {
   namespace Api {
     namespace Auth {
@@ -27,7 +26,6 @@ declare namespace App {
         locale?: string
       }
 
-      // Passkey / WebAuthn
       type PasskeyRegisterBeginResp = {
         nonce: string
         publicKey: unknown

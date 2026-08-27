@@ -1,11 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Copyright (C) 2025-2026 lin-snow -->
-<!--
-  对话快捷输入框：上方一句问候 + 下方圆角输入 pill。
-  背景用主题画布色、输入用主题 surface 色，文字一律 text-primary，
-  因此深/浅/暖三套主题都能保证对比度（不再依赖固定暗遮罩）。
-  打字 → Enter 进入 /chat，Shift+Enter 换行，Esc / 点击空白关闭。
--->
 <template>
   <Teleport to="body">
     <Transition name="chat-launcher">
@@ -32,7 +26,6 @@
               @input="autoGrow"
               @keydown="onKeydown"
             />
-            <!-- 点击发送：移动端无法靠回车提交时的主入口；桌面保留 Enter -->
             <button
               type="button"
               class="chat-launcher__send"
@@ -86,7 +79,6 @@ const autoGrow = () => {
   el.style.height = `${Math.min(el.scrollHeight, window.innerHeight * 0.3)}px`
 }
 
-// 回车进入 /chat：带文本则透传 q 供聊天页自动发送，空文本则只打开对话页
 const submit = () => {
   const q = draft.value.trim()
   close()
@@ -115,7 +107,6 @@ watch(
 </script>
 
 <style scoped>
-/* 背景用主题画布色（略透 + 模糊），而非固定暗遮罩：文字与底色同主题，恒定可读 */
 .chat-launcher {
   position: fixed;
   inset: 0;
@@ -144,12 +135,9 @@ watch(
   color: var(--color-text-primary);
 }
 
-/* 圆角输入 pill：自带 surface 底色 + 边框 + 柔和投影 */
 .chat-launcher__pill {
   display: flex;
 
-  /* 贴底对齐：多行时控件跟随最后一行落到底部；
-     单行时控件高度 = 一行行高，视觉上即居中 */
   align-items: flex-end;
   gap: 0.65rem;
   width: min(40rem, 100%);
@@ -169,7 +157,6 @@ watch(
   width: 1.2rem;
   height: 1.2rem;
 
-  /* (一行 2rem − 图标 1.2rem) / 2，使单行时垂直居中、多行时贴底对齐基线 */
   margin-bottom: 0.4rem;
   color: var(--color-text-muted);
   flex: none;
@@ -199,7 +186,6 @@ watch(
   color: var(--color-text-muted);
 }
 
-/* 发送按钮：圆形，有文字时点亮为 accent；移动端的主提交入口 */
 .chat-launcher__send {
   flex: none;
   display: inline-flex;
@@ -240,7 +226,6 @@ watch(
   font-variant-emoji: text;
 }
 
-/* 极淡的一行提示，低存在感 */
 .chat-launcher__hint {
   display: flex;
   align-items: center;

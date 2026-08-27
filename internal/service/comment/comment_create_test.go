@@ -32,7 +32,6 @@ const (
 	testIP     = "203.0.113.5"
 )
 
-// deps 把一次测试需要的全部协作者 mock 收在一起，并提供构造被测服务的便捷方法。
 type deps struct {
 	repo   *commentmock.MockRepository
 	kv     *kvmock.MockStore
@@ -51,8 +50,6 @@ func newDeps(t *testing.T) deps {
 }
 
 func (d deps) service() *commentService.CommentService {
-	// busProvider 返回一条全新的、无订阅者的 busen 总线：emit 时无人接收即 no-op，
-	// 不产生 goroutine，保持测试同步、确定。
 	return commentService.NewCommentService(
 		d.common,
 		d.repo,
@@ -62,8 +59,6 @@ func (d deps) service() *commentService.CommentService {
 	)
 }
 
-// expectSetting 让 durableKV 对评论系统设置 key 返回给定配置（JSON）。
-// 不加 .Once：成功路径下读设置会发生多次（入口校验 + 通知判定），允许 >=1 次。
 func (d deps) expectSetting(t *testing.T, s commentModel.SystemSetting) {
 	t.Helper()
 	buf, err := json.Marshal(s)
@@ -73,8 +68,6 @@ func (d deps) expectSetting(t *testing.T, s commentModel.SystemSetting) {
 		Return(string(buf), nil)
 }
 
-// enabledSetting 是「评论开启 + 需审核 + 无验证码 + 不发邮件」的基线设置。
-// EmailNotify.Enabled=false 确保成功路径不会触发任何异步邮件 goroutine。
 func enabledSetting() commentModel.SystemSetting {
 	return commentModel.SystemSetting{
 		EnableComment:   true,
@@ -84,8 +77,6 @@ func enabledSetting() commentModel.SystemSetting {
 	}
 }
 
-// signFormToken 用测试密钥复刻服务端的 form token 签名算法（HMAC-SHA256 over "ip:issuedAt"）。
-// 调用方必须先 helpers.SetJWTSecret(t, testSecret) 使服务端校验用同一密钥。
 func signFormToken(ip string, issuedAt int64) string {
 	mac := hmac.New(sha256.New, []byte(testSecret))
 	_, _ = fmt.Fprintf(mac, "%s:%d", ip, issuedAt)
@@ -93,12 +84,10 @@ func signFormToken(ip string, issuedAt int64) string {
 	return fmt.Sprintf("%d.%s", issuedAt, sig)
 }
 
-// freshToken 返回一个 5 秒前签发、处于有效窗口内的合法 form token。
 func freshToken() string {
 	return signFormToken(testIP, time.Now().UnixMilli()-5000)
 }
 
-// assertBiz 断言 service 层返回的 i18n 错误契约：error_code(Code) + 中文消息(Msg)。
 func assertBiz(t *testing.T, err error, wantCode, wantMsg string) {
 	t.Helper()
 	require.Error(t, err)
@@ -110,11 +99,9 @@ func assertBiz(t *testing.T, err error, wantCode, wantMsg string) {
 	}
 }
 
-// --- CreateComment ---------------------------------------------------------
-
 func TestCreateComment_GuardRails(t *testing.T) {
 	t.Run("honeypot filled is rejected before any IO", func(t *testing.T) {
-		d := newDeps(t) // 没有任何 mock 期望：蜜罐命中应在第一行就拒绝
+		d := newDeps(t)
 		_, err := d.service().CreateComment(helpers.CtxAnonymous(), testIP, "ua",
 			&commentModel.CreateCommentDto{
 				EchoID:        "echo-1",
@@ -126,7 +113,7 @@ func TestCreateComment_GuardRails(t *testing.T) {
 	})
 
 	t.Run("invalid form token is rejected", func(t *testing.T) {
-		d := newDeps(t) // verifyFormToken 在读设置之前，无 mock 调用
+		d := newDeps(t)
 		_, err := d.service().CreateComment(helpers.CtxAnonymous(), testIP, "ua",
 			&commentModel.CreateCommentDto{
 				EchoID:    "echo-1",
@@ -157,7 +144,6 @@ func TestCreateComment_GuardRails(t *testing.T) {
 		s := enabledSetting()
 		s.CaptchaEnabled = true
 		d.expectSetting(t, s)
-		// 空验证码 token：SiteVerify 立即返回错误（不构建引擎、不走网络）。
 		_, err := d.service().CreateComment(helpers.CtxAnonymous(), testIP, "ua",
 			&commentModel.CreateCommentDto{
 				EchoID:       "echo-1",
@@ -220,7 +206,6 @@ func TestCreateComment_GuestValidation(t *testing.T) {
 	}
 }
 
-// 已登录但非管理员/站长的用户仍被当作访客：必须填昵称/邮箱，无自动通过特权。
 func TestCreateComment_NonAdminUserTreatedAsGuest(t *testing.T) {
 	helpers.SetJWTSecret(t, testSecret)
 	d := newDeps(t)
@@ -243,7 +228,6 @@ func TestCreateComment_RateLimitExceeded(t *testing.T) {
 	helpers.SetJWTSecret(t, testSecret)
 	d := newDeps(t)
 	d.expectSetting(t, enabledSetting())
-	// IP 短窗口计数达到阈值(3)即拦截；两个 IP 窗口查询都会执行。
 	d.repo.EXPECT().
 		CountByIPWithin(mock.Anything, mock.Anything, mock.Anything).
 		Return(int64(3), nil)
@@ -263,7 +247,6 @@ func TestCreateComment_DuplicateRejected(t *testing.T) {
 	helpers.SetJWTSecret(t, testSecret)
 	d := newDeps(t)
 	d.expectSetting(t, enabledSetting())
-	// 走管理员路径（无频率限制），直接命中查重分支。
 	d.common.EXPECT().
 		CommonGetUserByUserId(mock.Anything, "admin-1").
 		Return(helpers.NewUser(helpers.AsAdmin), nil).
@@ -363,11 +346,10 @@ func TestCreateComment_ParentResolution(t *testing.T) {
 	})
 }
 
-// 管理员/站长评论：自动通过、来源标记为 system、昵称取用户名、邮箱清空、绑定 UserID。
 func TestCreateComment_AdminAutoApprove(t *testing.T) {
 	helpers.SetJWTSecret(t, testSecret)
 	d := newDeps(t)
-	d.expectSetting(t, enabledSetting()) // RequireApproval=true，但管理员仍直接 approved
+	d.expectSetting(t, enabledSetting())
 
 	owner := helpers.NewUser(helpers.AsOwner)
 	owner.ID = "owner-1"
@@ -472,8 +454,6 @@ func TestCreateComment_GuestHappy(t *testing.T) {
 	}
 }
 
-// --- CreateIntegrationComment ---------------------------------------------
-
 func integrationCtx() context.Context {
 	return helpers.CtxAsToken(
 		"user-9", "access",
@@ -540,7 +520,6 @@ func TestCreateIntegrationComment_RateLimit(t *testing.T) {
 func TestCreateIntegrationComment_DuplicateRejected(t *testing.T) {
 	d := newDeps(t)
 	d.expectSetting(t, enabledSetting())
-	// 匿名（无 token 用户）：跳过 user 频率，命中查重。
 	d.repo.EXPECT().
 		CountByIPWithin(mock.Anything, mock.Anything, mock.Anything).
 		Return(int64(0), nil)
@@ -557,8 +536,6 @@ func TestCreateIntegrationComment_DuplicateRejected(t *testing.T) {
 	assertBiz(t, err, commonModel.ErrCodeInvalidRequest, "请勿重复提交相同评论")
 }
 
-// 集成端点是 MCP create_integration_comment 的同一绕过面：覆盖来源标记、昵称默认、
-// 审核开关、UserID 绑定。
 func TestCreateIntegrationComment_Happy(t *testing.T) {
 	cases := []struct {
 		name            string

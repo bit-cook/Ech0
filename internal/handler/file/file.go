@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露文件相关的 HTTP 接口。
 package handler
 
 import (
@@ -85,7 +84,6 @@ func (fileHandler *FileHandler) GetFileByID(ctx context.Context, in *GetFileByID
 	return commonModel.OK(fileDto), nil
 }
 
-// UpdateFileMeta 更新对象存储文件元信息（file:write，用于预签名直传完成后回填 size/width/height）。
 func (fileHandler *FileHandler) UpdateFileMeta(ctx context.Context, in *UpdateFileMetaInput) (FileOutput, error) {
 	fileDto, err := fileHandler.fileService.UpdateFileMeta(ctx, in.ID, in.Body)
 	if err != nil {
@@ -116,8 +114,6 @@ func (fileHandler *FileHandler) GetFilePresignURL(ctx context.Context, in *GetFi
 	}
 	return commonModel.OK(presignDto, commonModel.GET_S3_PRESIGN_URL_SUCCESS), nil
 }
-
-// --- 以下为非 JSON 端点，仍走裸 gin（multipart 上传 / 二进制流式下载） ---
 
 func (fileHandler *FileHandler) UploadFile() gin.HandlerFunc {
 	return res.Execute(func(ctx *gin.Context) res.Response {

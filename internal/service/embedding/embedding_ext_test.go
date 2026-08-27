@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// External-package tests drive the public EmbeddingService methods through
-// mocked collaborators. They cover only the branches reached BEFORE the
-// uninjectable package-level seam embedding.EmbedOne/Embed (which does real
-// network I/O): not-enabled gates, content-hash dedup skip, empty-content
-// delete, and ensureReady error propagation. Author-scope filtering and k
-// normalization live AFTER the seam and cannot be reached without networking.
 package service_test
 
 import (
@@ -35,8 +29,6 @@ const (
 	testDim   = 1536
 )
 
-// enabledSettingJSON is what kvstore returns for the embedding setting key when
-// the feature is enabled and fully configured.
 func enabledSettingJSON(t *testing.T) string {
 	t.Helper()
 	b, err := json.Marshal(settingModel.EmbeddingSetting{
@@ -48,8 +40,6 @@ func enabledSettingJSON(t *testing.T) string {
 	return string(b)
 }
 
-// contentHash mirrors the service's hashContent over a tag-less echo (where
-// buildText == TrimSpace(content)), so the test can hand GetMeta a matching hash.
 func contentHash(t *testing.T, content string) string {
 	t.Helper()
 	sum := sha256.Sum256([]byte(content))
@@ -109,7 +99,6 @@ func TestIndexEcho_GetSettingError(t *testing.T) {
 	ctx := context.Background()
 	svc, _, kv := newSvc(t)
 	boom := errors.New("kv backend down")
-	// Non-ErrNotFound backend error surfaces through setting.Get and aborts indexing.
 	kv.EXPECT().Get(ctx, commonModel.EmbeddingSettingKey).Return("", boom).Once()
 
 	err := svc.IndexEcho(ctx, echoModel.Echo{ID: "e1", Content: "hello"})
@@ -133,7 +122,6 @@ func TestIndexEcho_NotEnabled(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			svc, _, kv := newSvc(t)
 			kv.EXPECT().Get(ctx, commonModel.EmbeddingSettingKey).Return(tc.raw, tc.getErr).Once()
-			// Disabled => no repository interaction at all.
 			require.NoError(t, svc.IndexEcho(ctx, echoModel.Echo{ID: "e1", Content: "hello"}))
 		})
 	}
@@ -158,9 +146,6 @@ func TestIndexEcho_EmptyText_Deletes(t *testing.T) {
 	})
 }
 
-// TestIndexEcho_DedupSkip: when the stored meta's hash/model/dim all match the
-// current echo+setting, indexing short-circuits — no ensureReady, no Upsert,
-// no EmbedOne network call.
 func TestIndexEcho_DedupSkip(t *testing.T) {
 	ctx := context.Background()
 	svc, repo, kv := newSvc(t)
@@ -177,10 +162,6 @@ func TestIndexEcho_DedupSkip(t *testing.T) {
 	require.NoError(t, svc.IndexEcho(ctx, echoModel.Echo{ID: "e1", Content: content}))
 }
 
-// TestIndexEcho_ContentChanged_ProceedsPastDedup: a hash/model/dim mismatch
-// must NOT skip; indexing proceeds into ensureReady. We force ensureReady to
-// fail so the flow stops before the EmbedOne network seam, proving the dedup
-// guard let it through.
 func TestIndexEcho_ContentChanged_ProceedsPastDedup(t *testing.T) {
 	ctx := context.Background()
 	boom := errors.New("ensure boom")
@@ -212,7 +193,6 @@ func TestIndexEcho_ContentChanged_ProceedsPastDedup(t *testing.T) {
 			svc, repo, kv := newSvc(t)
 			kv.EXPECT().Get(ctx, commonModel.EmbeddingSettingKey).Return(enabledSettingJSON(t), nil).Once()
 			repo.EXPECT().GetMeta(ctx, "e1").Return(tc.meta, tc.ok, nil).Once()
-			// ensureReady: matching state -> only EnsureVecTable, which we fail.
 			kv.EXPECT().Get(ctx, commonModel.EmbeddingIndexStateKey).
 				Return(mustJSONState(t, testModel, testDim), nil).Once()
 			repo.EXPECT().EnsureVecTable(ctx, testDim).Return(boom).Once()
@@ -247,10 +227,6 @@ func TestRemoveEcho(t *testing.T) {
 	})
 }
 
-// TestBackfill_PreSeamGates covers the branches Backfill reaches before the
-// per-page embedding.Embed seam: setting error, not-enabled, ensureReady error,
-// and the ctx-cancellation check at the top of the page loop (which fires after
-// a successful ensureReady, before GetEchosByPage / any network call).
 func TestBackfill_PreSeamGates(t *testing.T) {
 	t.Run("setting backend error surfaces", func(t *testing.T) {
 		ctx := context.Background()
@@ -285,12 +261,10 @@ func TestBackfill_PreSeamGates(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		svc, repo, kv := newSvc(t)
-		// ensureReady takes the matched-state fast path and succeeds...
 		kv.EXPECT().Get(ctx, commonModel.EmbeddingSettingKey).Return(enabledSettingJSON(t), nil).Once()
 		kv.EXPECT().Get(ctx, commonModel.EmbeddingIndexStateKey).
 			Return(mustJSONState(t, testModel, testDim), nil).Once()
 		repo.EXPECT().EnsureVecTable(ctx, testDim).Return(nil).Once()
-		// ...then the loop's ctx.Err() check fires before GetEchosByPage runs.
 		_, err := svc.Backfill(ctx, nil)
 		require.ErrorIs(t, err, context.Canceled)
 	})

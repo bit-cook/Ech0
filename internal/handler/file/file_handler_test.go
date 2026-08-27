@@ -22,7 +22,6 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// newGinCtx 构造一个挂载在 recorder 上的 *gin.Context（带可选 query 的请求）。
 func newGinCtx(t *testing.T, rawURL string) (*gin.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	rec := httptest.NewRecorder()
@@ -31,25 +30,16 @@ func newGinCtx(t *testing.T, rawURL string) (*gin.Context, *httptest.ResponseRec
 	return c, rec
 }
 
-// ---------------------------------------------------------------------------
-// StreamFileByID（裸 gin）
-// ---------------------------------------------------------------------------
-
-// 空 id 时 handler 自己短路返回 400，绝不调用 service。
 func TestStreamFileByID_EmptyID_NoServiceCall(t *testing.T) {
-	mockSvc := filemock.NewMockService(t) // 无任何 EXPECT：一旦被调用即 panic
+	mockSvc := filemock.NewMockService(t)
 	h := NewFileHandler(mockSvc)
 
 	c, _ := newGinCtx(t, "/")
-	// 不设置 id 参数 -> ctx.Param("id") == ""
 	h.StreamFileByID(c)
 
-	// gin 的 ResponseWriter 在无 body 时不会 flush 到 recorder，故断言 pending status。
 	assert.Equal(t, http.StatusBadRequest, c.Writer.Status())
 }
 
-// 非空 id 时 handler 把同一个 *gin.Context 与 id 透传给 service，
-// service 写什么 HTTP 结果（200/403/404/302）都原样透出。
 func TestStreamFileByID_DelegatesToService(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -99,11 +89,6 @@ func TestStreamFileByID_DelegatesToService(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// StreamFileByPath（裸 gin，query 绑定）
-// ---------------------------------------------------------------------------
-
-// storage_type / path 为必填，缺任一项 ShouldBindQuery 失败 -> 400 + 明文消息，不调用 service。
 func TestStreamFileByPath_BadQuery_NoServiceCall(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -128,7 +113,6 @@ func TestStreamFileByPath_BadQuery_NoServiceCall(t *testing.T) {
 	}
 }
 
-// 合法 query 被正确解析并连同同一 *gin.Context 透传给 service。
 func TestStreamFileByPath_DelegatesParsedQuery(t *testing.T) {
 	mockSvc := filemock.NewMockService(t)
 	var got commonModel.FilePathStreamQueryDto
@@ -158,10 +142,6 @@ func TestStreamFileByPath_DelegatesParsedQuery(t *testing.T) {
 	assert.Same(t, c, gotCtx)
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
-
-// ---------------------------------------------------------------------------
-// JSON handlers（框架中立 Huma 函数）
-// ---------------------------------------------------------------------------
 
 var errBoom = errors.New("boom")
 

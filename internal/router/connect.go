@@ -12,7 +12,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// registerConnect 注册实例互联（Connect）路由。
 func registerConnect(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, public(), huma.Operation{
 		OperationID: "connect-self",

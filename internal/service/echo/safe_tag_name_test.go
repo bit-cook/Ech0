@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestIsSafeTagName 守护存储型 XSS 纵深防御（GHSA-3v85-fqvh-7rxf）：
-// 含 HTML 元字符（<>"'&）的标签名必须被拒绝，普通文本（含空格/中文/#）放行。
 func TestIsSafeTagName(t *testing.T) {
 	cases := []struct {
 		name string

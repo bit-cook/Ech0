@@ -15,11 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestBuildWebhookSignature 校验 HMAC-SHA256 签名：对已知输入稳定、密钥/载荷不同则签名不同。
 func TestBuildWebhookSignature(t *testing.T) {
 	t.Run("known vector is stable", func(t *testing.T) {
-		// RFC/Wikipedia 规范 HMAC-SHA256 测试向量：
-		// HMAC-SHA256("key", "The quick brown fox jumps over the lazy dog")
 		const (
 			secret  = "key"
 			payload = "The quick brown fox jumps over the lazy dog"
@@ -27,7 +24,6 @@ func TestBuildWebhookSignature(t *testing.T) {
 		)
 		got := buildWebhookSignature(secret, []byte(payload))
 		assert.Equal(t, want, got, "签名必须匹配已知 HMAC-SHA256 向量")
-		// 长度恒为 32 字节 hex = 64 字符。
 		assert.Len(t, got, 64)
 	})
 
@@ -58,12 +54,10 @@ func TestBuildWebhookSignature(t *testing.T) {
 	t.Run("empty payload still produces 64-char hex", func(t *testing.T) {
 		got := buildWebhookSignature("k", nil)
 		assert.Len(t, got, 64)
-		// 空载荷下也应稳定。
 		assert.Equal(t, got, buildWebhookSignature("k", []byte{}))
 	})
 }
 
-// newObs 构造一个测试用的中立观察。
 func newObs(t *testing.T) event.WebhookObservation {
 	t.Helper()
 	return event.WebhookObservation{
@@ -75,7 +69,6 @@ func newObs(t *testing.T) event.WebhookObservation {
 	}
 }
 
-// readBody 通过 GetBody 取一份新鲜的 body 拷贝，避免消费 req.Body。
 func readBody(t *testing.T, getBody func() (io.ReadCloser, error)) []byte {
 	t.Helper()
 	require.NotNil(t, getBody, "buildRequest 必须设置 GetBody")
@@ -87,7 +80,6 @@ func readBody(t *testing.T, getBody func() (io.ReadCloser, error)) []byte {
 	return b
 }
 
-// TestBuildRequest_HeaderContract 校验请求构造的 header 契约与方法/URL。
 func TestBuildRequest_HeaderContract(t *testing.T) {
 	wh := &webhookModel.Webhook{
 		ID:     "wh-1",
@@ -104,12 +96,10 @@ func TestBuildRequest_HeaderContract(t *testing.T) {
 	assert.Equal(t, "POST", req.Method)
 	assert.Equal(t, wh.URL, req.URL.String())
 
-	// 固定 header 契约。
 	assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 	assert.Equal(t, obs.Topic, req.Header.Get("X-Ech0-Event"))
 	assert.Equal(t, "Ech0-Webhook-Client", req.Header.Get("User-Agent"))
 
-	// 动态但必须存在且形态合理的 header。
 	eventID := req.Header.Get("X-Ech0-Event-ID")
 	require.NotEmpty(t, eventID, "X-Ech0-Event-ID 必须存在")
 	_, err = strconv.ParseInt(eventID, 10, 64)
@@ -121,7 +111,6 @@ func TestBuildRequest_HeaderContract(t *testing.T) {
 	assert.NoError(t, err, "X-Ech0-Timestamp 应为 unix 秒数字")
 }
 
-// TestBuildRequest_SignatureHeader 校验：有密钥时签名头存在且与 body 一致，无密钥时不带签名头。
 func TestBuildRequest_SignatureHeader(t *testing.T) {
 	obs := newObs(t)
 
@@ -135,7 +124,6 @@ func TestBuildRequest_SignatureHeader(t *testing.T) {
 		assert.True(t, len(sig) > len("sha256="), "签名头应带 sha256= 前缀")
 		assert.Equal(t, "sha256=", sig[:7], "签名头前缀必须是 sha256=")
 
-		// 签名必须覆盖实际发送的 body。
 		body := readBody(t, req.GetBody)
 		want := "sha256=" + buildWebhookSignature(wh.Secret, body)
 		assert.Equal(t, want, sig, "签名头必须等于对 body 的 HMAC")
@@ -149,7 +137,6 @@ func TestBuildRequest_SignatureHeader(t *testing.T) {
 	})
 }
 
-// TestBuildRequest_BodyShape 校验 body 的 JSON 结构与字段映射。
 func TestBuildRequest_BodyShape(t *testing.T) {
 	wh := &webhookModel.Webhook{URL: "https://example.com/hook"}
 	obs := newObs(t)
@@ -174,12 +161,10 @@ func TestBuildRequest_BodyShape(t *testing.T) {
 	assert.Equal(t, obs.Metadata, decoded.Metadata)
 	assert.Equal(t, obs.OccurredAt, decoded.OccurredAt)
 
-	// GetBody 可重复读取且内容一致（重试时复用）。
 	again := readBody(t, req.GetBody)
 	assert.Equal(t, body, again, "GetBody 应可重复返回相同 body")
 }
 
-// TestBuildRequest_InvalidURL 校验非法 URL 时返回错误。
 func TestBuildRequest_InvalidURL(t *testing.T) {
 	wh := &webhookModel.Webhook{URL: "://bad-url"}
 	_, err := buildRequest(wh, newObs(t))

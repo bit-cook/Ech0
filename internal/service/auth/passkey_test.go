@@ -19,16 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// passkey 测试用的合法 WebAuthn 边界（domain RPID + 对应 https origin）。
 const (
 	testRPID   = "example.com"
 	testOrigin = "https://example.com"
 )
-
-// ---------------------------------------------------------------------------
-// 纯 helper：makeUserHandle/userIDFromHandle 往返、newNonce、session key 构造、
-// bindingPermissionError 映射
-// ---------------------------------------------------------------------------
 
 func TestUserHandleRoundTrip(t *testing.T) {
 	for _, id := range []string{"u-1", "", "01HXY-uuid-7"} {
@@ -42,7 +36,6 @@ func TestNewNonce(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, n1)
 
-	// base64url(无填充) 解码后应为 32 字节。
 	decoded, derr := base64.RawURLEncoding.DecodeString(n1)
 	require.NoError(t, derr)
 	assert.Len(t, decoded, 32)
@@ -75,10 +68,6 @@ func TestBindingPermissionError(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// PasskeyRegisterBegin：创建挑战、缓存会话、返回 creation options
-// ---------------------------------------------------------------------------
-
 func TestPasskeyRegisterBegin_Success(t *testing.T) {
 	ctx := helpers.CtxAsUser("u-1")
 	svc, repo, _, _ := newSvc(t, kvstore.NewMemory())
@@ -107,7 +96,6 @@ func TestPasskeyRegisterBegin_Success(t *testing.T) {
 	assert.NotEmpty(t, resp.Nonce)
 	require.NotNil(t, resp.PublicKey)
 
-	// 缓存键应由 register 前缀 + nonce 构成；缓存值应携带空 deviceName 的默认值 "Passkey"。
 	assert.Equal(t, getPasskeyRegisterSessionKey(resp.Nonce), cachedKey)
 	sess, ok := cachedVal.(passkeySessionCache)
 	require.True(t, ok)
@@ -124,16 +112,11 @@ func TestPasskeyRegisterBegin_UserLookupError(t *testing.T) {
 		GetUserByID(mock.Anything, "u-err").
 		Return(userModel.User{}, lookupErr).
 		Once()
-	// 查询失败时不应缓存会话（CacheSetPasskeySession 无期望即反证）。
 
 	resp, err := svc.PasskeyRegisterBegin(ctx, testRPID, testOrigin, "My Phone")
 	require.ErrorIs(t, err, lookupErr)
 	assert.Empty(t, resp.Nonce)
 }
-
-// ---------------------------------------------------------------------------
-// PasskeyLoginBegin：创建 discoverable 挑战、缓存会话、返回 request options
-// ---------------------------------------------------------------------------
 
 func TestPasskeyLoginBegin_Success(t *testing.T) {
 	svc, repo, _, _ := newSvc(t, kvstore.NewMemory())
@@ -150,10 +133,6 @@ func TestPasskeyLoginBegin_Success(t *testing.T) {
 	require.NotNil(t, resp.PublicKey)
 	assert.Equal(t, getPasskeyLoginSessionKey(resp.Nonce), cachedKey)
 }
-
-// ---------------------------------------------------------------------------
-// ListPasskeys：映射 repo 实体到 DTO；错误透传
-// ---------------------------------------------------------------------------
 
 func TestListPasskeys_MapsToDTO(t *testing.T) {
 	ctx := helpers.CtxAsUser("u-1")
@@ -188,10 +167,6 @@ func TestListPasskeys_Error(t *testing.T) {
 	assert.Nil(t, devs)
 }
 
-// ---------------------------------------------------------------------------
-// DeletePasskey：事务内删除；错误透传
-// ---------------------------------------------------------------------------
-
 func TestDeletePasskey(t *testing.T) {
 	t.Run("success runs delete inside tx", func(t *testing.T) {
 		ctx := helpers.CtxAsUser("u-1")
@@ -219,14 +194,10 @@ func TestDeletePasskey(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// UpdatePasskeyDeviceName：空名拒绝；正常更新走事务
-// ---------------------------------------------------------------------------
-
 func TestUpdatePasskeyDeviceName(t *testing.T) {
 	t.Run("blank name rejected before tx", func(t *testing.T) {
 		ctx := helpers.CtxAsUser("u-1")
-		svc, _, _, _ := newSvc(t, kvstore.NewMemory()) // tx 无期望即反证未进入事务
+		svc, _, _, _ := newSvc(t, kvstore.NewMemory())
 		err := svc.UpdatePasskeyDeviceName(ctx, "pk-1", "   ")
 		require.EqualError(t, err, commonModel.INVALID_PARAMS_BODY)
 	})

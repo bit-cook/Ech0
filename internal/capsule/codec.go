@@ -18,11 +18,8 @@ const (
 	yamlIndent       = 2
 )
 
-// unknownFieldMarker 是 yaml.v3 严格解码对「结构体没有这个字段」的措辞。
-// 未知字段按 spec §8 属警告（前向兼容），其余类型错误才是硬错误。
 const unknownFieldMarker = "not found in type"
 
-// EncodeYAML 以两空格缩进序列化，输出稳定、diff 友好。
 func EncodeYAML(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
@@ -37,13 +34,10 @@ func EncodeYAML(v any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// newLaxDecoder 返回一个忽略未知字段的解码器。
 func newLaxDecoder(data []byte) *yaml.Decoder {
 	return yaml.NewDecoder(bytes.NewReader(data))
 }
 
-// DecodeYAML 解析 YAML 并把未知字段降级为警告返回，其余错误照常上抛。
-// 消费者必须忽略未知字段（spec §8），但 check 需要能报出来。
 func DecodeYAML(data []byte, out any) (unknown []string, err error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
@@ -72,18 +66,14 @@ func DecodeYAML(data []byte, out any) (unknown []string, err error) {
 		return unknown, fmt.Errorf("yaml: %s", strings.Join(fatal, "; "))
 	}
 
-	// 只有未知字段：宽松地重解一次，拿到可用的值。
 	if err := newLaxDecoder(data).Decode(out); err != nil {
 		return unknown, err
 	}
 	return unknown, nil
 }
 
-// ErrEmptyDocument 标记空的 YAML 文档（yaml.v3 用 io.EOF 表达，语义太弱）。
 var ErrEmptyDocument = errors.New("capsule: empty yaml document")
 
-// EncodeEcho 把一个 Echo 渲染成 frontmatter-markdown 字节。
-// 正文逐字写出，不做任何转换或转义（spec §4.3）。
 func EncodeEcho(doc *EchoDoc) ([]byte, error) {
 	front, err := EncodeYAML(doc)
 	if err != nil {
@@ -98,8 +88,6 @@ func EncodeEcho(doc *EchoDoc) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// DecodeEcho 解析 frontmatter-markdown。闭合围栏之后的全部字节即正文，
-// 逐字保留（含首尾空白与换行）。
 func DecodeEcho(data []byte) (*EchoDoc, []string, error) {
 	body, rest, ok := splitFrontmatter(data)
 	if !ok {
@@ -114,11 +102,9 @@ func DecodeEcho(data []byte) (*EchoDoc, []string, error) {
 	return doc, unknown, nil
 }
 
-// splitFrontmatter 切出围栏之间的 YAML 与其后的正文。
 func splitFrontmatter(data []byte) (front, body []byte, ok bool) {
 	rest, ok := bytes.CutPrefix(data, []byte(frontmatterFence+"\n"))
 	if !ok {
-		// 允许 CRLF 开头的手写文件。
 		rest, ok = bytes.CutPrefix(data, []byte(frontmatterFence+"\r\n"))
 		if !ok {
 			return nil, nil, false
@@ -129,7 +115,6 @@ func splitFrontmatter(data []byte) (front, body []byte, ok bool) {
 			return rest[:idx+1], rest[idx+len(closer):], true
 		}
 	}
-	// 无正文时文件可以以围栏结尾且不带换行。
 	if trimmed, cut := bytes.CutSuffix(rest, []byte("\n"+frontmatterFence)); cut {
 		return append(trimmed, '\n'), nil, true
 	}

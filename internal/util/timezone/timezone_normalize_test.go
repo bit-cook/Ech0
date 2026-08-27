@@ -58,7 +58,6 @@ func TestLoadLocationOrUTC(t *testing.T) {
 
 func TestLoadLocationOrUTCInvalidIsUTCEquivalent(t *testing.T) {
 	loc := LoadLocationOrUTC("definitely/not/real")
-	// The returned location must behave like UTC: zero offset.
 	_, offset := time.Date(2026, 1, 1, 0, 0, 0, 0, loc).Zone()
 	if offset != 0 {
 		t.Fatalf("expected UTC zero offset for invalid tz, got offset=%d", offset)

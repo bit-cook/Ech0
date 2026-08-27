@@ -16,14 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// 这些是纯函数（未导出）的 in-package 测试：只依赖全局 JWT 密钥，不需要 mock。
-
 func TestFormTokenRoundTrip(t *testing.T) {
 	helpers.SetJWTSecret(t, "round-trip-secret")
 	s := &CommentService{}
 
 	const ip = "203.0.113.9"
-	// 5s 之前签发：大于 minSubmitMS、远小于 maxFormTokenHours，处于有效窗口内。
 	issuedAt := time.Now().UnixMilli() - 5000
 
 	token := s.signFormToken(ip, issuedAt)
@@ -38,7 +35,6 @@ func TestVerifyFormToken_Rejects(t *testing.T) {
 	const ip = "198.51.100.7"
 	now := time.Now().UnixMilli()
 
-	// manualSign 用指定密钥手工复刻签名算法，用于构造「换密钥伪造」的 token。
 	manualSign := func(clientIP string, issuedAt int64, secret string) string {
 		mac := hmac.New(sha256.New, []byte(secret))
 		_, _ = fmt.Fprintf(mac, "%s:%d", clientIP, issuedAt)
@@ -46,7 +42,6 @@ func TestVerifyFormToken_Rejects(t *testing.T) {
 		return fmt.Sprintf("%d.%s", issuedAt, sig)
 	}
 
-	// tamper 翻转 token 最后一个字符，破坏签名段。
 	tamper := func(token string) string {
 		b := []byte(token)
 		last := len(b) - 1
@@ -101,7 +96,6 @@ func TestComputeHMAC(t *testing.T) {
 	c := s.computeHMAC("1.2.3.4:1700000000001")
 	assert.NotEqual(t, a, c, "different payload must yield different mac")
 
-	// 输出必须是合法的 base64 RawURL 编码。
 	_, err := base64.RawURLEncoding.DecodeString(a)
 	assert.NoError(t, err)
 }

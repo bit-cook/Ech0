@@ -13,7 +13,6 @@ import viteCompression from 'vite-plugin-compression'
 import { fingerprintPlugin } from './src/plugins/fingerprint-plugin'
 import { welcomePlugin } from './src/plugins/welcome-plugin'
 
-// https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   plugins: [
     vue({
@@ -31,7 +30,7 @@ export default defineConfig(({ command }) => ({
       filter: (file) => /\.(js|mjs|css|html|svg)$/i.test(file),
     }),
     fingerprintPlugin(),
-    welcomePlugin(), // 欢迎横幅插件
+    welcomePlugin(),
   ],
   resolve: {
     alias: {
@@ -47,20 +46,15 @@ export default defineConfig(({ command }) => ({
     restoreMocks: true,
   },
   build: {
-    // 当使用embed时则调整构建输出到后端的template/dist目录
     outDir: '../template/dist',
     emptyOutDir: true,
     reportCompressedSize: false,
     rollupOptions: {
-      // 关闭 Rolldown 两类构建检查警告：
-      //   invalidAnnotation —— 第三方产物（如 @vueuse/core）里位置不当的 #__PURE__ 注释，非本仓代码可控；
-      //   pluginTimings     —— 插件耗时提示（UnoCSS 扫描占比偏高），纯信息性。
       checks: {
         invalidAnnotation: false,
         pluginTimings: false,
       },
       output: {
-        // 代码分割：将重型库打包到单独的 chunk 中，利用浏览器缓存
         manualChunks(id) {
           const normalizedId = id.replaceAll('\\', '/')
           if (normalizedId.includes('/node_modules/floating-vue/')) {

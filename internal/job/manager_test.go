@@ -14,7 +14,6 @@ import (
 	jobModel "github.com/lin-snow/ech0/internal/model/job"
 )
 
-// stubRepo 是内存态 JobRepository，用于确定性测试 Manager 状态机（不碰 DB）。
 type stubRepo struct {
 	mu   sync.Mutex
 	rows map[string]jobModel.Job
@@ -59,7 +58,6 @@ func (r *stubRepo) Delete(_ context.Context, t string) error {
 	return nil
 }
 
-// waitForStatus 轮询 Get 直到命中目标状态或超时，消除 goroutine 时序 flakiness。
 func waitForStatus(t *testing.T, mgr *job.Manager, jobType string, want jobModel.Status) jobModel.Job {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
@@ -149,7 +147,7 @@ func TestCancel_RunningJob(t *testing.T) {
 	started := make(chan struct{})
 	mgr.Register("t", job.Adapt(func(ctx context.Context, _ struct{}, _ job.ReportFunc) (any, error) {
 		close(started)
-		<-ctx.Done() // 协作式取消
+		<-ctx.Done()
 		return nil, ctx.Err()
 	}))
 
@@ -189,7 +187,6 @@ func TestSubmit_AfterTerminalReplaces(t *testing.T) {
 		t.Fatalf("submit failed: %v", err)
 	}
 	waitForStatus(t, mgr, "t", jobModel.StatusSuccess)
-	// 终态后可再次提交（upsert 覆盖旧行）。
 	if _, err := mgr.Submit(context.Background(), "t", nil); err != nil {
 		t.Fatalf("resubmit after terminal failed: %v", err)
 	}

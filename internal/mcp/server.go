@@ -52,8 +52,6 @@ func serverInfo() ServerInfo {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		// 2026-07-28 Streamable HTTP: the MCP endpoint accepts POST only.
-		// Legacy GET (status/SSE probe) and DELETE (session teardown) get 405.
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -80,9 +78,6 @@ func (s *Server) handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Notifications get "202 Accepted" with no body. The 2026-07-28 core
-	// protocol defines no client-to-server notifications over Streamable
-	// HTTP, so accepted notifications are simply discarded.
 	if len(req.ID) == 0 {
 		w.WriteHeader(http.StatusAccepted)
 		return
@@ -125,9 +120,6 @@ func (s *Server) handlePost(w http.ResponseWriter, r *http.Request) {
 	writeRPCResult(w, req.ID, result)
 }
 
-// requestParams is the transport-relevant subset of request params: the
-// 2026-07-28 per-request metadata plus the body fields mirrored into the
-// Mcp-Name header.
 type requestParams struct {
 	Meta map[string]any `json:"_meta"`
 	Name string         `json:"name"`
@@ -135,10 +127,6 @@ type requestParams struct {
 }
 
 func (s *Server) dispatch(r *http.Request, req *Request, v viewer.Context) (any, *RPCError) {
-	// The legacy (2025-11-25 and earlier) handshake is gone. Answer before
-	// header validation so legacy clients — which have no fall-forward
-	// mechanism — get a diagnostic naming the supported versions, as the
-	// spec recommends for modern-only servers.
 	if req.Method == "initialize" {
 		return nil, &RPCError{
 			Code: ErrCodeMethodNotFound,
@@ -174,11 +162,6 @@ func (s *Server) dispatch(r *http.Request, req *Request, v viewer.Context) (any,
 	}
 }
 
-// validateTransport enforces the Streamable HTTP request metadata rules:
-// the MCP-Protocol-Version header must be present, match the version in
-// params._meta, and name a supported revision; Mcp-Method must match the
-// body method; tools/call and resources/read must carry a matching
-// Mcp-Name (Base64 sentinel decoded).
 func validateTransport(r *http.Request, method string, params *requestParams) *RPCError {
 	headerVersion := r.Header.Get("Mcp-Protocol-Version")
 	if headerVersion == "" {
@@ -236,9 +219,6 @@ const (
 	b64SentinelSuffix = "?="
 )
 
-// decodeSentinel decodes the transport's Base64 sentinel format
-// (`=?base64?{payload}?=`), used for Mcp-Name values that are not
-// header-safe ASCII. Plain values pass through unchanged.
 func decodeSentinel(v string) (string, error) {
 	if len(v) < len(b64SentinelPrefix)+len(b64SentinelSuffix) ||
 		!strings.HasPrefix(v, b64SentinelPrefix) || !strings.HasSuffix(v, b64SentinelSuffix) {
@@ -333,8 +313,6 @@ func (s *Server) handleResourcesRead(r *http.Request, req *Request, v viewer.Con
 	if err != nil {
 		return nil, &RPCError{Code: ErrCodeInternal, Message: err.Error()}
 	}
-	// Read results are live, authorization-scoped data: immediately stale,
-	// never shared across authorization contexts.
 	result.CacheInfo = CacheInfo{TTLMs: 0, CacheScope: cacheScopePrivate}
 	return result, nil
 }
@@ -374,10 +352,6 @@ func writeRPCError(w http.ResponseWriter, id json.RawMessage, rpcErr *RPCError) 
 	})
 }
 
-// httpStatusFor maps transport-level JSON-RPC errors to the HTTP statuses
-// the 2026-07-28 Streamable HTTP binding mandates: 400 for malformed or
-// header-invalid requests and unsupported versions, 404 for unknown
-// methods. Application-level errors keep 200.
 func httpStatusFor(code int) int {
 	switch code {
 	case ErrCodeParse, ErrCodeInvalidRequest, ErrCodeHeaderMismatch, ErrCodeUnsupportedProtocolVersion:

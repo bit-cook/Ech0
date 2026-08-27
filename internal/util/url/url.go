@@ -7,13 +7,11 @@ import (
 	"strings"
 )
 
-// TrimURL 去除 URL 前后的空格和斜杠
 func TrimURL(url string) string {
 	if url == "" {
 		return ""
 	}
 
-	// 去除连接地址前后的空格和斜杠
 	url = strings.TrimSpace(url)
 	url = strings.TrimPrefix(url, "/")
 	url = strings.TrimSuffix(url, "/")

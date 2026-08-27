@@ -17,14 +17,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// newCommonRepo 构造一个绑定到测试内存库的 CommonRepository。
 func newCommonRepo(t *testing.T) (*CommonRepository, *gorm.DB) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
 	return NewCommonRepository(func() *gorm.DB { return db }), db
 }
 
-// seedEcho 插入一条 echo 行（显式 ID / created_at，绕开 autoCreateTime 以保证排序确定）。
 func seedEcho(t *testing.T, db *gorm.DB, id, userID string, private bool, createdAt int64) {
 	t.Helper()
 	require.NoError(t, db.Create(&echoModel.Echo{
@@ -36,7 +34,6 @@ func seedEcho(t *testing.T, db *gorm.DB, id, userID string, private bool, create
 	}).Error)
 }
 
-// seedFile 插入一条 external 类型 File 行（external 下 AfterFind 直接保留快照 URL，断言稳定）。
 func seedFile(t *testing.T, db *gorm.DB, id, userID string) {
 	t.Helper()
 	require.NoError(t, db.Create(&fileModel.File{
@@ -49,7 +46,6 @@ func seedFile(t *testing.T, db *gorm.DB, id, userID string) {
 	}).Error)
 }
 
-// linkEchoFile 直接写 echo_files 关系行（携带 sort_order，便于断言 Preload 排序）。
 func linkEchoFile(t *testing.T, db *gorm.DB, id, echoID, fileID string, sortOrder int) {
 	t.Helper()
 	require.NoError(t, db.Create(&fileModel.EchoFile{
@@ -70,7 +66,6 @@ func echoIDs(echos []echoModel.Echo) []string {
 
 func TestCommonRepository_GetAllEchos_VisibilityAndOrder(t *testing.T) {
 	repo, db := newCommonRepo(t)
-	// created_at 升序：pub-old(100) < prv(200) < pub-new(300)；默认排序 created_at DESC。
 	seedEcho(t, db, "pub-old", "u1", false, 100)
 	seedEcho(t, db, "prv", "u1", true, 200)
 	seedEcho(t, db, "pub-new", "u1", false, 300)
@@ -92,13 +87,11 @@ func TestCommonRepository_GetAllEchos_PreloadFilesOrderedAndTags(t *testing.T) {
 	repo, db := newCommonRepo(t)
 	seedEcho(t, db, "e1", "u1", false, 100)
 
-	// 两个文件，sort_order 故意倒序插入；Preload 须按 sort_order ASC 回放。
 	seedFile(t, db, "f-a", "u1")
 	seedFile(t, db, "f-b", "u1")
 	linkEchoFile(t, db, "ef-b", "e1", "f-b", 2)
 	linkEchoFile(t, db, "ef-a", "e1", "f-a", 1)
 
-	// 一个标签，many2many 预载。
 	require.NoError(t, db.Create(&echoModel.Tag{ID: "t1", Name: "alpha"}).Error)
 	require.NoError(t, db.Create(&echoModel.EchoTag{EchoID: "e1", TagID: "t1"}).Error)
 
@@ -107,14 +100,11 @@ func TestCommonRepository_GetAllEchos_PreloadFilesOrderedAndTags(t *testing.T) {
 	require.Len(t, echos, 1)
 
 	got := echos[0]
-	// EchoFiles 按 sort_order ASC：f-a(1) 在 f-b(2) 之前。
 	require.Len(t, got.EchoFiles, 2)
 	assert.Equal(t, "f-a", got.EchoFiles[0].FileID)
 	assert.Equal(t, "f-b", got.EchoFiles[1].FileID)
-	// EchoFiles.File 被预载（external 保留快照 URL）。
 	assert.Equal(t, "f-a", got.EchoFiles[0].File.ID)
 	assert.Equal(t, "https://example.com/f-a", got.EchoFiles[0].File.URL)
-	// Tags 被预载。
 	require.Len(t, got.Tags, 1)
 	assert.Equal(t, "alpha", got.Tags[0].Name)
 }
@@ -133,7 +123,6 @@ func TestCommonRepository_GetHeatMap_HalfOpenWindow(t *testing.T) {
 	seedEcho(t, db, "e300", "u1", false, 300)
 
 	t.Run("start inclusive, end exclusive", func(t *testing.T) {
-		// [100, 300) 应包含 100、200，排除 300。
 		got, err := repo.GetHeatMap(context.Background(), 100, 300)
 		require.NoError(t, err)
 		assert.Equal(t, []int64{100, 200}, got)
@@ -146,7 +135,6 @@ func TestCommonRepository_GetHeatMap_HalfOpenWindow(t *testing.T) {
 	})
 
 	t.Run("lower bound is inclusive at exact start", func(t *testing.T) {
-		// [200, 300) 排除 100（< start）与 300（>= end），仅留 200。
 		got, err := repo.GetHeatMap(context.Background(), 200, 300)
 		require.NoError(t, err)
 		assert.Equal(t, []int64{200}, got)

@@ -27,16 +27,6 @@
         >
           <Rss class="w-4 h-4" />
         </a>
-        <!-- <a
-          href="https://github.com/lin-snow/Ech0"
-          target="_blank"
-          rel="noopener noreferrer"
-          v-tooltip="t('homeNav.githubAction')"
-          :aria-label="t('homeNav.githubAction')"
-          class="home-header__link-icon"
-        >
-          <Github class="w-5 h-5" />
-        </a> -->
         <button
           type="button"
           v-tooltip="t('zenMode.tooltip')"
@@ -56,8 +46,6 @@
           <component :is="themeIcon" class="w-4 h-4" />
         </button>
         <TheLocaleToggle />
-        <!-- 静态站没有后端：登录与登出两个入口都不该出现（只藏登录会让 v-else
-             把登出顶上来，反而更糟）。 -->
         <template v-if="!isStatic">
           <button
             v-if="!isLogin"
@@ -115,8 +103,6 @@ const { t } = useI18n()
 const router = useRouter()
 const { openConfirm } = useBaseDialog()
 
-// 静态站（`ech0 build` 产物）没有后端：登录入口点进去也只能失败，直接不渲染。
-// RSS 也要改指——/rss 是 serve 模式的动态路由，静态产物里叫 rss.xml。
 const isStatic = isStaticMode()
 const rssHref = computed(() => (isStatic ? staticBase() + 'rss.xml' : '/rss'))
 
@@ -169,7 +155,6 @@ const runTypingEffect = () => {
     isTypingTitle.value = false
   }
 
-  // 先显示一小段纯光标闪烁，再开始打字机输出。
   introDelayTimer = setTimeout(typeNext, CURSOR_INTRO_DELAY_MS)
 }
 

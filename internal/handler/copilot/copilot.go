@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露 Ech0 Copilot 的 HTTP 接口。
 package handler
 
 import (
@@ -68,13 +67,11 @@ type askRequest struct {
 	Question string `json:"question"`
 }
 
-// Ask 处理 Chat 流式问答（SSE，裸 gin）。错误以 SSE 事件回传，故此处忽略返回值。
 func (h *CopilotHandler) Ask() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req askRequest
 		_ = ctx.ShouldBindJSON(&req)
 		locale := i18n.LocaleFromGin(ctx)
-		// 按用户上报时区算「今天/去年/上个月」与区间日界（与 today/heatmap 一致）。
 		timezone := timezoneUtil.NormalizeTimezone(ctx.GetHeader(timezoneUtil.DefaultTimezoneHeader))
 		_ = h.chatService.AskStream(ctx.Request.Context(), req.Question, locale, timezone, ctx.Writer)
 	}

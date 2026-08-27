@@ -2,10 +2,8 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2">
-    <!-- 分段控件：对象存储 / 文件管理 -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- 内容 -->
     <TheStorageSetting v-if="tab === 'object'" />
     <TheStorageFileList v-else />
   </div>

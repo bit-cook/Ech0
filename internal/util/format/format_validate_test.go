@@ -13,7 +13,7 @@ func TestValidateCrontabExpression(t *testing.T) {
 	}{
 		{name: "five fields every minute", expr: "* * * * *", wantErr: false},
 		{name: "five fields midnight daily", expr: "0 0 * * *", wantErr: false},
-		{name: "five fields with descriptor", expr: "@daily", wantErr: true}, // single field -> count 1
+		{name: "five fields with descriptor", expr: "@daily", wantErr: true},
 		{name: "six fields every second", expr: "* * * * * *", wantErr: false},
 		{name: "six fields midnight daily", expr: "0 0 0 * * *", wantErr: false},
 		{name: "leading and trailing whitespace five fields", expr: "  * * * * *  ", wantErr: false},

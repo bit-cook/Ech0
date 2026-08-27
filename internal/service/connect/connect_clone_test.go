@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCloneConnects 验证深拷贝语义：返回新底层数组，且与入参互不影响。
 func TestCloneConnects(t *testing.T) {
 	t.Run("nil input returns non-nil empty slice", func(t *testing.T) {
 		got := cloneConnects(nil)

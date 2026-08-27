@@ -128,8 +128,6 @@ const openGallery = (index: number, sourceElement?: HTMLElement | null) => {
 const getImageKey = (image: App.Api.Ech0.FileObject, idx: number) =>
   image.id || `${image.url}-${idx}`
 
-// 缺尺寸元数据时的兜底比例：保证慢网下骨架屏不会塌成 0、避免图片到达后整页 reflow。
-// 加载完成后必须撤掉这个兜底，否则真实图片比例与 4/3 不符会导致竖向空白或裁切。
 const FALLBACK_ASPECT_RATIO = '4 / 3'
 
 const getAspectRatioStyle = (

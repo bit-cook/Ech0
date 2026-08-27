@@ -18,10 +18,9 @@ const (
 	echoID    = "01947c3e-0000-7000-8000-000000000001"
 	commentID = "01947c3e-0000-7000-8000-000000000002"
 	echoPath  = "echoes/2026/2026-01-01-01947c3e.md"
-	catBytes  = "cat-bytes" // 9 字节，供 size 校验用
+	catBytes  = "cat-bytes"
 )
 
-// buildCapsule 在临时目录里手搭一个胶囊；键是胶囊内相对路径。
 func buildCapsule(t *testing.T, files map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -55,7 +54,6 @@ func runCheck(t *testing.T, dir string, opts Options) *Report {
 	return report
 }
 
-// findIssue 按级别 + 坐标定位一条发现，找不到返回 nil。
 func findIssue(report *Report, level Level, path, field string) *Issue {
 	for i := range report.Issues {
 		it := &report.Issues[i]
@@ -74,8 +72,6 @@ func dumpIssues(report *Report) string {
 	return b.String()
 }
 
-// TestValidateCleanCapsule 锁定「合法胶囊零噪音」：校验器一旦对正常导出产物
-// 报警告，用户就会开始无视报告，整套准入门槛随之失效。
 func TestValidateCleanCapsule(t *testing.T) {
 	dir := buildCapsule(t, map[string]string{
 		capsule.ManifestPath: `schema_version: 1
@@ -122,8 +118,6 @@ comments:
 	}
 }
 
-// TestFixGeneratesMissingID 锁定 spec §7 唯一的自动修复项：补 id 必须真的落盘，
-// 且正文逐字不动——回写走的是整文件重写，正文一旦被动过就是数据损坏。
 func TestFixGeneratesMissingID(t *testing.T) {
 	const body = "line one\n\n  indented line\n中文 🎉\n"
 	dir := buildCapsule(t, map[string]string{
@@ -169,13 +163,11 @@ layout: grid
 		t.Errorf("其余 frontmatter 字段未原样保留: %+v", doc)
 	}
 
-	// 修复后重跑（不带 --fix）必须干净：修复不是「本次报告好看」而是真落地。
 	if again := runCheck(t, dir, Options{}); again.HasErrors() {
 		t.Fatalf("修复后重跑仍有 error:%s", dumpIssues(again))
 	}
 }
 
-// TestValidateFileRefErrors 覆盖 files[] 的三类拦截项（spec §4.2 / §6）。
 func TestValidateFileRefErrors(t *testing.T) {
 	dir := buildCapsule(t, map[string]string{
 		capsule.ManifestPath: `schema_version: 1
@@ -201,7 +193,6 @@ body
 	if !report.HasErrors() {
 		t.Fatal("期望拦截级发现，实际为零")
 	}
-	// category 不认得只是渲染退化，属警告；真正拦截的是 key/url 互斥违规与缺字节。
 	if got := report.Count(LevelError); got != 2 {
 		t.Fatalf("error 数 = %d，期望 2:%s", got, dumpIssues(report))
 	}
@@ -219,8 +210,6 @@ body
 	}
 }
 
-// TestValidatePrivacyAndWarnings 覆盖隐私红线（禁止字段即 error）与三类警告：
-// 悬空媒体、custom_js、非 approved 评论。
 func TestValidatePrivacyAndWarnings(t *testing.T) {
 	const orphanMedia = "files/images/orphan.png"
 	dir := buildCapsule(t, map[string]string{
@@ -268,7 +257,6 @@ comments:
 		}
 	}
 
-	// 排序契约：error 一律排在 warning 之前。
 	for i := 1; i < len(report.Issues); i++ {
 		if report.Issues[i-1].Level > report.Issues[i].Level {
 			t.Fatalf("Issues 未按级别排序:%s", dumpIssues(report))
@@ -276,7 +264,6 @@ comments:
 	}
 }
 
-// TestValidateManifestAndOrphans 覆盖清单级拦截项与孤儿评论、内嵌实例 URL 警告。
 func TestValidateManifestAndOrphans(t *testing.T) {
 	dir := buildCapsule(t, map[string]string{
 		capsule.ManifestPath: `schema_version: 2
@@ -306,17 +293,16 @@ comments:
 	report := runCheck(t, dir, Options{})
 
 	for _, want := range []struct{ path, field string }{
-		{capsule.ManifestPath, "schema_version"}, // 高于自身支持必须拒绝
-		{capsule.ManifestPath, "owner.username"}, // 归属兜底缺失
-		{echoPath, "id"},                         // 非法 UUID
-		{echoPath, "created_at"},                 // 非 RFC3339
-		{echoPath, "extension.payload"},          // 有 extension 必须有 payload
+		{capsule.ManifestPath, "schema_version"},
+		{capsule.ManifestPath, "owner.username"},
+		{echoPath, "id"},
+		{echoPath, "created_at"},
+		{echoPath, "extension.payload"},
 	} {
 		if findIssue(report, LevelError, want.path, want.field) == nil {
 			t.Errorf("缺少 %s [%s] 的 error:%s", want.path, want.field, dumpIssues(report))
 		}
 	}
-	// 表现层枚举退化成警告：内容完好，消费者回落默认值即可，不该拦下整个胶囊。
 	if findIssue(report, LevelWarning, echoPath, "layout") == nil {
 		t.Errorf("未知 layout 应为 warning:%s", dumpIssues(report))
 	}
@@ -328,8 +314,6 @@ comments:
 	}
 }
 
-// TestFixRejectsArchiveCapsule 锁定 --fix 的前置门：zip 无法就地改写，
-// 与其改一半不如在动手前拒绝。
 func TestFixRejectsArchiveCapsule(t *testing.T) {
 	archive := filepath.Join(t.TempDir(), "capsule.zip")
 	if err := os.WriteFile(archive, []byte("PK-not-really"), 0o644); err != nil {

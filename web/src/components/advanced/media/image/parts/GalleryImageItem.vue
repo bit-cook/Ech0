@@ -59,7 +59,6 @@ const props = withDefaults(
   },
 )
 
-// priority 隐含 eager，避免父层忘改 loading 时拖慢 LCP。
 const effectiveLoading = computed(() => (props.priority ? 'eager' : props.loading))
 
 const handleClick = (event: MouseEvent) => {

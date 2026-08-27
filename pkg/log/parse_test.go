@@ -47,7 +47,7 @@ func TestParseMapAsEntry(t *testing.T) {
 		if got.Time != "2024-01-01T00:00:00Z" {
 			t.Errorf("Time = %q", got.Time)
 		}
-		if got.Level != "info" { // lowercased
+		if got.Level != "info" {
 			t.Errorf("Level = %q, want %q", got.Level, "info")
 		}
 		if got.Msg != "hello" {
@@ -81,11 +81,9 @@ func TestParseMapAsEntry(t *testing.T) {
 		if got.Error != "kaboom" {
 			t.Errorf("Error = %q, want %q (err promoted)", got.Error, "kaboom")
 		}
-		// err key remains in fields as well.
 		if got.Fields["err"] != "kaboom" {
 			t.Errorf("Fields[err] = %v, want %q", got.Fields["err"], "kaboom")
 		}
-		// empty msg falls back to raw.
 		if got.Msg != "RAWLINE" {
 			t.Errorf("Msg = %q, want raw %q", got.Msg, "RAWLINE")
 		}

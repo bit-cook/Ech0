@@ -73,10 +73,6 @@ func NewFileService(
 	}
 }
 
-// uploadPolicyFor resolves the per-category upload rules — the max size (bytes)
-// and the upload event type — from config. Centralizing both here keeps them
-// from drifting as media categories are added (previously each was its own
-// if-ladder in UploadFile); a new category is one extra case, not two.
 func uploadPolicyFor(category storage.Category) (maxSize int, uploadType commonModel.UploadFileType) {
 	upload := config.Config().Upload
 	switch category {
@@ -118,9 +114,6 @@ func (s *FileService) UploadFile(
 		return commonModel.FileDto{}, err
 	}
 
-	// Use the canonical MIME for the extension rather than the raw sniffed
-	// value (which may be "application/octet-stream" for formats Go cannot
-	// identify by magic bytes alone, e.g. AVIF, FLAC).
 	contentType := resolveContentType(file.Filename, detectedMIME)
 
 	maxSize, uploadType := uploadPolicyFor(category)
@@ -325,11 +318,6 @@ func (s *FileService) CreateExternalFile(
 	if err := s.fileRepository.Create(context.Background(), fileRecord); err != nil {
 		return commonModel.FileDto{}, err
 	}
-	// External records have no stored object, so nothing else keeps them alive:
-	// without a temp tracking row an abandoned draft reference would linger in
-	// the files table forever. Publish confirms it away like any upload; the
-	// dedup-reuse branch above must NOT create one, or an expiring temp row
-	// could reap a record already referenced by published echos.
 	if err := s.fileRepository.CreateTemp(context.Background(), &fileModel.TempFile{
 		FileID:     fileRecord.ID,
 		UploaderID: user.ID,
@@ -419,14 +407,6 @@ func (s *FileService) GetFileByID(ctx context.Context, id string) (commonModel.F
 	}, nil
 }
 
-// GetFilesByIDs batch-loads file metadata for the given IDs in a single query,
-// used by callers (e.g. the echo service) that need each attached file's Category
-// without paying N per-file lookups. Missing IDs are simply absent from the result.
-//
-// It is authorization-agnostic on purpose: its only caller runs inside
-// PostEcho/UpdateEcho, which already gate on IsAdmin, so re-checking here would
-// just repeat a users-table lookup on the write hot path. Any future caller must
-// enforce access control itself before calling this.
 func (s *FileService) GetFilesByIDs(ctx context.Context, ids []string) ([]commonModel.FileDto, error) {
 	if len(ids) == 0 {
 		return []commonModel.FileDto{}, nil
@@ -642,7 +622,6 @@ func (s *FileService) ListFileTree(
 			idByKey[f.Key] = f.ID
 		}
 	}
-	// Compatibility fallback: keep URL mapping as last resort.
 	idByURL := map[string]string{}
 	urlByPath := make(map[string]string, len(nodes))
 	fileURLs := make([]string, 0, len(nodes))
@@ -1045,7 +1024,6 @@ func isAllowedType(contentType string, allowedTypes []string) bool {
 	return slices.Contains(allowedTypes, contentType)
 }
 
-// Extensions that must never be stored, regardless of allowlist configuration.
 var dangerousExtensions = map[string]struct{}{
 	".html": {}, ".htm": {}, ".xhtml": {},
 	".svg": {},
@@ -1054,7 +1032,6 @@ var dangerousExtensions = map[string]struct{}{
 	".php": {}, ".asp": {}, ".aspx": {}, ".jsp": {},
 }
 
-// Safe extension-to-MIME mapping. Only these extensions are accepted for upload.
 var safeExtMIME = map[string][]string{
 	".jpg":  {"image/jpeg"},
 	".jpeg": {"image/jpeg"},
@@ -1070,8 +1047,6 @@ var safeExtMIME = map[string][]string{
 	".mp4":  {"video/mp4"},
 }
 
-// MIME types that indicate executable/document content; files whose magic
-// bytes resolve to these must always be rejected regardless of extension.
 var executableMIMEs = map[string]struct{}{
 	"text/html":               {},
 	"text/xml":                {},
@@ -1083,8 +1058,6 @@ var executableMIMEs = map[string]struct{}{
 	"application/x-httpd-php": {},
 }
 
-// detectContentType reads the first 512 bytes of f to sniff MIME via
-// http.DetectContentType, then rewinds f back to the start.
 func detectContentType(f multipart.File) (string, error) {
 	buf := make([]byte, 512)
 	n, err := f.Read(buf)
@@ -1097,10 +1070,6 @@ func detectContentType(f multipart.File) (string, error) {
 	return http.DetectContentType(buf[:n]), nil
 }
 
-// validateFileUpload performs server-side file type validation:
-//  1. Reject dangerous extensions unconditionally.
-//  2. Require extension to be in the safe whitelist.
-//  3. Require the config allowlist MIME to match the extension's expected set.
 func validateFileUpload(filename string, detectedMIME string, allowedTypes []string) error {
 	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(filename)))
 
@@ -1113,15 +1082,10 @@ func validateFileUpload(filename string, detectedMIME string, allowedTypes []str
 		return errors.New(commonModel.FILE_TYPE_NOT_ALLOWED)
 	}
 
-	// If magic-bytes detection resolved to an executable MIME, reject even if
-	// the extension looks safe (e.g. an HTML file renamed to .jpg).
 	if _, exec := executableMIMEs[detectedMIME]; exec {
 		return errors.New(commonModel.FILE_TYPE_NOT_ALLOWED)
 	}
 
-	// The detected MIME must either match one of the extension's expected
-	// types, or be "application/octet-stream" (meaning the sniffer could not
-	// determine a more specific type — common for AVIF, FLAC, etc.).
 	mimeOK := detectedMIME == "application/octet-stream"
 	if !mimeOK {
 		if slices.Contains(expectedMIMEs, detectedMIME) {
@@ -1132,8 +1096,6 @@ func validateFileUpload(filename string, detectedMIME string, allowedTypes []str
 		return errors.New(commonModel.FILE_TYPE_NOT_ALLOWED)
 	}
 
-	// At least one of the extension's expected MIMEs must be on the config
-	// allowlist so administrators retain control.
 	configOK := false
 	for _, m := range expectedMIMEs {
 		if isAllowedType(m, allowedTypes) {
@@ -1148,8 +1110,6 @@ func validateFileUpload(filename string, detectedMIME string, allowedTypes []str
 	return nil
 }
 
-// validateFileUploadByName validates filename + declared MIME without file
-// body (used by presign URL flow where no file content is available).
 func validateFileUploadByName(filename string, declaredMIME string, allowedTypes []string) error {
 	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(filename)))
 
@@ -1173,10 +1133,6 @@ func validateFileUploadByName(filename string, declaredMIME string, allowedTypes
 	return nil
 }
 
-// canonicalMIMEForExt returns the canonical (first-listed) MIME registered for
-// name's extension in safeExtMIME, or "" if the extension is not a supported
-// type. It is the single ext→MIME source of truth shared by uploads
-// (resolveContentType) and external references (CreateExternalFile).
 func canonicalMIMEForExt(name string) string {
 	ext := strings.ToLower(filepath.Ext(strings.TrimSpace(name)))
 	if mimes, ok := safeExtMIME[ext]; ok && len(mimes) > 0 {
@@ -1185,9 +1141,6 @@ func canonicalMIMEForExt(name string) string {
 	return ""
 }
 
-// resolveContentType returns the canonical MIME for the file extension. If the
-// detected MIME is specific (not application/octet-stream), it is returned
-// directly; otherwise the first expected MIME for the extension is used.
 func resolveContentType(filename string, detected string) string {
 	if detected != "" && detected != "application/octet-stream" {
 		return detected

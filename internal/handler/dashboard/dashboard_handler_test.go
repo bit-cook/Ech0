@@ -25,10 +25,6 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// ---------------------------------------------------------------------------
-// GetSystemLogs（框架中立）
-// ---------------------------------------------------------------------------
-
 func TestGetSystemLogs_TailParsing(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -68,7 +64,6 @@ func TestGetSystemLogs_TailParsing(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, commonModel.DEFAULT_SUCCESS_CODE, out.Code)
-			// 成功响应预设显式 message_key，localizeResult 不应覆盖。
 			assert.Equal(t, commonModel.MsgKeyDashboardLogsOk, out.MessageKey)
 			assert.Equal(t, want, out.Data)
 		})
@@ -86,7 +81,6 @@ func TestGetSystemLogs_InvalidTail(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			// 无 EXPECT：非法 tail 必须在触达 service 前短路。
 			svc := dashboardmock.NewMockService(t)
 			h := dashboardHandler.NewDashboardHandler(svc)
 
@@ -114,10 +108,6 @@ func TestGetSystemLogs_ServiceError(t *testing.T) {
 	assert.Equal(t, dashboardHandler.LogsOutput{}, out)
 }
 
-// ---------------------------------------------------------------------------
-// GetVisitorStats（框架中立，service 无 error）
-// ---------------------------------------------------------------------------
-
 func TestGetVisitorStats(t *testing.T) {
 	svc := dashboardmock.NewMockService(t)
 	want := []visitor.DayStat{
@@ -134,12 +124,7 @@ func TestGetVisitorStats(t *testing.T) {
 	assert.Equal(t, want, out.Data)
 }
 
-// ---------------------------------------------------------------------------
-// WS/SSE 认证守卫（仅早退分支：缺/坏 token 在触达流式逻辑前 401，不涉及真实流）
-// ---------------------------------------------------------------------------
-
 func TestStreamSubscribe_AuthGuard(t *testing.T) {
-	// 缺/坏 token 必须在调用 service 前短路，故 mock 不设任何 EXPECT。
 	routes := map[string]func(*dashboardHandler.DashboardHandler) gin.HandlerFunc{
 		"ws":  (*dashboardHandler.DashboardHandler).WSSubscribeSystemLogs,
 		"sse": (*dashboardHandler.DashboardHandler).SSESubscribeSystemLogs,

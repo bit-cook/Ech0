@@ -18,7 +18,6 @@ import (
 	"github.com/lin-snow/ech0/internal/test/helpers"
 )
 
-// noFlushWriter 是不实现 http.Flusher 的 ResponseWriter：用于触发 AskStream 的「streaming unsupported」分支。
 type noFlushWriter struct{ h http.Header }
 
 func (w *noFlushWriter) Header() http.Header         { return w.h }
@@ -36,7 +35,6 @@ func seedAgentSetting(t *testing.T, kv kvstore.Store, setting settingModel.Agent
 	}
 }
 
-// 非 Flusher 的 ResponseWriter → 返回 streaming unsupported 错误（早于一切业务逻辑）。
 func TestAskStream_StreamingUnsupported(t *testing.T) {
 	s := &CopilotService{durableKV: kvstore.NewMemory()}
 	w := &noFlushWriter{h: http.Header{}}
@@ -47,7 +45,6 @@ func TestAskStream_StreamingUnsupported(t *testing.T) {
 	}
 }
 
-// 空问题 → SSE error 事件 "empty question"，返回 nil（错误走 SSE 而非 HTTP 状态码）。
 func TestAskStream_EmptyQuestion(t *testing.T) {
 	s := &CopilotService{durableKV: kvstore.NewMemory()}
 	rec := httptest.NewRecorder()
@@ -64,7 +61,6 @@ func TestAskStream_EmptyQuestion(t *testing.T) {
 	}
 }
 
-// 解析当前用户失败 → SSE error 透传错误信息，绝不退化为不收口检索（防泄露）。
 func TestAskStream_UserLookupError(t *testing.T) {
 	s := &CopilotService{
 		durableKV:  kvstore.NewMemory(),
@@ -80,10 +76,9 @@ func TestAskStream_UserLookupError(t *testing.T) {
 	}
 }
 
-// Agent 设置缺失 → SSE error AGENT_SETTING_NOT_FOUND。
 func TestAskStream_AgentSettingMissing(t *testing.T) {
 	s := &CopilotService{
-		durableKV:  kvstore.NewMemory(), // 空 KV → agentSetting miss
+		durableKV:  kvstore.NewMemory(),
 		userReader: &stubUserReader{user: userModel.User{ID: "u1", Username: "alice"}},
 	}
 	rec := httptest.NewRecorder()
@@ -96,15 +91,13 @@ func TestAskStream_AgentSettingMissing(t *testing.T) {
 	}
 }
 
-// agent.Run 校验失败（设置未启用）→ SSE error，且不发起任何真实 LLM 流。
-// 此路径走完了 AskStream 的前半段：取用户、取设置、取标签、构建 system prompt 与工具、进入 Run。
 func TestAskStream_AgentRunValidationError(t *testing.T) {
 	kv := kvstore.NewMemory()
 	seedAgentSetting(t, kv, settingModel.AgentSetting{Enable: false, Protocol: "openai", Model: "gpt"})
 	s := &CopilotService{
 		durableKV:   kv,
 		userReader:  &stubUserReader{user: userModel.User{ID: "u1", Username: "alice"}},
-		echoService: &stubEchoSvc{tags: nil}, // GetAllTags 被调用
+		echoService: &stubEchoSvc{tags: nil},
 	}
 	rec := httptest.NewRecorder()
 

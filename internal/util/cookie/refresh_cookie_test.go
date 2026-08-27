@@ -16,8 +16,6 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// newTestContext 构造一个带空白 GET 请求的 gin.Context，
-// 返回 context 与底层 ResponseRecorder，便于断言写出的 Set-Cookie。
 func newTestContext(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	w := httptest.NewRecorder()
@@ -26,7 +24,6 @@ func newTestContext(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
 	return c, w
 }
 
-// findSetCookie 从响应中解析出指定名字的 Set-Cookie。
 func findSetCookie(t *testing.T, w *httptest.ResponseRecorder, name string) *http.Cookie {
 	t.Helper()
 	for _, ck := range w.Result().Cookies() {
@@ -163,7 +160,6 @@ func TestClearRefreshTokenCookie(t *testing.T) {
 	if ck.Path != "/api/auth" {
 		t.Errorf("Path = %q, want %q", ck.Path, "/api/auth")
 	}
-	// http.SetCookie 对 MaxAge<0 写出 "Max-Age=0"，回读后规整为 -1（立即过期）。
 	if ck.MaxAge >= 0 {
 		t.Errorf("MaxAge = %d, want negative (expire immediately)", ck.MaxAge)
 	}
@@ -201,7 +197,6 @@ func TestGetRefreshTokenFromCookie(t *testing.T) {
 	})
 
 	t.Run("round-trip: Set then read back the value", func(t *testing.T) {
-		// 写出 -> 模拟浏览器回带 -> 读取，验证 Set/Get 契约一致。
 		cWrite, w := newTestContext(t)
 		SetRefreshTokenCookie(cWrite, "round-trip-tok", 3600)
 

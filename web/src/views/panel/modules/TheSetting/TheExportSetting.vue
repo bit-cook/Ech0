@@ -98,13 +98,10 @@ const {
 } = storeToRefs(settingStore)
 const { isLogin } = storeToRefs(userStore)
 
-// 导出 = 异步 export 作业产出快照或胶囊（与导入对称：重活在 job 里，有进度/可取消），完成后取回产物。
 const isExporting = computed(
   () => snapshotStatus.value === 'pending' || snapshotStatus.value === 'running',
 )
 
-// 快照与胶囊不可互换：快照是唯一能灾难恢复的完整备份，胶囊只是内容。故快照恒为默认项，
-// 描述里把「含凭据 / 不含凭据」讲清楚，避免被当成两个平级中性选项。
 const formatCards = computed<{ value: ExportFormat; title: string; desc: string }[]>(() => [
   {
     value: 'snapshot',
@@ -124,7 +121,6 @@ const exportActionText = computed(() =>
     : String(t('exportSetting.exportSnapshot')),
 )
 
-// 进度卡与产物行描述的是「已发起的作业」,一律读 snapshotFormat 而非界面选择器。
 const jobTitle = computed(() =>
   snapshotFormat.value === 'capsule'
     ? String(t('exportSetting.jobTitleCapsule'))
@@ -137,7 +133,6 @@ const jobFormatTitle = computed(() =>
     : String(t('exportSetting.formatSnapshotTitle')),
 )
 
-// 步进器对齐后端真实阶段：排队(pending) → 打包(packing) → 完成(completed)。
 const exportSteps = computed(() => [
   { key: 'pending', label: String(t('jobProgress.exportPhasePending')) },
   { key: 'packing', label: String(t('jobProgress.exportPhasePacking')) },
@@ -159,11 +154,8 @@ const statusLabelMap = computed<Record<string, string>>(() => ({
   cancelled: String(t('jobProgress.statusCancelled')),
 }))
 
-// 鉴权下载：经 fetchDownloadExport（credentials + Authorization header）取回 blob 触发下载，
-// token 不进 URL（避免出现在浏览器历史/日志/Referer）。
 const downloadSnapshot = async () => {
   try {
-    // 下载跟随作业实际产物的格式：用户导完胶囊后可能把选择器拨回快照，此时仍须取回胶囊。
     const format = snapshotFormat.value
     const blob = await fetchDownloadExport(format)
     const url = URL.createObjectURL(blob)
@@ -194,7 +186,6 @@ const handleExport = async () => {
     if (res.code !== 1) {
       theToast.error(res.msg || String(t('exportSetting.exportFailed')))
     }
-    // 作业完成后由下方 watch(snapshotStatus) 自动触发下载。
   } catch (error) {
     console.error(String(t('exportSetting.exportFailed')), error)
     theToast.error(String(t('exportSetting.exportFailed')))
@@ -217,7 +208,6 @@ watch(
 )
 
 onMounted(() => {
-  // 进入页面时若有进行中的导出作业则接管轮询（完成会自动下载）。
   void restoreSnapshotTask()
 })
 </script>
@@ -240,7 +230,6 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
-/* 与导入 tab 的 migration-source-grid 保持一致的卡片式选择器，两页视觉对称。 */
 .export-format-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

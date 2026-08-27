@@ -1,12 +1,8 @@
 {
-  // Cloudflare Workers Static Assets config for the hub (hub.ech0.app).
-  // Deployed by .github/workflows/deploy-hub.yml via `wrangler deploy`.
   "name": "ech0-hub",
   "compatibility_date": "2026-05-27",
   "assets": {
-    // Vite build output.
     "directory": "./dist",
-    // Serve index.html for unmatched client routes (replaces _redirects).
     "not_found_handling": "single-page-application"
   }
 }

@@ -24,8 +24,6 @@ var (
 	ProviderSet = wire.NewSet(ManagerSet)
 )
 
-// NewFS builds a virefs.FS based on the given StorageConfig.
-// File classification (images/, audios/, etc.) is handled by VireFS Schema.
 func NewFS(cfg config.StorageConfig) virefs.FS {
 	schema := NewFileSchema()
 	if cfg.ObjectEnabled {
@@ -34,8 +32,6 @@ func NewFS(cfg config.StorageConfig) virefs.FS {
 	return buildLocalFS(cfg, schema)
 }
 
-// NewURLResolver builds a URLResolver based on the given StorageConfig.
-// It applies schema.Resolve internally so callers just pass flat keys.
 func NewURLResolver(cfg config.StorageConfig) URLResolver {
 	schema := NewFileSchema()
 	if cfg.ObjectEnabled {
@@ -97,9 +93,6 @@ func buildS3FS(cfg config.StorageConfig, schema *virefs.Schema) virefs.FS {
 	return fs
 }
 
-// virefsS3ConfigFromStorage 把操作用 StorageConfig 归一化为 virefs.S3Config，
-// buildS3FS / probeS3 / buildOptionalObjectFSAndResolver 共用同一套参数，
-// 保证「测的就是会用的」。
 func virefsS3ConfigFromStorage(cfg config.StorageConfig) *virefs.S3Config {
 	s3cfg := &virefs.S3Config{
 		Provider:  mapProvider(cfg.Provider),
@@ -109,8 +102,6 @@ func virefsS3ConfigFromStorage(cfg config.StorageConfig) *virefs.S3Config {
 		AccessKey: cfg.AccessKey,
 		SecretKey: cfg.SecretKey,
 	}
-	// 仅在 true 时设指针：virefs 只在 UsePathStyle 为 nil 时应用 minio/r2 的
-	// path-style 预设，无条件传 aws.Bool(false) 会把预设击穿。
 	if cfg.UsePathStyle {
 		s3cfg.UsePathStyle = aws.Bool(true)
 	}
@@ -147,16 +138,12 @@ func buildS3PathURLResolver(cfg config.StorageConfig) URLResolver {
 		}
 	}
 
-	// 无 CDN 时直接用 Endpoint 拼直链，寻址方式必须与 SDK 一致（见 addressesPathStyle），
-	// 否则会出现「上传成功、直链却打不开」：virtual-hosted-only 的服务（腾讯 COS、阿里 OSS 等）
-	// 会拒绝 path-style 直链，反之只支持 path-style 的自建服务会拒绝 virtual-hosted 直链。
 	endpoint := normalizeEndpoint(cfg.Endpoint, cfg.UseSSL)
-	baseURL := strings.TrimRight(endpoint, "/") + "/" + cfg.BucketName // path-style: endpoint/bucket
+	baseURL := strings.TrimRight(endpoint, "/") + "/" + cfg.BucketName
 	if !addressesPathStyle(cfg) {
 		if vh, ok := virtualHostedBaseURL(endpoint, cfg.BucketName); ok {
-			baseURL = vh // virtual-hosted: bucket.endpoint
+			baseURL = vh
 		}
-		// vh 拼接失败（如 Endpoint 为空的默认 AWS）时回退 path-style 形状，交由 CDN / 代理兜底。
 	}
 	return func(path string) string {
 		clean := strings.Trim(strings.TrimSpace(path), "/")
@@ -164,10 +151,6 @@ func buildS3PathURLResolver(cfg config.StorageConfig) URLResolver {
 	}
 }
 
-// addressesPathStyle 判定对象访问是否走 path-style 寻址（endpoint/bucket/key）。它与
-// virefsS3ConfigFromStorage 传给 SDK 的寻址方式同源：minio/r2 预设 path-style，aws/other
-// 默认 virtual-hosted，other 可用 UsePathStyle 开关强制 path-style（UsePathStyle 已在
-// normalize 阶段对非 other 归零）。直链拼接靠它跟随 SDK 寻址，避免两者漂移。
 func addressesPathStyle(cfg config.StorageConfig) bool {
 	if cfg.UsePathStyle {
 		return true
@@ -180,8 +163,6 @@ func addressesPathStyle(cfg config.StorageConfig) bool {
 	}
 }
 
-// virtualHostedBaseURL 把 bucket 前置到已归一化 Endpoint 的 host，得到 virtual-hosted 直链前缀
-// （https://bucket.endpoint）。Endpoint 或 bucket 为空、或无法解析出 host 时返回 ok=false。
 func virtualHostedBaseURL(endpoint, bucket string) (string, bool) {
 	if endpoint == "" || bucket == "" {
 		return "", false

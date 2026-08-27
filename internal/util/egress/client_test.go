@@ -44,8 +44,6 @@ func TestNewClient_Guard_blocks_redirect_to_loopback(t *testing.T) {
 	}))
 	defer loopbackSrv.Close()
 
-	// Even if the initial URL were allowed, a redirect to a loopback address
-	// must still be blocked by CheckRedirect.
 	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, loopbackSrv.URL, http.StatusFound)
 	}))
@@ -95,11 +93,6 @@ func TestRetry_exhausts_attempts(t *testing.T) {
 	}
 }
 
-// TestRetry_backoff_schedule pins the schedule Retry documents: the first attempt
-// runs immediately, every retry waits twice as long as the previous one, and no
-// sleep happens after the final attempt. Running inside a testing/synctest bubble
-// makes the fake clock exact, so the assertions are on nanosecond boundaries and
-// the test itself is instant.
 func TestRetry_backoff_schedule(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		const initial = 100 * time.Millisecond

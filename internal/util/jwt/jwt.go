@@ -19,9 +19,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// CreateClaims 创建浏览器会话的 access token claims。
-// typ=session, 有效期由 ECH0_JWT_EXPIRES 控制（默认 900s = 15 分钟），
-// 每个 token 带唯一 JTI 以支持黑名单吊销。
 func CreateClaims(user userModel.User) jwt.Claims {
 	leeway := time.Second * 60
 	now := time.Now().UTC()
@@ -43,9 +40,6 @@ func CreateClaims(user userModel.User) jwt.Claims {
 	return claims
 }
 
-// CreateRefreshClaims 创建静默刷新专用的 refresh token claims。
-// typ=refresh, 有效期由 ECH0_JWT_REFRESH_EXPIRES 控制（默认 604800s = 7 天），
-// 通过 HttpOnly Cookie 传递给浏览器，JS 无法读取。
 func CreateRefreshClaims(user userModel.User) jwt.Claims {
 	leeway := time.Second * 60
 	now := time.Now().UTC()
@@ -67,7 +61,6 @@ func CreateRefreshClaims(user userModel.User) jwt.Claims {
 	return claims
 }
 
-// CreateClaims 创建Claims 带过期时间
 func CreateClaimsWithExpiry(user userModel.User, expiry int64) jwt.Claims {
 	return CreateAccessClaimsWithExpiry(user, expiry, nil, "", "")
 }
@@ -79,15 +72,11 @@ func CreateAccessClaimsWithExpiry(
 	audience string,
 	jti string,
 ) jwt.Claims {
-	leeway := time.Second * 60 // 允许的时间偏差
+	leeway := time.Second * 60
 	audiences := jwt.ClaimStrings{config.Config().Auth.Jwt.Audience}
 	if audience != "" {
 		audiences = jwt.ClaimStrings{audience}
 	}
-	// expiry <= 0 历史上表示"永不过期"。但缺失 exp claim 会让 logout/RevokeToken
-	// 路径无法计算剩余 TTL，导致 nil 解引用 panic 与黑名单写入被跳过
-	// (GHSA-fpw6-hrg5-q5x5)。这里统一回落到 100 年的有限过期时间：仍然实质等同
-	// 永不过期，但 ExpiresAt 始终非 nil，吊销路径都能正常工作。
 	const neverExpiryFallback = int64(100 * 365 * 24 * 3600)
 	if expiry <= 0 {
 		expiry = neverExpiryFallback
@@ -110,15 +99,11 @@ func CreateAccessClaimsWithExpiry(
 	return claims
 }
 
-// GenerateToken 生成JWT Token
 func GenerateToken(claim jwt.Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
 	return token.SignedString(config.Config().Security.JWTSecret)
 }
 
-// ParseToken 解析 JWT（仅接受 typ=session / typ=access）。
-// 用于鉴权中间件（RequireAuth/OptionalAuth）和 AuthHandler.Logout 吊销 access_token。
-// 不接受 typ=refresh，防止 refresh_token 被当作 access_token 使用。
 func ParseToken(tokenString string) (*authModel.MyClaims, error) {
 	claims, err := parseTokenRaw(tokenString)
 	if err != nil {
@@ -130,9 +115,6 @@ func ParseToken(tokenString string) (*authModel.MyClaims, error) {
 	return claims, nil
 }
 
-// ParseRefreshToken 解析 refresh token（仅接受 typ=refresh）。
-// 用于 AuthHandler.Refresh 和 AuthHandler.Logout。
-// 不接受 session/access 类型，防止 access_token 被用于刷新。
 func ParseRefreshToken(tokenString string) (*authModel.MyClaims, error) {
 	claims, err := parseTokenRaw(tokenString)
 	if err != nil {
@@ -144,9 +126,6 @@ func ParseRefreshToken(tokenString string) (*authModel.MyClaims, error) {
 	return claims, nil
 }
 
-// parseTokenRaw 是 ParseToken 和 ParseRefreshToken 的公共底层：
-// 验证 JWT 签名和标准 claims（exp/iat/nbf），但不检查 typ 字段。
-// typ 检查由上层调用方负责，确保 token 类型不被混用。
 func parseTokenRaw(tokenString string) (*authModel.MyClaims, error) {
 	claims := &authModel.MyClaims{}
 	token, err := jwt.ParseWithClaims(
@@ -168,7 +147,6 @@ func parseTokenRaw(tokenString string) (*authModel.MyClaims, error) {
 	return nil, errors.New("unknown claims type, cannot proceed")
 }
 
-// GenerateOAuthState 生成 OAuth2 state token
 func GenerateOAuthState(
 	action string,
 	userID string,
@@ -198,7 +176,6 @@ func GenerateOAuthState(
 	return state, nonce, nil
 }
 
-// ParseOAuthState 解析并验证 OAuth2 state token
 func ParseOAuthState(stateStr string) (*authModel.OAuthState, error) {
 	claims := jwt.MapClaims{}
 
@@ -257,7 +234,6 @@ func ParseOAuthState(stateStr string) (*authModel.OAuthState, error) {
 	}, nil
 }
 
-// ParseAndVerifyIDToken 解析并验证 OIDC id_token
 func ParseAndVerifyIDToken(idToken, issuer, jwksURL, clientID, expectedNonce string) (jwt.MapClaims, error) {
 	if idToken == "" {
 		return nil, errors.New("id_token 为空")

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露评论相关的 HTTP 接口（Huma type-first）。
 package handler
 
 import (
@@ -27,7 +26,6 @@ func NewCommentHandler(commentService service.Service) *CommentHandler {
 	}
 }
 
-// commentMeta 承载从 *gin.Context 取得、Huma handler 需要的请求侧元数据。
 type commentMeta struct {
 	clientIP  string
 	userAgent string
@@ -41,7 +39,6 @@ func metaFrom(ctx context.Context) commentMeta {
 	return m
 }
 
-// StashMeta 桥接的 gin 中间件：把 ClientIP/UserAgent/baseURL 塞进 request context。
 func (h *CommentHandler) StashMeta() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		m := commentMeta{
@@ -54,7 +51,6 @@ func (h *CommentHandler) StashMeta() gin.HandlerFunc {
 	}
 }
 
-// OptionalViewer 桥接的 gin 中间件：为公开评论端点附加可选 viewer（带有效 token 时识别用户）。
 func (h *CommentHandler) OptionalViewer() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		h.attachOptionalViewer(ctx)
@@ -154,7 +150,6 @@ func (h *CommentHandler) CreateComment(ctx context.Context, in *CreateCommentInp
 	return commonModel.OK(result), nil
 }
 
-// CreateIntegrationComment 经访问令牌（comment:write + integration/mcp-remote 受众）创建评论。
 func (h *CommentHandler) CreateIntegrationComment(ctx context.Context, in *CreateIntegrationCommentInput) (CreateCommentOutput, error) {
 	m := metaFrom(ctx)
 	result, err := h.commentService.CreateIntegrationComment(ctx, m.clientIP, m.userAgent, &in.Body)

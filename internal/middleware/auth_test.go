@@ -113,8 +113,6 @@ func TestRequireAuth_RejectsAdminScopeTokenFromQuery(t *testing.T) {
 	}
 }
 
-// OptionalAuth 虽然允许匿名降级，但「admin scope token 经 query 串传入」属于不可降级的硬拒绝，
-// 即使在可匿名路由上也必须返回 403，避免高权限 token 在 URL 中泄漏后被静默放行为匿名。
 func TestOptionalAuth_RejectsAdminScopeTokenFromQuery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

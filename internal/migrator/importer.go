@@ -19,10 +19,6 @@ import (
 	logUtil "github.com/lin-snow/ech0/pkg/log"
 )
 
-// ImportEngine 跑迁移数据导入的编排:选来源 Importer 适配器 → 运行 → 应用配置 → 失效缓存 →
-// 清理 tmp。它不感知作业状态机(无 *job.Manager 依赖,只接受裸 report 回调),属于引擎核心;
-// service 层只做 auth + 作业生命周期 + DTO 转发。正因为执行体不依赖作业框架,
-// `runner → migrator(核心)`、`job.Manager → runner` 全程无构造环。
 type ImportEngine struct {
 	durableKV      KVStore
 	storageManager StorageManager
@@ -41,9 +37,6 @@ func NewImportEngine(
 	}
 }
 
-// Import 选来源适配器 → Import(进度桥接到 report 阶段)→ 应用配置 → 失效缓存 →
-// 清理 tmp。不写作业状态:失败/取消由 job.Manager 据返回 error 与 ctx.Err 落终态。
-// 终态 result 为补充了 report/job_id 的 MigrationPayload,落 Job.Payload。
 func (im *ImportEngine) Import(
 	ctx context.Context,
 	payload migratorModel.MigrationPayload,
@@ -180,7 +173,6 @@ func applyMigratedSettingValue[T any](
 ) (bool, error) {
 	parsed, ok, err := parser(report)
 	if err != nil {
-		// 迁移报告中的单项配置格式异常时忽略,不中断整任务。
 		return false, nil
 	}
 	if !ok || parsed == nil {

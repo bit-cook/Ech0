@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// In-package tests cover the unexported pure helpers (buildText/hashContent)
-// and the unexported ensureReady drop+rebuild decision, which can only be
-// reached from inside package service.
 package service
 
 import (
@@ -80,8 +77,6 @@ func newSvcForEnsure(t *testing.T) (*EmbeddingService, *embeddingmock.MockReposi
 	return NewEmbeddingService(repo, kv, nil), repo, kv
 }
 
-// TestEnsureReady_AlreadyReady covers the fast path: the persisted IndexState
-// matches the current model/dim, so only EnsureVecTable (idempotent) runs.
 func TestEnsureReady_AlreadyReady(t *testing.T) {
 	ctx := context.Background()
 	setting := settingModel.EmbeddingSetting{Model: "m1", Dim: 768}
@@ -103,9 +98,6 @@ func TestEnsureReady_AlreadyReady(t *testing.T) {
 	})
 }
 
-// TestEnsureReady_Rebuild covers every trigger that forces a drop+rebuild:
-// missing state, corrupt state, dim change, model change — each must run the
-// full Drop -> ClearAll -> EnsureVecTable -> Set sequence and persist new state.
 func TestEnsureReady_Rebuild(t *testing.T) {
 	ctx := context.Background()
 	setting := settingModel.EmbeddingSetting{Model: "m1", Dim: 768}
@@ -134,8 +126,6 @@ func TestEnsureReady_Rebuild(t *testing.T) {
 	}
 }
 
-// TestEnsureReady_RebuildErrors checks that any failure inside the rebuild
-// sequence short-circuits and propagates, without running later steps.
 func TestEnsureReady_RebuildErrors(t *testing.T) {
 	ctx := context.Background()
 	setting := settingModel.EmbeddingSetting{Model: "m1", Dim: 768}

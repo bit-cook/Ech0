@@ -3,19 +3,16 @@
 
 package model
 
-// SUCCESS_MESSAGE 成功相关的消息常量
 const (
 	SUCCESS_MESSAGE = "请求成功"
 )
 
-// Auth 成功相关常量
 const (
 	LOGIN_SUCCESS      = "登陆成功"
 	REGISTER_SUCCESS   = "注册成功"
 	INIT_OWNER_SUCCESS = "Owner初始化成功"
 )
 
-// Echo 成功相关常量
 const (
 	POST_ECHO_SUCCESS             = "发布Echo成功！"
 	GET_ECHOS_BY_PAGE_SUCCESS     = "获取Echos成功！"
@@ -34,7 +31,6 @@ const (
 	GET_ON_THIS_DAY_ECHOS_SUCCESS = "获取那年今日Echos成功"
 )
 
-// Common 成功相关常量
 const (
 	UPLOAD_SUCCESS             = "上传成功"
 	DELETE_SUCCESS             = "删除成功"
@@ -45,7 +41,6 @@ const (
 	GET_WEBSITE_TITLE_SUCCESS  = "获取网站标题成功"
 )
 
-// Setting 成功相关常量
 const (
 	GET_SETTINGS_SUCCESS            = "获取设置成功！"
 	UPDATE_SETTINGS_SUCCESS         = "更新设置成功！"
@@ -69,7 +64,6 @@ const (
 	SCHEDULE_SNAPSHOT_SUCCESS       = "设置定时快照计划成功"
 )
 
-// User 成功相关常量
 const (
 	UPDATE_USER_SUCCESS       = "更新用户信息成功"
 	GET_USER_SUCCESS          = "获取用户列表成功"
@@ -80,7 +74,6 @@ const (
 	GET_OAUTH_INFO_SUCCESS    = "获取 OAuth2 信息成功"
 )
 
-// Connect 成功相关常量
 const (
 	CONNECT_SUCCESS            = "连接成功"
 	ADD_CONNECT_SUCCESS        = "添加连接成功"
@@ -90,19 +83,16 @@ const (
 	GET_CONNECT_HEALTH_SUCCESS = "获取实例健康状态成功"
 )
 
-// Snapshot / 导出成功相关常量
 const (
 	EXPORT_SNAPSHOT_SUCCESS = "导出快照成功"
 	IMPORT_SNAPSHOT_SUCCESS = "导入快照成功"
 )
 
-// Agent 成功相关常量
 const (
 	AGENT_GET_RECENT_SUCCESS      = "获取近期活动总结成功"
 	AGENT_TEST_CONNECTION_SUCCESS = "Ech0 Copilot 连接测试成功"
 )
 
-// Chat 成功相关常量
 const (
 	CHAT_SESSION_GET_SUCCESS   = "获取会话成功"
 	CHAT_SESSION_CLEAR_SUCCESS = "清除会话成功"

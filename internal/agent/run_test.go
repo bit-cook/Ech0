@@ -14,13 +14,10 @@ import (
 	model "github.com/lin-snow/ech0/internal/model/setting"
 )
 
-// fakeProvider 是一个脚本化的 Provider 测试替身：每次 Stream 调用依次消费 scripts[calls]
-// 里的事件序列后关闭 channel，并记录每轮收到的 Request（用于断言 Tools / Messages）。
-// Complete 不被 runLoop 触达，留空实现。
 type fakeProvider struct {
-	scripts [][]Event // 每次 Stream() 调用消费一段事件
-	calls   int       // Stream 调用计数
-	gotReqs []Request // 每轮捕获的 Request（断言强制收尾轮 Tools==nil、图片折入下一轮 Messages）
+	scripts [][]Event
+	calls   int
+	gotReqs []Request
 }
 
 func (p *fakeProvider) Complete(_ context.Context, _ Request) (Response, error) {
@@ -49,7 +46,6 @@ func (p *fakeProvider) Stream(ctx context.Context, req Request) (<-chan Event, e
 	return ch, nil
 }
 
-// drain 收集 out 的全部事件直到关闭。
 func drain(out <-chan AgentEvent) []AgentEvent {
 	var evs []AgentEvent
 	for ev := range out {
@@ -58,7 +54,6 @@ func drain(out <-chan AgentEvent) []AgentEvent {
 	return evs
 }
 
-// countingTool 构造一个记录执行次数的工具；output / err 为固定返回。
 func countingTool(name string, output ToolOutput, err error) (Tool, *int) {
 	calls := 0
 	t := Tool{
@@ -71,7 +66,6 @@ func countingTool(name string, output ToolOutput, err error) (Tool, *int) {
 	return t, &calls
 }
 
-// toolCallEvent / textEvent / doneEvent / errEvent 是构造脚本事件的便捷函数。
 func toolCallEvent(id, name, args string) Event {
 	return Event{Kind: EventToolCall, ToolCall: ToolCall{ID: id, Name: name, Args: json.RawMessage(args)}}
 }
@@ -79,12 +73,10 @@ func textEvent(s string) Event { return Event{Kind: EventTextDelta, Text: s} }
 func doneEvent() Event         { return Event{Kind: EventDone} }
 func errEvent(err error) Event { return Event{Kind: EventError, Err: err} }
 
-// runLoopSync 同步跑一轮 runLoop，返回收集到的事件（断言 calls / gotReqs 用 provider 字段）。
 func runLoopSync(ctx context.Context, provider Provider, req RunRequest) []AgentEvent {
 	return drain(runChan(ctx, provider, req))
 }
 
-// kinds 抽取事件类型序列，便于断言顺序。
 func kinds(evs []AgentEvent) []AgentEventKind {
 	ks := make([]AgentEventKind, len(evs))
 	for i, e := range evs {
@@ -103,13 +95,10 @@ func countKind(evs []AgentEvent, k AgentEventKind) int {
 	return n
 }
 
-// enabledSetting 是一个能通过 validate 的最小可用配置（runLoop 不实际调 validate，
-// 但 RunRequest 需要一个 Setting；这里保持真实形状）。
 func enabledSetting() model.AgentSetting {
 	return model.AgentSetting{Enable: true, Protocol: "openai", Model: "gpt-test", ApiKey: "k"}
 }
 
-// 多轮 happy path：第一轮调工具，第二轮作答。事件序列应为 Searching→ToolResult→Delta→Done。
 func TestRunLoop_MultiRoundHappyPath(t *testing.T) {
 	tool, execs := countingTool("search_echos", ToolOutput{Content: "hit", Meta: "meta"}, nil)
 	fp := &fakeProvider{scripts: [][]Event{
@@ -143,12 +132,11 @@ func TestRunLoop_MultiRoundHappyPath(t *testing.T) {
 	}
 }
 
-// 工具去重：跨轮同 Name+Args 的调用只执行一次，第二次走 seen 短路（不发 Searching/ToolResult）。
 func TestRunLoop_ToolDedup(t *testing.T) {
 	tool, execs := countingTool("search_echos", ToolOutput{Content: "hit"}, nil)
 	fp := &fakeProvider{scripts: [][]Event{
 		{toolCallEvent("c1", "search_echos", `{"q":"same"}`), doneEvent()},
-		{toolCallEvent("c2", "search_echos", `{"q":"same"}`), doneEvent()}, // 同 Name+Args → 去重
+		{toolCallEvent("c2", "search_echos", `{"q":"same"}`), doneEvent()},
 		{textEvent("done"), doneEvent()},
 	}}
 
@@ -168,12 +156,11 @@ func TestRunLoop_ToolDedup(t *testing.T) {
 	}
 }
 
-// maxRounds 用尽：工具轮跑满后强制一轮「不给工具」收尾，第二次 Stream 的 Tools 必须为 nil。
 func TestRunLoop_MaxRoundsForcesFinalNoToolRound(t *testing.T) {
 	tool, _ := countingTool("search_echos", ToolOutput{Content: "hit"}, nil)
 	fp := &fakeProvider{scripts: [][]Event{
-		{toolCallEvent("c1", "search_echos", `{"q":"x"}`), doneEvent()}, // 唯一一轮就调工具
-		{textEvent("forced answer"), doneEvent()},                       // 强制收尾轮
+		{toolCallEvent("c1", "search_echos", `{"q":"x"}`), doneEvent()},
+		{textEvent("forced answer"), doneEvent()},
 	}}
 
 	evs := runLoopSync(context.Background(), fp, RunRequest{
@@ -199,7 +186,6 @@ func TestRunLoop_MaxRoundsForcesFinalNoToolRound(t *testing.T) {
 	}
 }
 
-// 工具执行错误：包装成 tool 结果回喂模型自愈，不中止；下一轮正常作答收尾。
 func TestRunLoop_ToolExecErrorFedBack(t *testing.T) {
 	tool, execs := countingTool("search_echos", ToolOutput{}, errors.New("boom"))
 	fp := &fakeProvider{scripts: [][]Event{
@@ -226,11 +212,10 @@ func TestRunLoop_ToolExecErrorFedBack(t *testing.T) {
 	}
 }
 
-// 未知工具：模型调了不存在的工具，短路（不发 Searching），不 panic，继续到下一轮收尾。
 func TestRunLoop_UnknownTool(t *testing.T) {
 	tool, _ := countingTool("search_echos", ToolOutput{Content: "hit"}, nil)
 	fp := &fakeProvider{scripts: [][]Event{
-		{toolCallEvent("c1", "nope", `{}`), doneEvent()}, // 未注册的工具名
+		{toolCallEvent("c1", "nope", `{}`), doneEvent()},
 		{textEvent("answer"), doneEvent()},
 	}}
 
@@ -244,7 +229,6 @@ func TestRunLoop_UnknownTool(t *testing.T) {
 	}
 }
 
-// 传输/协议错误：单 AgentError 后关闭，不再调 Stream。
 func TestRunLoop_TransportError(t *testing.T) {
 	fp := &fakeProvider{scripts: [][]Event{
 		{errEvent(errors.New("network down"))},
@@ -263,12 +247,9 @@ func TestRunLoop_TransportError(t *testing.T) {
 	}
 }
 
-// ctx 取消：预取消后 runLoop 必须干净收口——关闭 out、不死锁、不泄漏 goroutine。
-// （注意：emit 用 select{out / ctx.Done} 监听取消，预取消下二者皆 ready，是否还发出 Done 由
-// Go 随机选择决定，故这里只断言「能终止」这一真实不变式，不断言具体事件。）
 func TestRunLoop_CtxCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // 预取消
+	cancel()
 
 	fp := &fakeProvider{scripts: [][]Event{
 		{textEvent("never delivered"), doneEvent()},
@@ -276,35 +257,30 @@ func TestRunLoop_CtxCancelled(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		// drain 直到 out 关闭：若 runLoop 不收口，drain 会阻塞，由 go test 超时兜底报错。
 		drain(runChan(ctx, fp, RunRequest{Setting: enabledSetting()}))
 		close(done)
 	}()
 
-	<-done // 必须返回，证明 runLoop 在取消下关闭了 out（不死锁、不泄漏）。
+	<-done
 }
 
-// runChan 启动 runLoop 并返回其事件 channel（不立即 drain，供取消场景断言收口）。
 func runChan(ctx context.Context, provider Provider, req RunRequest) <-chan AgentEvent {
 	out := make(chan AgentEvent)
 	go runLoop(ctx, provider, req, out)
 	return out
 }
 
-// per-run 超时：Timeout>0 时 Run 给整轮套上超时；极短超时下应干净收口（关闭 out、不死锁）。
-// （走真实 provider，但 ctx 立即过期使其在发起网络请求前即返回错误，故快速且无真实网络。）
 func TestRun_TimeoutAborts(t *testing.T) {
 	out, err := Run(context.Background(), RunRequest{
 		Setting: enabledSetting(),
-		Timeout: time.Nanosecond, // 立即过期
+		Timeout: time.Nanosecond,
 	})
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
-	drain(out) // 必须关闭（超时 ctx 经 emit 收口），否则 go test 超时报错
+	drain(out)
 }
 
-// RunStrings 留空字段回退到中文默认；非空字段保留。
 func TestRunStrings_WithDefaults(t *testing.T) {
 	if got := (RunStrings{}).withDefaults(); got != defaultRunStrings {
 		t.Fatalf("empty RunStrings should equal defaults, got %+v", got)
@@ -318,7 +294,6 @@ func TestRunStrings_WithDefaults(t *testing.T) {
 	}
 }
 
-// 自定义 Strings.ImageNote 应出现在带图的下一轮 user 消息里（替代中文默认）。
 func TestRunLoop_CustomImageNote(t *testing.T) {
 	const enNote = "(custom english image note)"
 	tool, _ := countingTool("search_echos", ToolOutput{Content: "hit", Images: []ImagePart{{MediaType: "image/png", Base64: "abc"}}}, nil)
@@ -344,8 +319,6 @@ func TestRunLoop_CustomImageNote(t *testing.T) {
 	}
 }
 
-// 单轮多工具：模型一轮内发起两个不同工具调用，二者都执行（并发），且下一轮上下文里两条
-// tool 结果按调用原序回灌；Searching/ToolResult 各 2 次。-race 下应无竞态。
 func TestRunLoop_ParallelToolsSingleRound(t *testing.T) {
 	toolA := Tool{
 		Def:     ToolDef{Name: "tool_a", Description: "a", Parameters: json.RawMessage(`{"type":"object"}`)},
@@ -369,7 +342,6 @@ func TestRunLoop_ParallelToolsSingleRound(t *testing.T) {
 		t.Fatalf("AgentToolResult count = %d, want 2", n)
 	}
 
-	// 下一轮 Messages 里两条 RoleTool 必须按调用原序：c1(AAA) 在 c2(BBB) 之前。
 	var toolMsgs []Message
 	for _, m := range fp.gotReqs[1].Messages {
 		if m.Role == RoleTool {
@@ -387,18 +359,16 @@ func TestRunLoop_ParallelToolsSingleRound(t *testing.T) {
 	}
 }
 
-// 轮内 token 预算回收：超 MaxContextTokens 时，最旧的 RoleTool 结果被替换为占位，较新的保留。
 func TestRunLoop_TrimsOldestToolResultOverBudget(t *testing.T) {
 	note := defaultRunStrings.ContextTrimNote
 	msgs := []Message{
 		{Role: RoleSystem, Content: "S"},
 		{Role: RoleUser, Content: "Q"},
 		{Role: RoleAssistant, ToolCalls: []ToolCall{{ID: "t1", Name: "search_echos"}}},
-		{Role: RoleTool, ToolCallID: "t1", Content: strings.Repeat("a", 100)}, // 最旧、最大
+		{Role: RoleTool, ToolCallID: "t1", Content: strings.Repeat("a", 100)},
 		{Role: RoleAssistant, ToolCalls: []ToolCall{{ID: "t2", Name: "search_echos"}}},
-		{Role: RoleTool, ToolCallID: "t2", Content: strings.Repeat("b", 20)}, // 较新
+		{Role: RoleTool, ToolCallID: "t2", Content: strings.Repeat("b", 20)},
 	}
-	// 预算 50：替换最旧的 t1(100→note 长度) 后 1+1+len(note)+20 应 ≤ 50。
 	fp := &fakeProvider{scripts: [][]Event{{textEvent("ok"), doneEvent()}}}
 
 	runLoopSync(context.Background(), fp, RunRequest{
@@ -416,7 +386,6 @@ func TestRunLoop_TrimsOldestToolResultOverBudget(t *testing.T) {
 	}
 }
 
-// 多模态：工具带出图片时，下一轮 Messages 应追加一条带图的 RoleUser（Content==toolImageNote）。
 func TestRunLoop_ToolImageNoteAppended(t *testing.T) {
 	img := ImagePart{MediaType: "image/png", Base64: "abc"}
 	tool, _ := countingTool("search_echos", ToolOutput{Content: "hit", Images: []ImagePart{img}}, nil)
@@ -441,7 +410,6 @@ func TestRunLoop_ToolImageNoteAppended(t *testing.T) {
 	if found == nil {
 		t.Fatalf("next round messages should contain the toolImageNote user message")
 	} else if len(found.Images) != 1 || found.Images[0].Base64 != "abc" {
-		// else-if keeps the deref lexically guarded by found != nil so staticcheck (SA5011) is satisfied.
 		t.Fatalf("toolImageNote message should carry the tool's image, got %+v", found.Images)
 	}
 }

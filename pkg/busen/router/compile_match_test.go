@@ -45,40 +45,33 @@ func TestCompileMatch(t *testing.T) {
 		topic   string
 		want    bool
 	}{
-		// empty pattern only matches the empty topic
 		{name: "empty matches empty", pattern: "", topic: "", want: true},
 		{name: "empty rejects nonempty", pattern: "", topic: "a", want: false},
 
-		// exact (no wildcard)
 		{name: "exact equal", pattern: "a.b.c", topic: "a.b.c", want: true},
 		{name: "exact last differs", pattern: "a.b.c", topic: "a.b.d", want: false},
 		{name: "exact too short", pattern: "a.b.c", topic: "a.b", want: false},
 		{name: "single literal", pattern: "a", topic: "a", want: true},
 
-		// single-segment star
 		{name: "star matches one segment", pattern: "*", topic: "a", want: true},
 		{name: "star rejects two segments", pattern: "*", topic: "a.b", want: false},
 		{name: "star rejects empty", pattern: "*", topic: "", want: false},
 
-		// star embedded with literals (a.*.c)
 		{name: "mid star match", pattern: "a.*.c", topic: "a.b.c", want: true},
 		{name: "mid star other value", pattern: "a.*.c", topic: "a.x.c", want: true},
 		{name: "mid star last differs", pattern: "a.*.c", topic: "a.b.d", want: false},
 		{name: "mid star too few segments", pattern: "a.*.c", topic: "a.b", want: false},
 		{name: "mid star too many segments", pattern: "a.*.c", topic: "a.b.c.d", want: false},
 
-		// trailing star (a.*)
 		{name: "trailing star match", pattern: "a.*", topic: "a.b", want: true},
 		{name: "trailing star too many", pattern: "a.*", topic: "a.b.c", want: false},
 		{name: "trailing star too few", pattern: "a.*", topic: "a", want: false},
 
-		// trailing > matches one-or-more remaining segments
 		{name: "tail gt single segment", pattern: "a.>", topic: "a.b", want: true},
 		{name: "tail gt multi segment", pattern: "a.>", topic: "a.b.c", want: true},
 		{name: "tail gt empty tail rejected", pattern: "a.>", topic: "a", want: false},
 		{name: "tail gt prefix differs", pattern: "a.>", topic: "x.b", want: false},
 
-		// bare > matches any nonempty topic
 		{name: "bare gt single", pattern: ">", topic: "a", want: true},
 		{name: "bare gt multi", pattern: ">", topic: "a.b.c", want: true},
 		{name: "bare gt empty rejected", pattern: ">", topic: "", want: false},

@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// DeleteEchoById 必须手动级联删除 extension：schema 里的 ON DELETE CASCADE
-// 依赖 SQLite 的 foreign_keys 开关，连接默认不启用，级联不会自动发生。
 func TestEchoRepository_DeleteEchoById_RemovesExtension(t *testing.T) {
 	repo, db := newEchoRepo(t)
 	seedEcho(t, db, "e1", "with extension", false, 0, 100)

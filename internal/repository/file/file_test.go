@@ -22,7 +22,6 @@ func newFileRepo(t *testing.T) (*FileRepository, *gorm.DB) {
 	return NewFileRepository(func() *gorm.DB { return db }), db
 }
 
-// insertFile 直接通过 db 落库一行 File，并回填可断言的字段。
 func insertFile(t *testing.T, db *gorm.DB, f fileModel.File) fileModel.File {
 	t.Helper()
 	require.NoError(t, db.Create(&f).Error)
@@ -115,7 +114,6 @@ func TestFileRepository_GetByRoute(t *testing.T) {
 
 func TestFileRepository_ListByStorageTypeAndSearch(t *testing.T) {
 	repo, db := newFileRepo(t)
-	// created_at 显式设置以保证 DESC 排序可断言（autoCreateTime 仅填充零值）。
 	insertFile(t, db, fileModel.File{ID: "s-1", Key: "alpha", Name: "apple", StorageType: "local", UserID: "u-1", CreatedAt: 100})
 	insertFile(t, db, fileModel.File{ID: "s-2", Key: "beta", Name: "banana", StorageType: "local", UserID: "u-1", CreatedAt: 200})
 	insertFile(t, db, fileModel.File{ID: "s-3", Key: "gamma", Name: "cherry", StorageType: "object", Provider: "r2", Bucket: "b", UserID: "u-1", CreatedAt: 300})
@@ -125,7 +123,7 @@ func TestFileRepository_ListByStorageTypeAndSearch(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), total)
 		require.Len(t, files, 2)
-		assert.Equal(t, "s-2", files[0].ID) // created_at 200 first (DESC)
+		assert.Equal(t, "s-2", files[0].ID)
 		assert.Equal(t, "s-1", files[1].ID)
 	})
 
@@ -161,12 +159,11 @@ func TestFileRepository_ListByStorageTypeAndSearch(t *testing.T) {
 	})
 
 	t.Run("pagination respects page and pageSize", func(t *testing.T) {
-		// 3 local-or-all rows; page 2, size 2 → second page has 1 row (oldest by DESC).
 		files, total, err := repo.ListByStorageTypeAndSearch(context.Background(), "", "", 2, 2)
 		require.NoError(t, err)
 		assert.Equal(t, int64(3), total)
 		require.Len(t, files, 1)
-		assert.Equal(t, "s-1", files[0].ID) // created_at 100 is last in DESC order
+		assert.Equal(t, "s-1", files[0].ID)
 	})
 }
 
@@ -186,7 +183,7 @@ func TestFileRepository_ListByStorageTypeAndKeys(t *testing.T) {
 	t.Run("filters by storage type and key set", func(t *testing.T) {
 		files, err := repo.ListByStorageTypeAndKeys(context.Background(), "local", []string{"kk-a", "kk-b", "kk-c"})
 		require.NoError(t, err)
-		require.Len(t, files, 2) // kk-c is object, excluded
+		require.Len(t, files, 2)
 		ids := map[string]bool{files[0].ID: true, files[1].ID: true}
 		assert.True(t, ids["k-a"] && ids["k-b"])
 	})
@@ -237,7 +234,6 @@ func TestFileRepository_UpdateMetaByID(t *testing.T) {
 		assert.Equal(t, 600, got.Height)
 		assert.Equal(t, "image/png", got.ContentType)
 
-		// 落库验证
 		var fresh fileModel.File
 		require.NoError(t, db.First(&fresh, "id = ?", "m-1").Error)
 		assert.Equal(t, 800, fresh.Width)
@@ -318,7 +314,6 @@ func TestFileRepository_TempLifecycle(t *testing.T) {
 
 func TestFileRepository_ListExpiredTemps(t *testing.T) {
 	repo, db := newFileRepo(t)
-	// expire_at: 10, 20, 30; created_at controls ASC ordering.
 	require.NoError(t, db.Create(&fileModel.TempFile{ID: "e-1", FileID: "ef-1", UploaderID: "u-1", ExpireAt: 10, CreatedAt: 1}).Error)
 	require.NoError(t, db.Create(&fileModel.TempFile{ID: "e-2", FileID: "ef-2", UploaderID: "u-1", ExpireAt: 20, CreatedAt: 2}).Error)
 	require.NoError(t, db.Create(&fileModel.TempFile{ID: "e-3", FileID: "ef-3", UploaderID: "u-1", ExpireAt: 30, CreatedAt: 3}).Error)
@@ -363,8 +358,6 @@ func TestFileRepository_GetByCategory(t *testing.T) {
 	})
 }
 
-// TestFileRepository_GetDB_UsesContextTx 验证事务上下文优先：事务内创建后回滚，
-// 基础连接查询不到该行。
 func TestFileRepository_GetDB_UsesContextTx(t *testing.T) {
 	repo, db := newFileRepo(t)
 

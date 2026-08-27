@@ -367,8 +367,7 @@
     "localeSyncFailed": "Failed to sync language preference",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSunny": "Sunny",
-    "githubAction": "GitHub"
+    "themeSunny": "Sunny"
   },
   "homeTop": {
     "searchTitle": "Search",

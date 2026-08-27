@@ -12,16 +12,12 @@ import (
 	echoModel "github.com/lin-snow/ech0/internal/model/echo"
 )
 
-// maxPromptTags 限制注入 system prompt 的标签数量，避免标签很多时占用过多 token。
 const maxPromptTags = 40
 
-// localeIsZH 判定是否中文 locale（zh-* 走中文，其余回退英文）。
 func localeIsZH(locale string) bool {
 	return strings.HasPrefix(strings.ToLower(locale), "zh")
 }
 
-// runStringsFor 按 locale 选择 Loop 回喂/注入模型的提示文案（agent.RunStrings）。
-// 让回喂模型的文本随用户语言切换，而非固定中文。
 func runStringsFor(locale string) agent.RunStrings {
 	if localeIsZH(locale) {
 		return agent.RunStrings{
@@ -41,7 +37,6 @@ func runStringsFor(locale string) agent.RunStrings {
 	}
 }
 
-// chatSystemPrompt 是 Chat（Agent 形态）的系统提示词：声明工具用途与作答纪律。
 const chatSystemPrompt = `你是用户的私人助手。你可以检索 ta 过往发布的 Echo（微博客/碎碎念）来作答——回顾总结、查找某条、延伸思考、找灵感都行。
 你有三个工具，按需选用：
 - search_echos：点查。回答具体问题、找某几条相关记录时用它（top-k，只返回最相关的若干条，是采样不是全貌）。
@@ -56,7 +51,6 @@ const chatSystemPrompt = `你是用户的私人助手。你可以检索 ta 过�
 - 如果没有足够依据，就如实说明“你的 Echo 里没有相关记录”，不要编造；若材料标注了覆盖范围或截断，请在总结中如实体现；
 - 用简洁自然的中文，可用 Emoji 和换行，不要输出 HTML 标签。`
 
-// chatSystemPromptEN 是 chatSystemPrompt 的英文版本（locale 非 zh-* 时使用）。
 const chatSystemPromptEN = `You are the user's personal assistant. You can search their past Echos (microblog notes) to help — reviewing, summarizing, finding a specific one, reflecting further, or sparking ideas.
 You have three tools; pick the right one:
 - search_echos: pinpoint lookup. Use it to answer specific questions or find a few relevant entries (top-k, returns only the most relevant ones).
@@ -72,10 +66,6 @@ Answering requirements:
 - Be concise and natural, you may use emoji and line breaks, do not output HTML tags.
 Always answer in the same language as the user's question.`
 
-// buildChatMessages 组装 Chat 一轮对话的消息：system → 历史多轮 → 本轮问题。
-// today（YYYY-MM-DD）与 tagNames 作为检索上下文拼进 system，让模型能把相对时间换算成
-// date_from/date_to、并从已知标签里挑 tags。
-// history 是经 historyForModel 裁剪好的过往多轮（已剥旧工具结果、按 token 预算截断）。
 func buildChatMessages(history []agent.Message, question, locale, today string, tagNames []string, displayName string) []agent.Message {
 	msgs := make([]agent.Message, 0, len(history)+2)
 	msgs = append(msgs, agent.Message{Role: agent.RoleSystem, Content: buildSystemPrompt(locale, today, tagNames, displayName)})
@@ -84,15 +74,10 @@ func buildChatMessages(history []agent.Message, question, locale, today string, 
 	return msgs
 }
 
-// buildSystemPrompt 拼出 Chat 的完整 system 提示词（系统纪律 + 检索上下文块）。
-// 抽成独立函数，供 AskStream 在裁剪历史前估算固定开销 token。
 func buildSystemPrompt(locale, today string, tagNames []string, displayName string) string {
 	return chatSystemPromptFor(locale) + buildContextBlock(locale, today, tagNames, displayName)
 }
 
-// buildContextBlock 生成注入 system prompt 的检索上下文块（身份 + 当前日期 + 可用标签）。
-// displayName 是当前对话用户的展示名：注入一行**任务中性**的身份信息，让模型知道在跟谁对话、
-// 能检索到的是谁的 Echo（不暗示「只能回顾」等具体任务）；为空则省略该行。
 func buildContextBlock(locale, today string, tagNames []string, displayName string) string {
 	var b strings.Builder
 	if localeIsZH(locale) {
@@ -115,8 +100,6 @@ func buildContextBlock(locale, today string, tagNames []string, displayName stri
 	return b.String()
 }
 
-// tagNamesForPrompt 取使用次数最高的若干标签名注入 prompt（按 UsageCount 降序、上限
-// maxPromptTags），在召回质量与 token 成本间取平衡。
 func tagNamesForPrompt(tags []echoModel.Tag) []string {
 	sorted := append([]echoModel.Tag(nil), tags...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].UsageCount > sorted[j].UsageCount })
@@ -130,7 +113,6 @@ func tagNamesForPrompt(tags []echoModel.Tag) []string {
 	return names
 }
 
-// chatSystemPromptFor 按 locale 选择系统提示词：zh-* 用中文，其余统一回退英文。
 func chatSystemPromptFor(locale string) string {
 	if localeIsZH(locale) {
 		return chatSystemPrompt
@@ -138,13 +120,10 @@ func chatSystemPromptFor(locale string) string {
 	return chatSystemPromptEN
 }
 
-// recentSourcesNote{ZH,EN} 是折进「最近一轮 assistant 文本」的检索依据标注块（含一个 %s 占位
-// 给 formatSearchResults 的命中文本），让用户追问上一轮结果细节时模型直接有据，无需重检索。
 const recentSourcesNoteZH = "（上一轮检索到的 Echo 依据，供追问其细节时参考：\n%s）"
 
 const recentSourcesNoteEN = "(Echos retrieved in the previous turn, for reference when asked about their details:\n%s)"
 
-// recentSourcesNoteFor 按 locale 选择检索依据标注块文案。
 func recentSourcesNoteFor(locale string) string {
 	if localeIsZH(locale) {
 		return recentSourcesNoteZH
@@ -152,7 +131,6 @@ func recentSourcesNoteFor(locale string) string {
 	return recentSourcesNoteEN
 }
 
-// summarySystemPromptFor 按 locale 选择「近况总结」系统提示词。
 func summarySystemPromptFor(locale string) string {
 	if localeIsZH(locale) {
 		return summarySystemPromptZH
@@ -160,7 +138,6 @@ func summarySystemPromptFor(locale string) string {
 	return summarySystemPromptEN
 }
 
-// summaryUserPromptFor 按 locale 选择「近况总结」用户提示词。
 func summaryUserPromptFor(locale string) string {
 	if localeIsZH(locale) {
 		return summaryUserPromptZH
@@ -186,8 +163,6 @@ const summaryUserPromptZH = "请根据提供的近期互动内容（内容可能
 
 const summaryUserPromptEN = "Based on the provided recent activity (which may include daily life, quoted sentences or poems, venting, etc.), summarize this user's recent activity and state. Just highlight the author's state without describing the content in detail. If there is no content at all, reply that the author has been quite mysterious lately~"
 
-// aggregateMapPromptFor 是区间聚合 map 阶段（单月浓缩）的指令：把一个月的 Echo 压成
-// 事实性摘要供上层再归纳，强调忠实、保留关键信息、不发挥、随内容语言。
 func aggregateMapPromptFor(locale string) string {
 	if localeIsZH(locale) {
 		return "下面是用户在一段时间内发布的若干 Echo（按月分组，每条含日期，可能带 #标签、[img×N]（配图数）、" +
@@ -202,8 +177,6 @@ func aggregateMapPromptFor(locale string) string {
 		"Use the same language as the content. This is intermediate material for a later period summary."
 }
 
-// searchCoverageNoteFor 在 search_echos 命中数多于本次展示（top-k 截断）时，给模型的一行如实告知，
-// 防止它把「采样的几条」当成「全部」。
 func searchCoverageNoteFor(locale string, total, shown int) string {
 	if localeIsZH(locale) {
 		return fmt.Sprintf("（本次条件共命中 %d 条，下面只展示最相关的 %d 条；若需覆盖全部用于总结/回顾，请改用 summarize_echos。）", total, shown)
@@ -211,8 +184,6 @@ func searchCoverageNoteFor(locale string, total, shown int) string {
 	return fmt.Sprintf("(This filter matched %d Echos in total; only the %d most relevant are shown below. To cover all of them for a summary/review, use summarize_echos instead.)", total, shown)
 }
 
-// aggregateMaterialHeaderFor 是 summarize_echos 回喂模型的物料抬头：声明这是覆盖某区间的中间材料、
-// 覆盖度多少、是否截断，并提示模型据此为用户写最终成稿（而非把材料原样吐回）。
 func aggregateMaterialHeaderFor(locale string, total, returned, buckets int, truncated bool) string {
 	if localeIsZH(locale) {
 		var b strings.Builder
@@ -240,8 +211,6 @@ func aggregateMaterialHeaderFor(locale string, total, returned, buckets int, tru
 	return b.String()
 }
 
-// aggregateReducePromptFor 是 reduce 阶段的指令：当各月摘要拼接后仍超预算时，再压一轮，
-// 但必须保留每个月的要点与时间线，不丢月份。
 func aggregateReducePromptFor(locale string) string {
 	if localeIsZH(locale) {
 		return "下面是按月排好的多段摘要。请进一步压缩成更短的分月要点，保留每个月的核心信息与时间线，" +

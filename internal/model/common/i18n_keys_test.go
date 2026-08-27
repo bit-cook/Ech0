@@ -28,7 +28,6 @@ func TestMessageKeyFromErrorCode(t *testing.T) {
 		{"refresh_token_invalid", ErrCodeRefreshTokenInvalid, MsgKeyAuthRefreshTokenInvalid},
 		{"exchange_code_invalid", ErrCodeExchangeCodeInvalid, MsgKeyAuthExchangeCodeInvalid},
 		{"token_generate_failed", ErrCodeTokenGenerateFailed, MsgKeyAuthTokenGenerateFailed},
-		// Codes with no dedicated message key fall through to empty string.
 		{"internal_unmapped", ErrCodeInternal, ""},
 		{"permission_denied_unmapped", ErrCodePermissionDenied, ""},
 		{"invalid_request_unmapped", ErrCodeInvalidRequest, ""},
@@ -65,8 +64,6 @@ func TestResolveFailureFields(t *testing.T) {
 	params := map[string]any{"name": "x", "n": 3}
 
 	t.Run("biz_error_with_explicit_message_key_wins", func(t *testing.T) {
-		// An explicit MessageKey on the BizError takes precedence over any
-		// code-derived key, and Params are passed through verbatim.
 		err := NewBizErrorWithMessageKey(ErrCodeTokenMissing, "boom", "custom.key", params)
 		code, key, gotParams := ResolveFailureFields(err, "ignored base")
 		assert.Equal(t, ErrCodeTokenMissing, code)
@@ -83,8 +80,6 @@ func TestResolveFailureFields(t *testing.T) {
 	})
 
 	t.Run("biz_error_whitespace_key_is_trimmed_then_mapped", func(t *testing.T) {
-		// A blank/whitespace MessageKey is treated as absent (TrimSpace == ""),
-		// so resolution falls back to the code mapping.
 		err := NewBizErrorWithMessageKey(ErrCodeTokenRevoked, "revoked", "   ", params)
 		code, key, gotParams := ResolveFailureFields(err, "ignored base")
 		assert.Equal(t, ErrCodeTokenRevoked, code)
@@ -110,8 +105,6 @@ func TestResolveFailureFields(t *testing.T) {
 	})
 
 	t.Run("plain_error_maps_message_key_from_base", func(t *testing.T) {
-		// Non-BizError: no error_code, message_key derived from the (already
-		// HandleError-ed) base text, no params.
 		code, key, gotParams := ResolveFailureFields(errors.New("whatever"), SUCCESS_MESSAGE)
 		assert.Equal(t, "", code)
 		assert.Equal(t, MsgKeyCommonSuccess, key)

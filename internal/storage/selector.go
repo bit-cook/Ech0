@@ -180,10 +180,6 @@ func (r *StorageSelector) ResolveURLByPath(storageType StorageType, filePath str
 	}
 }
 
-// ResolveKeyByPath converts a listed storage path to business key.
-// Current upload strategy stores flat keys, while schema/prefix adds
-// directory layers in storage path. For tree listing, basename maps
-// back to the stable DB file.key.
 func (r *StorageSelector) ResolveKeyByPath(storageType StorageType, filePath string) string {
 	candidates := r.ResolveKeyCandidatesByPath(storageType, filePath)
 	if len(candidates) == 0 {

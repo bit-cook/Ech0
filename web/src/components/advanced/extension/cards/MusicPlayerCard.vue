@@ -466,15 +466,10 @@ function setupMediaSession() {
   for (const action of MEDIA_SESSION_ACTIONS) {
     try {
       navigator.mediaSession.setActionHandler(action, handlers[action])
-    } catch {
-      // Browsers may expose only part of the Media Session API.
-    }
+    } catch {}
   }
 }
 
-// Mirror of setupMediaSession: release the shared mediaSession singleton so the
-// OS media controls don't stay bound to a destroyed player. Only call this when
-// this card currently owns the session, or it would clobber another player's.
 function teardownMediaSession() {
   if (!('mediaSession' in navigator)) return
 
@@ -483,9 +478,7 @@ function teardownMediaSession() {
   for (const action of MEDIA_SESSION_ACTIONS) {
     try {
       navigator.mediaSession.setActionHandler(action, null)
-    } catch {
-      // Browsers may expose only part of the Media Session API.
-    }
+    } catch {}
   }
 }
 
@@ -517,9 +510,7 @@ function updateMediaPositionState() {
       playbackRate: audioRef.value?.playbackRate ?? 1,
       position: Math.min(currentTime.value, duration.value),
     })
-  } catch {
-    // Metadata and duration can briefly be out of sync while audio loads.
-  }
+  } catch {}
 }
 
 function handleOtherPlayer(event: Event) {
@@ -538,8 +529,6 @@ onBeforeUnmount(() => {
   lyricController?.abort()
   if (trackInfoTimer) clearTimeout(trackInfoTimer)
   window.removeEventListener(PLAYER_EVENT, handleOtherPlayer)
-  // Only the active player owns the shared mediaSession (playback is mutually
-  // exclusive across cards), so clearing it here can't steal another card's.
   if (isPlaybackActive.value) teardownMediaSession()
   pause()
 })

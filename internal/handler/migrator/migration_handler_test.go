@@ -18,10 +18,6 @@ import (
 
 var errBoom = errors.New("boom")
 
-// ---------------------------------------------------------------------------
-// 导入（全局迁移）框架中立 handler
-// ---------------------------------------------------------------------------
-
 func TestStartMigration(t *testing.T) {
 	t.Run("success forwards body and wraps OK", func(t *testing.T) {
 		mockSvc := migratormock.NewMockService(t)
@@ -143,10 +139,6 @@ func TestCleanupMigration(t *testing.T) {
 		assert.Equal(t, EmptyOutput{}, out)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// 导出（快照）框架中立 handler
-// ---------------------------------------------------------------------------
 
 func TestStartExport(t *testing.T) {
 	t.Run("success", func(t *testing.T) {

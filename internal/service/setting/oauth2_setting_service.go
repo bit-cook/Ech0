@@ -14,8 +14,6 @@ import (
 	"github.com/lin-snow/ech0/pkg/viewer"
 )
 
-// GetOAuth2Setting 获取 OAuth2 设置（管理员可见全量；缺省/归一化由 setting 引擎处理）。
-// 内部调用方（auth 等）直接走 setting.Get(ctx, kv, setting.OAuth2)，不经此鉴权方法。
 func (settingService *SettingService) GetOAuth2Setting(
 	ctx context.Context,
 	setting *model.OAuth2Setting,
@@ -37,7 +35,6 @@ func (settingService *SettingService) GetOAuth2Setting(
 	return nil
 }
 
-// UpdateOAuth2Setting 更新 OAuth2 设置
 func (settingService *SettingService) UpdateOAuth2Setting(
 	ctx context.Context,
 	newSetting *model.OAuth2SettingDto,
@@ -67,11 +64,9 @@ func (settingService *SettingService) UpdateOAuth2Setting(
 		AuthRedirectAllowedReturnURLs: sanitizeURLList(newSetting.AuthRedirectAllowedReturnURLs),
 		CORSAllowedOrigins:            sanitizeURLList(newSetting.CORSAllowedOrigins),
 	}
-	// 边界白名单为空时回退到 config 默认，由 coreSetting.Set 的 Normalize 统一处理。
 	return coreSetting.Set(ctx, settingService.durableKV, coreSetting.OAuth2, oauthSetting)
 }
 
-// GetOAuth2Status 获取 OAuth2 状态（公开读，直接走 setting 引擎）。
 func (settingService *SettingService) GetOAuth2Status(status *model.OAuth2Status) error {
 	oauthSetting, err := coreSetting.Get(context.Background(), settingService.durableKV, coreSetting.OAuth2)
 	if err != nil {

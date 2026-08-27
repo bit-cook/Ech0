@@ -2,10 +2,8 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2 comment-manager-page">
-    <!-- 分段控件：评论设置 / 评论管理 -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- 评论设置 -->
     <PanelCard v-if="tab === 'setting'">
       <div class="mb-4 flex items-center justify-between gap-3">
         <div>
@@ -109,7 +107,6 @@
       </div>
     </PanelCard>
 
-    <!-- 评论管理 -->
     <PanelCard v-else>
       <div class="mb-4">
         <h1 class="text-lg font-bold text-[var(--color-text-primary)]">
@@ -282,7 +279,6 @@
       <div
         class="comment-detail w-full max-w-lg overflow-hidden rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-canvas)] shadow-[var(--shadow-md)]"
       >
-        <!-- 标题栏 -->
         <div class="comment-detail__header">
           <h3 class="comment-detail__title">{{ t('commentManager.detailTitle') }}</h3>
           <button
@@ -296,7 +292,6 @@
         </div>
 
         <div class="comment-detail__body">
-          <!-- 评论者 -->
           <div class="comment-detail__author">
             <BaseAvatar
               :seed="avatarSeed(current)"
@@ -317,10 +312,8 @@
             </div>
           </div>
 
-          <!-- 正文 -->
           <p class="comment-detail__content">{{ current.content }}</p>
 
-          <!-- 元信息 -->
           <dl class="comment-detail__meta">
             <div class="comment-detail__meta-row">
               <dt>{{ t('commentManager.email') }}</dt>
@@ -575,7 +568,6 @@ const openDetail = async (id: string) => {
   }
 }
 
-// 与公开评论区一致：用 Micah 自动头像，按评论的稳定字段做 seed。
 const avatarSeed = (item: App.Api.Comment.CommentItem) =>
   `${item.id}-${item.nickname}-${item.source}`
 
@@ -704,7 +696,6 @@ onMounted(async () => {
   opacity: 0.72;
 }
 
-/* 评论详情弹窗 */
 .comment-detail__header {
   display: flex;
   align-items: center;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-// Package handler 暴露 Embedding 向量索引的 HTTP 接口（Huma type-first）。
 package handler
 
 import (
@@ -14,7 +13,6 @@ import (
 	jobModel "github.com/lin-snow/ech0/internal/model/job"
 )
 
-// reindexStatusIdle 是「从未运行 / 已无作业行」时合成的哨兵状态，对应 job.ErrNotFound。
 const reindexStatusIdle = "idle"
 
 type EmbeddingHandler struct {
@@ -27,8 +25,6 @@ func NewEmbeddingHandler(jobManager *job.Manager) *EmbeddingHandler {
 	}
 }
 
-// ReindexStatusResponse 是 reindex 作业的状态响应。payload 用 RawMessage 内嵌成对象
-// （承载 BackfillResult: total/indexed/skipped/failed），避免被转义成字符串。
 type ReindexStatusResponse struct {
 	Status     string          `json:"status" doc:"作业状态：idle/pending/running/succeeded/failed/cancelled" example:"running"`
 	Phase      string          `json:"phase,omitempty" doc:"当前阶段"`
@@ -38,7 +34,6 @@ type ReindexStatusResponse struct {
 	FinishedAt *int64          `json:"finished_at,omitempty" doc:"结束时间（Unix 秒）"`
 }
 
-// 空入参类型：这些操作不带 path/query/body 参数，但 Huma 要求每个 operation 有输入结构。
 type (
 	ReindexInput       struct{}
 	ReindexStatusInput struct{}
@@ -69,8 +64,6 @@ func (embeddingHandler *EmbeddingHandler) Reindex(ctx context.Context, _ *Reinde
 	return commonModel.OK(mapJobToReindexStatus(jb)), nil
 }
 
-// ReindexStatus 查询重建索引作业状态（前端按 type 轮询，无需 id）。
-// 查无作业行时合成 idle，供前端判断「无进行中重建」。
 func (embeddingHandler *EmbeddingHandler) ReindexStatus(ctx context.Context, _ *ReindexStatusInput) (ReindexOutput, error) {
 	jb, err := embeddingHandler.jobManager.Get(ctx, jobModel.TypeReindex)
 	if errors.Is(err, job.ErrNotFound) {

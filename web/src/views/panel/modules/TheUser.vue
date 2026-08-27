@@ -2,12 +2,9 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="w-full px-2">
-    <!-- 分段控件：账户设置 / 用户管理 -->
     <BaseSegmented v-model="tab" :options="tabOptions" />
 
-    <!-- 账户设置 -->
     <TheUserSetting v-if="tab === 'account'" />
-    <!-- 用户管理 -->
     <TheUserManager v-else />
   </div>
 </template>

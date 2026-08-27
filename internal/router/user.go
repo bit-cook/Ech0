@@ -12,9 +12,7 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// registerUser 注册用户路由。
 func registerUser(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
-	// 公开但敏感：仅 NoCache，不鉴权。
 	route(api, public(), huma.Operation{
 		OperationID: "user-register",
 		Method:      http.MethodPost,

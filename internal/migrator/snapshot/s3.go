@@ -22,9 +22,6 @@ const (
 	s3SnapshotKeepCount = 3
 )
 
-// BuildS3FS creates a VireFS ObjectFS dedicated to snapshot operations.
-// It respects the user's PathPrefix but omits Schema (no file-type classification),
-// so snapshots are stored at <prefix>/snapshots/ech0_snapshot_xxx.zip.
 func BuildS3FS(cfg config.StorageConfig) (virefs.FS, error) {
 	if !cfg.ObjectEnabled {
 		return nil, fmt.Errorf("object storage is not enabled")
@@ -54,21 +51,12 @@ func virefsS3Config(cfg config.StorageConfig) *virefs.S3Config {
 		AccessKey: cfg.AccessKey,
 		SecretKey: cfg.SecretKey,
 	}
-	// 仅在 true 时设指针：virefs 只在 UsePathStyle 为 nil 时应用 minio/r2 的
-	// path-style 预设，无条件传 aws.Bool(false) 会把预设击穿。
 	if cfg.UsePathStyle {
 		s3cfg.UsePathStyle = aws.Bool(true)
 	}
 	return s3cfg
 }
 
-// UploadToS3 uploads the local snapshot ZIP to S3 at snapshots/<fileName>,
-// then cleans up old snapshots keeping only the most recent ones.
-//
-// VireFS opts every non-AWS target (MinIO, R2, "other" S3-compatible services)
-// out of request/response checksum calculation (see NewS3Client), avoiding the
-// aws-chunked trailer bodies those services reject as XAmzContentSHA256Mismatch
-// or "chunk too big".
 func UploadToS3(ctx context.Context, snapshotFilePath, fileName string, cfg config.StorageConfig) error {
 	f, err := os.Open(snapshotFilePath)
 	if err != nil {
@@ -102,9 +90,6 @@ func UploadToS3(ctx context.Context, snapshotFilePath, fileName string, cfg conf
 	return nil
 }
 
-// cleanupOldS3Snapshots lists files under the snapshots/ prefix and removes
-// all but the most recent keepCount files (sorted by name, which embeds
-// a UTC timestamp).
 func cleanupOldS3Snapshots(ctx context.Context, s3FS virefs.FS, keepCount int) error {
 	result, err := s3FS.List(ctx, s3SnapshotPrefix)
 	if err != nil {

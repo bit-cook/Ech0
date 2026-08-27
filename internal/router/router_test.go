@@ -47,7 +47,6 @@ func TestSetupRouter_RegistersKeyRoutes(t *testing.T) {
 		method string
 		path   string
 	}{
-		// Huma type-first docs/spec（取代旧 /swagger）。
 		{method: http.MethodGet, path: "/api/docs"},
 		{method: http.MethodGet, path: "/api/openapi.json"},
 		{method: http.MethodPost, path: "/api/login"},
@@ -71,12 +70,6 @@ func TestSetupRouter_RegistersKeyRoutes(t *testing.T) {
 	}
 }
 
-// TestSetupRouter_EnvelopeContract 锁住 Huma 端点的响应信封契约：handler 返回
-// commonModel.Result（自带成功提示），经外挂的 humares.Wrap 套成 Envelope。验证重构后
-// 线上形态仍是 { code, msg, data }（handler 自身不认识 Huma）。
-//
-// 用 /api/hello：公开、不碰 DB，且其成功文案不映射 i18n key（localizeResult 推导出空 key 后
-// 跳过翻译），故不依赖测试环境里未初始化的 i18n bundle，断言稳定。
 func TestSetupRouter_EnvelopeContract(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	initTestDatabase(t)
@@ -124,8 +117,6 @@ func TestSetupRouter_AuthGroupProtected(t *testing.T) {
 	}
 }
 
-// 锁住「公开可读 echo 接口匿名可达」契约：这些路由注册在 OptionalAuthRouterGroup，
-// 无 token 时应被放行（非 401），而非被强制鉴权拦截。若有人误把它们挪回强制组，此用例会失败。
 func TestSetupRouter_PublicEchoRoutesAllowAnonymous(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	initTestDatabase(t)

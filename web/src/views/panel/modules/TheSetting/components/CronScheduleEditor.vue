@@ -236,7 +236,6 @@ watch([frequency, hour, minute, weekday, monthday, hourlyInterval, customExpress
   text-transform: uppercase;
 }
 
-/* Shared form-input shape for native <select>, <input type=time>, <input type=text>. */
 .cron-editor__control {
   width: 100%;
   height: 2.1rem;
@@ -271,9 +270,6 @@ watch([frequency, hour, minute, weekday, monthday, hourlyInterval, customExpress
   opacity: 0.6;
 }
 
-/* Native select: hide browser arrow, paint our own that adapts to the
-   text color (so it works in both light and dark themes, unlike a
-   hardcoded SVG fill). */
 select.cron-editor__control {
   appearance: none;
   padding-right: 1.9rem;
@@ -301,7 +297,6 @@ select.cron-editor__control::-ms-expand {
   letter-spacing: 0.02em;
 }
 
-/* iOS Safari collapses ::-webkit-date-and-time-value when appearance:none. */
 .cron-editor__control--time::-webkit-date-and-time-value {
   text-align: left;
   min-height: 1.2em;

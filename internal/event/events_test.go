@@ -14,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEventName 锁定每个事件的稳定外部名（webhook 的 topic / X-Ech0-Event）。
-// 这些字符串是 webhook 兼容契约，任何改动都属破坏性变更，必须显式失败。
 func TestEventName(t *testing.T) {
 	cases := []struct {
 		name string
@@ -37,7 +35,6 @@ func TestEventName(t *testing.T) {
 		{"UpdateSnapshotSchedule", UpdateSnapshotSchedule{}, "system.snapshot_schedule.updated"},
 	}
 
-	// 守卫事件总数：新增/删除事件时此处必须同步更新，避免遗漏 topic 契约锁定。
 	require.Len(t, cases, 13, "expected exactly 13 named events")
 
 	for _, tc := range cases {
@@ -47,7 +44,6 @@ func TestEventName(t *testing.T) {
 	}
 }
 
-// TestEventNamesUnique 保证所有 topic 字符串互不重复——webhook 路由按名分发，重名会串台。
 func TestEventNamesUnique(t *testing.T) {
 	names := []Named{
 		UserCreated{},
@@ -78,8 +74,6 @@ func TestEventNamesUnique(t *testing.T) {
 	assert.Len(t, seen, len(names), "every event must have a distinct topic")
 }
 
-// TestOrderingKey 锁定局部有序键：busen 对 async 订阅者按 per-key 保序。
-// 仅历史上带 WithKey 的 10 个事件实现 Keyed，键值取对应资源 ID。
 func TestOrderingKey(t *testing.T) {
 	const (
 		userID    = "user-key-0001"
@@ -105,7 +99,6 @@ func TestOrderingKey(t *testing.T) {
 		{"ResourceUploaded", ResourceUploaded{Key: storeKey}, storeKey},
 	}
 
-	// 守卫 Keyed 事件总数。
 	require.Len(t, cases, 10, "expected exactly 10 keyed events")
 
 	for _, tc := range cases {
@@ -115,16 +108,13 @@ func TestOrderingKey(t *testing.T) {
 	}
 }
 
-// TestOrderingKey_EmptyWhenIDUnset 验证键直接透传资源 ID：未设置 ID 时键为空（不保序）。
 func TestOrderingKey_EmptyWhenIDUnset(t *testing.T) {
 	assert.Empty(t, EchoCreated{}.OrderingKey())
 	assert.Empty(t, UserCreated{}.OrderingKey())
 	assert.Empty(t, CommentCreated{}.OrderingKey())
-	// ResourceUploaded 的有序键取存储 Key 而非 FileName/URL。
 	assert.Empty(t, ResourceUploaded{FileName: "a.png", URL: "http://x/a.png"}.OrderingKey())
 }
 
-// TestSystemEventsNotKeyed 回归：系统类事件不应实现 Keyed（历史上不带 WithKey，不保序）。
 func TestSystemEventsNotKeyed(t *testing.T) {
 	cases := []struct {
 		name string
@@ -142,7 +132,6 @@ func TestSystemEventsNotKeyed(t *testing.T) {
 	}
 }
 
-// TestKeyedEventsAlsoNamed 编译期+运行期双保险：每个 Keyed 事件同时是 Named。
 func TestKeyedEventsAlsoNamed(t *testing.T) {
 	keyed := []Keyed{
 		UserCreated{},

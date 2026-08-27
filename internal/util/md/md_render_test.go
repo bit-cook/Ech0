@@ -47,7 +47,6 @@ func TestMdToHTML(t *testing.T) {
 		if !strings.Contains(out, `target="_blank"`) {
 			t.Fatalf("expected target=_blank, got: %q", out)
 		}
-		// gomarkdown emits rel="noreferrer noopener" (token order is not contractual).
 		if !strings.Contains(out, "noopener") || !strings.Contains(out, "noreferrer") {
 			t.Fatalf("expected rel to contain noopener and noreferrer, got: %q", out)
 		}

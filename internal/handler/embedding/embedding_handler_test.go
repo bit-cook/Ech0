@@ -18,10 +18,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// ---------------------------------------------------------------------------
-// mapJobToReindexStatus（纯函数，表驱动）
-// ---------------------------------------------------------------------------
-
 func TestMapJobToReindexStatus(t *testing.T) {
 	cases := []struct {
 		name string
@@ -75,7 +71,6 @@ func TestMapJobToReindexStatus(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := mapJobToReindexStatus(tc.in)
 			assert.Equal(t, tc.want, got)
-			// 显式守 Payload 仅在源 Payload 非空时设置。
 			if tc.in.Payload == "" {
 				assert.Nil(t, got.Payload)
 			} else {
@@ -85,7 +80,6 @@ func TestMapJobToReindexStatus(t *testing.T) {
 	}
 }
 
-// newEmbeddingHandlerWithDB 用 DB-backed job manager 构造 handler。
 func newEmbeddingHandlerWithDB(t *testing.T) (*EmbeddingHandler, *jobRepository.JobRepository) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
@@ -93,10 +87,6 @@ func newEmbeddingHandlerWithDB(t *testing.T) (*EmbeddingHandler, *jobRepository.
 	mgr := job.NewManager(repo)
 	return NewEmbeddingHandler(mgr), repo
 }
-
-// ---------------------------------------------------------------------------
-// ReindexStatus
-// ---------------------------------------------------------------------------
 
 func TestReindexStatus_NoJobSynthesizesIdle(t *testing.T) {
 	h, _ := newEmbeddingHandlerWithDB(t)
@@ -130,14 +120,9 @@ func TestReindexStatus_ExistingJobMapped(t *testing.T) {
 	assert.JSONEq(t, `{"total":10}`, string(out.Data.Payload))
 }
 
-// ---------------------------------------------------------------------------
-// CancelReindex
-// ---------------------------------------------------------------------------
-
 func TestCancelReindex_NoJobSynthesizesIdle(t *testing.T) {
 	h, _ := newEmbeddingHandlerWithDB(t)
 
-	// 无在跑作业：Cancel 为 no-op，Get 查无行 → 合成 idle。
 	out, err := h.CancelReindex(context.Background(), &CancelReindexInput{})
 
 	require.NoError(t, err)
@@ -153,7 +138,6 @@ func TestCancelReindex_TerminalRowMapped(t *testing.T) {
 		Phase:  "done",
 	}))
 
-	// 终态行无取消句柄，Cancel no-op；Get 返回该行并映射。
 	out, err := h.CancelReindex(context.Background(), &CancelReindexInput{})
 
 	require.NoError(t, err)
@@ -161,10 +145,6 @@ func TestCancelReindex_TerminalRowMapped(t *testing.T) {
 	assert.Equal(t, string(jobModel.StatusSuccess), out.Data.Status)
 	assert.Equal(t, "done", out.Data.Phase)
 }
-
-// ---------------------------------------------------------------------------
-// Reindex（未注册 runner → ErrNoRunner）
-// ---------------------------------------------------------------------------
 
 func TestReindex_NoRunnerReturnsErrNoRunner(t *testing.T) {
 	h, _ := newEmbeddingHandlerWithDB(t)

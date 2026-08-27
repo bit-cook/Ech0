@@ -27,9 +27,8 @@ import (
 )
 
 const (
-	publicEchoID  = "0193f1a1-1111-7000-8000-000000000001"
-	privateEchoID = "0193f1a1-2222-7000-8000-000000000002"
-	// 2023-11-14T22:13:20Z / 2023-11-15T22:13:20Z
+	publicEchoID        = "0193f1a1-1111-7000-8000-000000000001"
+	privateEchoID       = "0193f1a1-2222-7000-8000-000000000002"
 	publicEchoAt  int64 = 1700000000
 	privateEchoAt int64 = 1700086400
 
@@ -41,7 +40,7 @@ var testSite = settingModel.SystemSetting{
 	ServerLogo:    "https://example.com/logo.png",
 	ServerName:    "linsnow",
 	ServerURL:     "https://example.com",
-	AllowRegister: true, // 行为开关：必须留在库里，不得进胶囊
+	AllowRegister: true,
 	DefaultLocale: "zh-CN",
 	ICPNumber:     "京ICP备00000000号",
 	FooterContent: "footer",
@@ -51,8 +50,6 @@ var testSite = settingModel.SystemSetting{
 	CustomJS:      "console.log(1)",
 }
 
-// newFixture 造一个最小但覆盖全部分流的实例：公开/私密 Echo、托管/外链/悬空/仅私密
-// 引用四种 file 行、已审核/待审核/孤儿三种评论。
 func newFixture(t *testing.T) (Deps, string) {
 	t.Helper()
 
@@ -121,7 +118,6 @@ func newFixture(t *testing.T) (Deps, string) {
 		Private: true, UserID: "u-owner", CreatedAt: privateEchoAt,
 	}).Error)
 
-	// sort_order 与插入顺序故意相反：胶囊的 files 数组顺序必须由 sort_order 决定。
 	links := []fileModel.EchoFile{
 		{ID: "ef-1", EchoID: publicEchoID, FileID: "f-pic", SortOrder: 1},
 		{ID: "ef-2", EchoID: publicEchoID, FileID: "f-clip", SortOrder: 0},
@@ -192,7 +188,6 @@ func TestRun_ManifestRoundTrips(t *testing.T) {
 	assert.Equal(t, []capsule.Connect{{URL: "https://peer.example.com"}}, manifest.Connects)
 	assert.Equal(t, 1, res.Connects)
 
-	// site 逐字对齐库中设置（读回归一化后的值，避免与 locale 归一化耦合）。
 	stored, err := coreSetting.Get(context.Background(), deps.KV, coreSetting.System)
 	require.NoError(t, err)
 	assert.Equal(t, capsule.Site{
@@ -208,7 +203,6 @@ func TestRun_ManifestRoundTrips(t *testing.T) {
 		CustomCSS:     stored.CustomCSS,
 		CustomJS:      stored.CustomJS,
 	}, manifest.Site)
-	// 行为开关不得入胶囊（spec §3）。
 	assert.NotContains(t, string(raw), "allow_register")
 }
 
@@ -235,7 +229,6 @@ func TestRun_EchoDocument(t *testing.T) {
 	assert.Equal(t, echoModel.Extension_WEBSITE, doc.Extension.Type)
 	assert.Equal(t, map[string]any{"url": "https://example.org"}, doc.Extension.Payload)
 
-	// 数组顺序 = sort_order 升序；托管条目只带 key，外链条目只带 url。
 	require.Len(t, doc.Files, 3)
 	assert.Equal(t, []string{"clip.mp4", "pic.png", ""}, []string{doc.Files[0].Key, doc.Files[1].Key, doc.Files[2].Key})
 	assert.Empty(t, doc.Files[0].URL)
@@ -252,12 +245,10 @@ func TestRun_MediaBytesAreSelfContained(t *testing.T) {
 
 	assert.Equal(t, "PNGDATA", string(readCapsuleFile(t, out, "files/images/pic.png")))
 	assert.Equal(t, "MP4!!", string(readCapsuleFile(t, out, "files/videos/clip.mp4")))
-	// 悬空文件合法且照常导出（check 侧只告警）。
 	assert.Equal(t, "%PDF-1", string(readCapsuleFile(t, out, "files/documents/orphan.pdf")))
-	// 外链没有字节。
 	assert.NoFileExists(t, filepath.Join(out, "files", "images", "remote.png"))
 
-	assert.Equal(t, 4, res.Files) // pic / clip / orphan / external，secret 被排除
+	assert.Equal(t, 4, res.Files)
 	assert.Equal(t, 1, res.ExternalFiles)
 }
 
@@ -267,12 +258,10 @@ func TestRun_ExcludesPrivateByDefault(t *testing.T) {
 
 	assert.NoFileExists(t, filepath.Join(out, filepath.FromSlash(
 		capsule.EchoPath(privateEchoID, time.Unix(privateEchoAt, 0)))))
-	// 仅被私密 Echo 引用的图片不得出门。
 	assert.NoFileExists(t, filepath.Join(out, "files", "images", "secret.png"))
 	assert.Equal(t, 1, res.Echoes)
 	assert.Equal(t, 1, res.SkippedPrivate)
 
-	// 私密 Echo 名下的评论会随之变成孤儿，不导出；待审核评论同样不导出。
 	var doc capsule.CommentsDoc
 	_, err := capsule.DecodeYAML(readCapsuleFile(t, out, capsule.CommentsPath), &doc)
 	require.NoError(t, err)
@@ -321,7 +310,6 @@ func TestRun_Zip(t *testing.T) {
 	require.NoError(t, loaded.ManifestErr)
 	assert.Equal(t, "linsnow", loaded.Manifest.Owner.Username)
 	require.Len(t, loaded.Echoes, 1)
-	// zip 内布局与目录形态一致：无额外顶层目录。
 	assert.Equal(t, int64(len("PNGDATA")), loaded.MediaPaths["files/images/pic.png"])
 }
 
@@ -343,7 +331,6 @@ func TestRun_ReportsUnreadableManagedFiles(t *testing.T) {
 
 	_, err := Run(context.Background(), deps, Options{Output: filepath.Join(t.TempDir(), "capsule")})
 	require.Error(t, err)
-	// 一次跑完再报全清单，而不是撞上第一条就退出。
 	assert.Contains(t, err.Error(), "pic.png")
 	assert.Contains(t, err.Error(), "clip.mp4")
 }
@@ -352,7 +339,6 @@ func TestUniquePath_DeduplicatesCollisions(t *testing.T) {
 	used := make(map[string]struct{})
 	base := capsule.EchoPath("0193f1a1-aaaa", time.Unix(publicEchoAt, 0))
 
-	// 命名取 id 去掉横线后的末 8 位（UUIDv7 的随机段）。
 	assert.Equal(t, "echoes/2023/2023-11-14-f1a1aaaa.md", uniquePath(used, base))
 	assert.Equal(t, "echoes/2023/2023-11-14-f1a1aaaa-2.md", uniquePath(used, base))
 	assert.Equal(t, "echoes/2023/2023-11-14-f1a1aaaa-3.md", uniquePath(used, base))

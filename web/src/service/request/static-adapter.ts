@@ -1,27 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2025-2026 lin-snow
 
-/**
- * 静态站请求 adapter。
- *
- * `ech0 build` 把胶囊烘焙成 `dataset.json` + 内嵌 SPA 产物，并在 index.html 里注入
- * `window.__ECH0_STATIC__ = true`。同一份 bundle 在静态托管上运行时，`service/request`
- * 会**动态 import** 本文件，把网络请求换成纯浏览器内的 dataset 查询引擎：零后端、零 Node。
- *
- * 非静态构建下本文件不会被求值（动态 import 让它进独立 chunk），生产路径零运行时开销。
- * 契约（路由表 / 查询引擎语义 / dataset 形状）见 docs/dev/capsule/spec.md §10。
- */
-
 declare global {
   interface Window {
-    /** 静态站开关，由 `ech0 build` 注入 index.html */
     __ECH0_STATIC__?: boolean
-    /** 静态站部署基址，保证以 `/` 开头且以 `/` 结尾 */
     __ECH0_STATIC_BASE__?: string
   }
 }
 
-/** `dataset.json` 的形状，字段名与后端 JSON 契约逐字一致；时间一律 Unix 秒 */
 export type StaticDataset = {
   schema_version: number
   generated_at: number
@@ -39,10 +25,8 @@ export type StaticDataset = {
   connect: App.Api.Connect.Connect
 }
 
-/** 查询引擎入参，对齐后端 EchoQueryDto（internal/service/echo/echo.go） */
 type EchoQueryBody = Partial<App.Api.Ech0.EchoQueryParams>
 
-/** dataset 只拉一次，并发请求共享同一个 Promise */
 let datasetPromise: Promise<StaticDataset> | null = null
 
 const DEFAULT_PAGE_SIZE = 10
@@ -56,7 +40,6 @@ const unavailable = <T>(msg = 'Not available in static mode'): App.Api.Response<
   data: null as T,
 })
 
-/** 拉取并缓存 dataset；失败时清空缓存，允许后续请求重试 */
 function loadDataset(): Promise<StaticDataset> {
   if (!datasetPromise) {
     const base = (typeof window !== 'undefined' && window.__ECH0_STATIC_BASE__) || '/'
@@ -76,10 +59,6 @@ function loadDataset(): Promise<StaticDataset> {
   return datasetPromise
 }
 
-/**
- * URL 归一：剥掉 hash/query、绝对地址只取 pathname、容忍 `/api` 前缀在与不在两种写法、
- * 去掉尾斜杠。同时把 query 参数解出来（`limit` / `echo_id` 要用）。
- */
 function normalizeUrl(rawUrl: string): { path: string; query: URLSearchParams } {
   const withoutHash = String(rawUrl ?? '').split('#')[0]
   const queryIndex = withoutHash.indexOf('?')
@@ -89,9 +68,7 @@ function normalizeUrl(rawUrl: string): { path: string; query: URLSearchParams } 
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) {
     try {
       path = new URL(path).pathname
-    } catch {
-      // 解析失败就按原样当作路径处理
-    }
+    } catch {}
   }
 
   path = path.replace(/\/{2,}/g, '/')
@@ -110,14 +87,12 @@ function normalizeUrl(rawUrl: string): { path: string; query: URLSearchParams } 
   return { path: path || '/', query }
 }
 
-/** query 里的 limit，缺省 fallback，夹到 [1, 100] */
 function readLimit(query: URLSearchParams, fallback: number): number {
   const raw = Number.parseInt(query.get('limit') ?? '', 10)
   const limit = Number.isFinite(raw) ? raw : fallback
   return Math.max(1, Math.min(limit, MAX_PAGE_SIZE))
 }
 
-/** Echo 的 created_at 允许 number（Unix 秒）或 ISO 字符串，统一折算成 Unix 秒 */
 function toUnixSeconds(value: number | string | undefined): number {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : 0
@@ -131,12 +106,10 @@ function toUnixSeconds(value: number | string | undefined): number {
   return 0
 }
 
-/** 静态站冻结展示：私密 Echo 一律不下发 */
 function publicEchos(dataset: StaticDataset): App.Api.Ech0.Echo[] {
   return (dataset.echos ?? []).filter((echo) => echo.private !== true)
 }
 
-/** 查询引擎：过滤 → 排序 → 分页，`total` 是过滤后（分页前）的总数 */
 function queryEchos(dataset: StaticDataset, body: EchoQueryBody): App.Api.Ech0.PaginationResult {
   const search = (body.search ?? '').trim().toLowerCase()
   const tagIds = (body.tagIds ?? []).filter((id) => typeof id === 'string' && id !== '')
@@ -188,10 +161,6 @@ function queryEchos(dataset: StaticDataset, body: EchoQueryBody): App.Api.Ech0.P
   return { items: sorted.slice(start, start + pageSize), total: sorted.length }
 }
 
-/**
- * 同月同日发布的 Echo。`sameYear` 为真时限定今天（`/echo/today`），
- * 否则是历年同月同日（`/echo/onthisday`）。时区一律取浏览器本地时区。
- */
 function echosOnThisDay(dataset: StaticDataset, sameYear: boolean): App.Api.Ech0.Echo[] {
   const now = new Date()
   return publicEchos(dataset).filter((echo) => {
@@ -204,7 +173,6 @@ function echosOnThisDay(dataset: StaticDataset, sameYear: boolean): App.Api.Ech0
   })
 }
 
-/** 路由表：未命中的一律返回 code 0（index.ts 在静态模式下不弹 toast） */
 function route<T>(
   dataset: StaticDataset,
   method: string,
@@ -245,11 +213,6 @@ function route<T>(
       if (candidates.length === 0) {
         return unavailable<T>()
       }
-      // 用 CSPRNG 而非 Math.random：这里的返回值流经 request() 这个泛型咽喉，
-      // 静态分析会把它当作可污染整条响应链的弱随机源（CodeQL js/insecure-randomness
-      // 由此把告警落在渲染密码/SMTP 凭据的面板组件上）。选一条 Echo 本身不需要
-      // 密码学强度，但换掉它比在契约咽喉上挂一条永久豁免便宜得多。取模偏置在
-      // 这个量级下无意义。
       const pick = new Uint32Array(1)
       crypto.getRandomValues(pick)
       return ok<T>(candidates[pick[0] % candidates.length])
@@ -271,13 +234,11 @@ function route<T>(
     case 'GET /connect':
       return ok<T>(dataset.connect)
     case 'GET /connects/info':
-      // 静态站不主动探测远端实例
       return ok<T>([])
     default:
       break
   }
 
-  // 命中详情：GET /echo/{id}
   const echoMatch = method === 'GET' ? /^\/echo\/([^/]+)$/.exec(path) : null
   if (echoMatch) {
     const echo = publicEchos(dataset).find((item) => item.id === echoMatch[1])
@@ -287,10 +248,6 @@ function route<T>(
   return unavailable<T>()
 }
 
-/**
- * 静态模式下的请求入口：把 (url, method, body) 解释成对 dataset 的一次查询。
- * 任何写操作（点赞 / 评论 / 登录刷新）都返回 code 0，SPA 会优雅降级成只读展示。
- */
 export async function handleStaticRequest<T>(
   url: string,
   method: string,

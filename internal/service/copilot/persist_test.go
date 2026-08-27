@@ -12,7 +12,6 @@ import (
 	"github.com/lin-snow/ech0/internal/test/helpers"
 )
 
-// loadSession 在 userID 为空、KV 未命中、JSON 损坏时都 best-effort 返回 nil。
 func TestLoadSession_BestEffort(t *testing.T) {
 	t.Run("empty userID", func(t *testing.T) {
 		s := &CopilotService{durableKV: kvstore.NewMemory()}
@@ -38,7 +37,6 @@ func TestLoadSession_BestEffort(t *testing.T) {
 	})
 }
 
-// persistTurn：答案为空且无来源 → 视为空轮，跳过落盘（不留永久空气泡）。
 func TestPersistTurn_SkipsEmpty(t *testing.T) {
 	kv := kvstore.NewMemory()
 	s := &CopilotService{durableKV: kv}
@@ -50,7 +48,6 @@ func TestPersistTurn_SkipsEmpty(t *testing.T) {
 	}
 }
 
-// persistTurn：有答案时写入 user + assistant 两条，保留来源/推理元数据。
 func TestPersistTurn_WritesUserAndAssistant(t *testing.T) {
 	kv := kvstore.NewMemory()
 	s := &CopilotService{durableKV: kv}
@@ -81,12 +78,10 @@ func TestPersistTurn_WritesUserAndAssistant(t *testing.T) {
 	}
 }
 
-// appendTurn：超过 maxStoredChatMessages 时只保留最近 N 条。
 func TestAppendTurn_CapsAtMax(t *testing.T) {
 	kv := kvstore.NewMemory()
 	s := &CopilotService{durableKV: kv}
 
-	// 一次性追加 maxStoredChatMessages + 5 条，确认封顶且保留的是最近的。
 	turns := make([]ChatMessage, 0, maxStoredChatMessages+5)
 	for i := range maxStoredChatMessages + 5 {
 		turns = append(turns, ChatMessage{Role: "user", Content: string(rune('A' + i%26))})
@@ -97,13 +92,11 @@ func TestAppendTurn_CapsAtMax(t *testing.T) {
 	if len(msgs) != maxStoredChatMessages {
 		t.Fatalf("session should be capped at %d, got %d", maxStoredChatMessages, len(msgs))
 	}
-	// 最后一条应等于最后追加的那条（最近保留）。
 	if msgs[len(msgs)-1].Content != turns[len(turns)-1].Content {
 		t.Fatalf("cap should keep the most recent turn, got %q", msgs[len(msgs)-1].Content)
 	}
 }
 
-// appendTurn：userID 为空直接跳过，不落任何键。
 func TestAppendTurn_EmptyUserSkips(t *testing.T) {
 	kv := kvstore.NewMemory()
 	s := &CopilotService{durableKV: kv}
@@ -115,7 +108,6 @@ func TestAppendTurn_EmptyUserSkips(t *testing.T) {
 	}
 }
 
-// GetSession：无会话返回空切片（非 nil，便于前端拿数组）；有会话原样返回。
 func TestGetSession(t *testing.T) {
 	t.Run("none returns empty slice", func(t *testing.T) {
 		s := &CopilotService{durableKV: kvstore.NewMemory()}
@@ -142,7 +134,6 @@ func TestGetSession(t *testing.T) {
 	})
 }
 
-// ClearSession：登录用户删除其会话；匿名（空 userID）直接 no-op 返回 nil。
 func TestClearSession(t *testing.T) {
 	t.Run("deletes for user", func(t *testing.T) {
 		kv := kvstore.NewMemory()

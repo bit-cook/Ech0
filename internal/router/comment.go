@@ -16,7 +16,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// setupCommentRoutes 仅保留 captcha 挂载走裸 gin（gin.WrapH，非 JSON-REST）。
 func setupCommentRoutes(appRouterGroup *AppRouterGroup, _ *handler.Bundle) {
 	captchaHandler, err := captcha.NewHTTPHandler("/api")
 	if err != nil {
@@ -25,17 +24,12 @@ func setupCommentRoutes(appRouterGroup *AppRouterGroup, _ *handler.Bundle) {
 	appRouterGroup.PublicRouterGroup.Any("/cap/*any", gin.WrapH(captchaHandler))
 }
 
-// registerComment 注册评论的 JSON 端点。
-//
-// 公开评论端点需要请求侧元数据（StashMeta）与可选 viewer（OptionalViewer），二者是**非鉴权**的
-// 请求处理中间件，故在 op 字面量里显式声明，不混进 posture。
 func registerComment(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	nc := humares.Bridge(middleware.NoCache())
 	stash := humares.Bridge(h.CommentHandler.StashMeta())
 	optViewer := humares.Bridge(h.CommentHandler.OptionalViewer())
 	moderate := secured(revoker, authModel.ScopeCommentMod)
 
-	// 公开端点
 	route(api, public(), huma.Operation{
 		OperationID: "comment-form-meta",
 		Method:      http.MethodGet,
@@ -72,7 +66,6 @@ func registerComment(api huma.API, h *handler.Bundle, revoker authService.TokenR
 		Middlewares: huma.Middlewares{stash, optViewer},
 	}, h.CommentHandler.CreateComment)
 
-	// 集成端点：访问令牌（comment:write + integration/mcp-remote 受众）
 	route(api, secured(revoker, authModel.ScopeCommentWrite).audience(authModel.AudienceIntegration, authModel.AudienceMCPRemote), huma.Operation{
 		OperationID: "comment-create-integration",
 		Method:      http.MethodPost,
@@ -82,7 +75,6 @@ func registerComment(api huma.API, h *handler.Bundle, revoker authService.TokenR
 		Middlewares: huma.Middlewares{stash},
 	}, h.CommentHandler.CreateIntegrationComment)
 
-	// 管理面板端点（comment:moderate）
 	route(api, moderate, huma.Operation{
 		OperationID: "comment-panel-list",
 		Method:      http.MethodGet,

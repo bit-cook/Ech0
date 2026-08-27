@@ -2,7 +2,6 @@
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <template>
   <div class="jpc" :class="`jpc--${tone}`">
-    <!-- 头部：标题 + 状态药丸 -->
     <div class="jpc__header">
       <div class="jpc__title-wrap">
         <h3 class="jpc__title">{{ title }}</h3>
@@ -14,7 +13,6 @@
       </span>
     </div>
 
-    <!-- 阶段步进器 -->
     <div v-if="steps.length" class="jpc__steps">
       <div v-for="(s, i) in steps" :key="s.key" class="jpc__step" :class="`is-${stepState(i)}`">
         <span class="jpc__node">
@@ -53,7 +51,6 @@
       </div>
     </div>
 
-    <!-- 进度条 -->
     <div
       class="jpc__bar"
       role="progressbar"
@@ -68,10 +65,8 @@
       />
     </div>
 
-    <!-- 错误信息 -->
     <p v-if="errorMessage" class="jpc__error">{{ errorMessage }}</p>
 
-    <!-- 指标 -->
     <div v-if="metrics && metrics.length" class="jpc__metrics">
       <div v-for="m in metrics" :key="m.label" class="jpc__metric">
         <span class="jpc__metric-label">{{ m.label }}</span>
@@ -79,10 +74,8 @@
       </div>
     </div>
 
-    <!-- 自定义 footer（如：产物文件 + 重新下载） -->
     <div v-if="$slots.footer" class="jpc__footer"><slot name="footer" /></div>
 
-    <!-- 元信息（任务 ID / 时间等） -->
     <div v-if="meta && meta.length" class="jpc__meta">
       <p v-for="line in meta" :key="line.label">
         <span class="jpc__meta-label">{{ line.label }}</span>
@@ -134,7 +127,6 @@ const tone = computed(() => {
   return 'idle'
 })
 
-// 当前活动步：成功态视为最后一步;否则按 currentKey 定位,定位不到且仍在进行中则回退到第一步。
 const activeIndex = computed(() => {
   if (isSuccess.value) return props.steps.length - 1
   const i = props.steps.findIndex((s) => s.key === props.currentKey)
@@ -142,7 +134,6 @@ const activeIndex = computed(() => {
   return isActive.value ? 0 : -1
 })
 
-// 纯前端进度:把"活动步"算作进行中,填充到该步的尾缘(成功态恒为 100%)。
 const percent = computed(() => {
   const n = props.steps.length || 1
   if (isSuccess.value) return 100
@@ -160,7 +151,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
 
 <style scoped>
 .jpc {
-  /* 状态色:accent/danger 走主题 token;success 主题无语义色,这里给一支跨主题可读的绿。 */
   --jpc-accent: var(--color-accent);
   --jpc-danger: var(--color-danger);
   --jpc-success: #15a06a;
@@ -175,7 +165,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   box-shadow: var(--shadow-sm);
 }
 
-/* ---- 头部 ---- */
 .jpc__header {
   display: flex;
   justify-content: space-between;
@@ -240,7 +229,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   border-color: color-mix(in srgb, var(--jpc-danger) 35%, transparent);
 }
 
-/* ---- 步进器 ---- */
 .jpc__steps {
   display: flex;
   padding: 0 0.25rem;
@@ -257,7 +245,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   text-align: center;
 }
 
-/* 连接线:从本节点中心向左延伸到上一节点中心(节点高 1.8rem → 圆心 0.9rem)。 */
 .jpc__step:not(:first-child)::before {
   content: '';
   position: absolute;
@@ -305,7 +292,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
 }
 
 .jpc__step.is-done .jpc__node {
-  /* 勾的颜色用 surface,使其在浅色(白底橙圈)与深色主题下都保持反差。 */
   color: var(--color-bg-surface);
   background: var(--jpc-accent);
   border-color: var(--jpc-accent);
@@ -339,7 +325,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   color: var(--color-text-secondary);
 }
 
-/* ---- 进度条 ---- */
 .jpc__bar {
   height: 0.45rem;
   border-radius: 999px;
@@ -376,14 +361,12 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   animation: jpc-shimmer 1.3s linear infinite;
 }
 
-/* ---- 错误 ---- */
 .jpc__error {
   font-size: 0.83rem;
   color: var(--jpc-danger);
   overflow-wrap: anywhere;
 }
 
-/* ---- 指标 ---- */
 .jpc__metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -420,7 +403,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   color: var(--jpc-danger);
 }
 
-/* ---- footer ---- */
 .jpc__footer {
   display: flex;
   flex-wrap: wrap;
@@ -428,7 +410,6 @@ const stepState = (i: number): 'done' | 'active' | 'error' | 'pending' => {
   gap: 0.6rem;
 }
 
-/* ---- 元信息 ---- */
 .jpc__meta {
   display: flex;
   flex-direction: column;

@@ -10,7 +10,6 @@ import (
 	"reflect"
 )
 
-// Publish delivers a typed event to matching subscribers.
 func (b *Bus) Publish[T any](ctx context.Context, value T, opts ...PublishOption) error {
 	if b == nil {
 		return fmt.Errorf("%w: nil bus", ErrInvalidOption)

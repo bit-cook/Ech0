@@ -13,8 +13,6 @@ import (
 	authService "github.com/lin-snow/ech0/internal/service/auth"
 )
 
-// setupFileRoutes 仅保留非 JSON 端点走裸 gin：二进制流式下载 + multipart 上传。
-// JSON 端点（列表/树/元信息/删除/外链/预签名）由 registerFile 注册。
 func setupFileRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	appRouterGroup.AuthRouterGroup.GET(
 		"/file/stream",
@@ -33,7 +31,6 @@ func setupFileRoutes(appRouterGroup *AppRouterGroup, h *handler.Bundle) {
 	)
 }
 
-// registerFile 注册文件的 JSON 端点。
 func registerFile(api huma.API, h *handler.Bundle, revoker authService.TokenRevoker) {
 	route(api, secured(revoker, authModel.ScopeFileRead), huma.Operation{
 		OperationID: "file-list",

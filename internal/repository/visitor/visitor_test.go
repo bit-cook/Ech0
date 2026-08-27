@@ -19,7 +19,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// closedDB 返回一个底层连接已关闭的 *gorm.DB，用于驱动仓储里的 DB 错误返回分支。
 func closedDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:closedvisitor?mode=memory&cache=shared"), &gorm.Config{
@@ -55,7 +54,6 @@ func TestVisitorRepository_UpsertDailyStat_OverwritesOnConflict(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, repo.UpsertDailyStat(ctx, visitorModel.DailyStat{Date: "2026-06-30", PV: 10, UV: 4}))
-	// 同一日期再次写入：OnConflict 直接以新值覆盖 pv/uv（非累加）。
 	require.NoError(t, repo.UpsertDailyStat(ctx, visitorModel.DailyStat{Date: "2026-06-30", PV: 25, UV: 9}))
 
 	var got visitorModel.DailyStat
@@ -63,7 +61,6 @@ func TestVisitorRepository_UpsertDailyStat_OverwritesOnConflict(t *testing.T) {
 	assert.Equal(t, int64(25), got.PV, "冲突时 pv 应被覆盖为新值")
 	assert.Equal(t, int64(9), got.UV, "冲突时 uv 应被覆盖为新值")
 
-	// 主键即 date → 同一天只有一行。
 	var count int64
 	require.NoError(t, db.Model(&visitorModel.DailyStat{}).Where("date = ?", "2026-06-30").Count(&count).Error)
 	assert.Equal(t, int64(1), count)
@@ -86,7 +83,7 @@ func TestVisitorRepository_GetRecentDays(t *testing.T) {
 	cases := []struct {
 		name      string
 		days      int
-		wantDates []string // 期望返回的日期，按 DESC 顺序
+		wantDates []string
 	}{
 		{"zero returns empty", 0, nil},
 		{"negative returns empty", -3, nil},
@@ -116,7 +113,6 @@ func TestVisitorRepository_DeleteOlderThan(t *testing.T) {
 		require.NoError(t, repo.UpsertDailyStat(ctx, visitorModel.DailyStat{Date: d, PV: 1, UV: 1}))
 	}
 
-	// 严格小于 cutoff 的被裁剪；cutoff 当天保留。
 	require.NoError(t, repo.DeleteOlderThan(ctx, "2026-06-29"))
 
 	var remaining []visitorModel.DailyStat

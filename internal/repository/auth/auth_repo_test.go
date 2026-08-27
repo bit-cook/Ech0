@@ -18,8 +18,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// newAuthRepo 构造一个挂在内存 SQLite + 确定性内存 cache 上的 AuthRepository。
-// 返回 cache 句柄以便在缓存类用例里直接植入脏数据（如类型不符的码）。
 func newAuthRepo(t *testing.T) (*AuthRepository, *gorm.DB, cache.ICache[string, any]) {
 	t.Helper()
 	db := helpers.NewTestDB(t)
@@ -27,24 +25,18 @@ func newAuthRepo(t *testing.T) (*AuthRepository, *gorm.DB, cache.ICache[string, 
 	return NewAuthRepository(func() *gorm.DB { return db }, c), db, c
 }
 
-// insertUser 直接落库一行 User。
 func insertUser(t *testing.T, db *gorm.DB, u userModel.User) userModel.User {
 	t.Helper()
 	require.NoError(t, db.Create(&u).Error)
 	return u
 }
 
-// countIdentities 统计某用户的外部身份行数。
 func countIdentities(t *testing.T, db *gorm.DB, userID string) int64 {
 	t.Helper()
 	var n int64
 	require.NoError(t, db.Model(&userModel.UserExternalIdentity{}).Where("user_id = ?", userID).Count(&n).Error)
 	return n
 }
-
-// ---------------------------------------------------------------------------
-// DB 面：User 查询
-// ---------------------------------------------------------------------------
 
 func TestAuthRepository_GetUserByUsername(t *testing.T) {
 	repo, db, _ := newAuthRepo(t)
@@ -85,14 +77,9 @@ func TestAuthRepository_GetUserByID(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// DB 面：BindOAuth（OAuth2 vs OIDC 的 issuer/protocol 处理 + upsert）
-// ---------------------------------------------------------------------------
-
 func TestAuthRepository_BindOAuth_CreateOAuth2(t *testing.T) {
 	repo, db, _ := newAuthRepo(t)
 
-	// OAuth2：即便传入 issuer，也应被规约为空串。
 	err := repo.BindOAuth(context.Background(), "u-1", "github", "sub-1", "https://ignored", string(authModel.AuthTypeOAuth2))
 	require.NoError(t, err)
 
@@ -107,7 +94,6 @@ func TestAuthRepository_BindOAuth_CreateOAuth2(t *testing.T) {
 func TestAuthRepository_BindOAuth_CreateOIDC(t *testing.T) {
 	repo, db, _ := newAuthRepo(t)
 
-	// OIDC：issuer 应被 TrimSpace 后落库。
 	err := repo.BindOAuth(context.Background(), "u-2", "keycloak", "sub-2", "  https://idp.example.com  ", string(authModel.AuthTypeOIDC))
 	require.NoError(t, err)
 
@@ -123,7 +109,6 @@ func TestAuthRepository_BindOAuth_UpsertUpdatesSubject(t *testing.T) {
 	ctx := context.Background()
 
 	require.NoError(t, repo.BindOAuth(ctx, "u-3", "github", "old-sub", "", string(authModel.AuthTypeOAuth2)))
-	// 同 user/provider/issuer/protocol 再次绑定：更新 Subject，而非新建行。
 	require.NoError(t, repo.BindOAuth(ctx, "u-3", "github", "new-sub", "", string(authModel.AuthTypeOAuth2)))
 
 	assert.Equal(t, int64(1), countIdentities(t, db, "u-3"))
@@ -137,16 +122,11 @@ func TestAuthRepository_BindOAuth_OAuth2AndOIDCAreDistinct(t *testing.T) {
 	repo, db, _ := newAuthRepo(t)
 	ctx := context.Background()
 
-	// 同 user/provider，但 protocol 不同 → 两行独立记录。
 	require.NoError(t, repo.BindOAuth(ctx, "u-4", "google", "sub-oauth2", "", string(authModel.AuthTypeOAuth2)))
 	require.NoError(t, repo.BindOAuth(ctx, "u-4", "google", "sub-oidc", "https://accounts.google.com", string(authModel.AuthTypeOIDC)))
 
 	assert.Equal(t, int64(2), countIdentities(t, db, "u-4"))
 }
-
-// ---------------------------------------------------------------------------
-// DB 面：GetUserByOAuthID vs GetUserByOIDC（protocol/issuer 维度区分）
-// ---------------------------------------------------------------------------
 
 func TestAuthRepository_GetUserByOAuthID(t *testing.T) {
 	repo, db, _ := newAuthRepo(t)
@@ -165,7 +145,6 @@ func TestAuthRepository_GetUserByOAuthID(t *testing.T) {
 	})
 
 	t.Run("does not match oidc binding", func(t *testing.T) {
-		// 仅存在 OIDC 绑定时，GetUserByOAuthID 应找不到（protocol 不符）。
 		require.NoError(t, repo.BindOAuth(ctx, "owner-oauth2", "keycloak", "kc-1", "https://idp", string(authModel.AuthTypeOIDC)))
 		_, err := repo.GetUserByOAuthID(ctx, "keycloak", "kc-1")
 		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
@@ -197,10 +176,6 @@ func TestAuthRepository_GetUserByOIDC(t *testing.T) {
 		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// DB 面：GetOAuthInfo / GetOAuthOIDCInfo
-// ---------------------------------------------------------------------------
 
 func TestAuthRepository_GetOAuthInfo(t *testing.T) {
 	repo, _, _ := newAuthRepo(t)
@@ -237,10 +212,6 @@ func TestAuthRepository_GetOAuthOIDCInfo(t *testing.T) {
 		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 	})
 }
-
-// ---------------------------------------------------------------------------
-// DB 面：Passkey CRUD
-// ---------------------------------------------------------------------------
 
 func newPasskey(opts ...func(*authModel.Passkey)) *authModel.Passkey {
 	p := &authModel.Passkey{
@@ -300,7 +271,6 @@ func TestAuthRepository_ListPasskeysByUserID(t *testing.T) {
 		p.ID = "pk-b"
 		p.CredentialID = "cred-b"
 	})))
-	// 另一个用户的 passkey，不应出现在结果里。
 	require.NoError(t, repo.CreatePasskey(ctx, newPasskey(func(p *authModel.Passkey) {
 		p.ID = "pk-other"
 		p.UserID = "u-other"
@@ -310,7 +280,6 @@ func TestAuthRepository_ListPasskeysByUserID(t *testing.T) {
 	list, err := repo.ListPasskeysByUserID("u-pk")
 	require.NoError(t, err)
 	require.Len(t, list, 2)
-	// Order("id desc") → pk-b 在前。
 	assert.Equal(t, "pk-b", list[0].ID)
 	assert.Equal(t, "pk-a", list[1].ID)
 }
@@ -348,7 +317,6 @@ func TestAuthRepository_UpdatePasskeyDeviceName(t *testing.T) {
 	})
 
 	t.Run("non-owner is a no-op", func(t *testing.T) {
-		// user_id 不匹配 → 不报错，但也不应改动设备名。
 		require.NoError(t, repo.UpdatePasskeyDeviceName(ctx, "u-intruder", "pk-1", "hacked"))
 		got, err := repo.GetPasskeyByCredentialID("cred-1")
 		require.NoError(t, err)
@@ -374,10 +342,6 @@ func TestAuthRepository_DeletePasskeyByID(t *testing.T) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// 缓存面：RevokeToken / IsTokenRevoked
-// ---------------------------------------------------------------------------
-
 func TestAuthRepository_RevokeToken(t *testing.T) {
 	repo, _, _ := newAuthRepo(t)
 
@@ -391,7 +355,7 @@ func TestAuthRepository_RevokeToken(t *testing.T) {
 	})
 
 	t.Run("empty jti never revokes or reports", func(t *testing.T) {
-		repo.RevokeToken("", time.Minute) // 守卫：不写缓存
+		repo.RevokeToken("", time.Minute)
 		assert.False(t, repo.IsTokenRevoked(""))
 	})
 
@@ -400,10 +364,6 @@ func TestAuthRepository_RevokeToken(t *testing.T) {
 		assert.False(t, repo.IsTokenRevoked("jti-zero"))
 	})
 }
-
-// ---------------------------------------------------------------------------
-// 缓存面：StoreOAuthCode / GetAndDeleteOAuthCode（一次性码）
-// ---------------------------------------------------------------------------
 
 func TestAuthRepository_OAuthCode_SingleUse(t *testing.T) {
 	repo, _, _ := newAuthRepo(t)
@@ -416,7 +376,6 @@ func TestAuthRepository_OAuthCode_SingleUse(t *testing.T) {
 	assert.Equal(t, "at", got.AccessToken)
 	assert.Equal(t, "rt", got.RefreshToken)
 
-	// 二次使用 → 已删除，应返回 invalid。
 	_, err = repo.GetAndDeleteOAuthCode("code-1")
 	require.EqualError(t, err, commonModel.EXCHANGE_CODE_INVALID)
 }
@@ -435,11 +394,9 @@ func TestAuthRepository_GetAndDeleteOAuthCode_Errors(t *testing.T) {
 	})
 
 	t.Run("type mismatch is rejected and key consumed", func(t *testing.T) {
-		// 直接植入一个非 *TokenPair 的值。
 		c.SetWithTTL(oauthCodePrefix+"weird", "not-a-pair", 1, time.Minute)
 		_, err := repo.GetAndDeleteOAuthCode("weird")
 		require.EqualError(t, err, commonModel.EXCHANGE_CODE_INVALID)
-		// 类型不符的码也应在命中后被删除。
 		_, found, _ := c.Get(oauthCodePrefix + "weird")
 		assert.False(t, found)
 	})
@@ -462,7 +419,6 @@ func TestAuthRepository_StoreOAuthCode_Guards(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			repo.StoreOAuthCode(tc.code, tc.pair, tc.ttl)
-			// 守卫命中：什么都没存，取码必然 invalid。
 			key := tc.code
 			if key == "" {
 				key = "c"
@@ -472,10 +428,6 @@ func TestAuthRepository_StoreOAuthCode_Guards(t *testing.T) {
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// 缓存面：Passkey session
-// ---------------------------------------------------------------------------
 
 func TestAuthRepository_PasskeySession(t *testing.T) {
 	repo, _, _ := newAuthRepo(t)
