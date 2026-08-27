@@ -317,7 +317,7 @@ emit AgentDone   // 到达 maxRounds 仍未收尾，强制结束（已产出的�
 | `service/agent/agent.go:137` → `agent.Generate(...)`（近期总结，非流式、无工具） | 保留 `Generate` 为 `Run`（`Tools=nil, MaxRounds=1`）的薄封装，行为不变 | → `service/copilot/summary.go` |
 
 - `AgentSetting` **不改**（工具是运行时注入，非配置），但**移除 `gemini` 协议**（§15.1）。
-- **Wire**：包归并（agent/chat → copilot）会改 provider set 与注入，需 `make wire` 重新生成并 `make wire-check`。
+- **Wire**：包归并（agent/chat → copilot）会改 provider set 与注入，需 `just wire` 重新生成并 `just wire-check`。
 - 可测性：`agent` 仍是无状态包级函数 + 工厂；如需注入 fake provider 做单测，可引入 `Runner` struct 持有 `providerFactory`。
 
 ## 13. 成本与护栏参数
@@ -329,12 +329,12 @@ emit AgentDone   // 到达 maxRounds 仍未收尾，强制结束（已产出的�
 
 ## 14. 分期实施（建议顺序）
 
-- **M0 — 包归并**：`handler/service` 层 `agent`（近期总结）+ `chat` → `copilot`（§16.2），`make wire` 重生成，对外路由契约不变。纯结构移动，先把目录摆对，后续都建在新布局上。
+- **M0 — 包归并**：`handler/service` 层 `agent`（近期总结）+ `chat` → `copilot`（§16.2），`just wire` 重生成，对外路由契约不变。纯结构移动，先把目录摆对，后续都建在新布局上。
 - **M1 — 抽象与骨架**：`types.go`（含 tool-aware Message）、`Provider` 接口、`providerFor` 工厂、空 `Run` 框架，编译通过；`Generate`/`GenerateStream` 改为薄壳，**两个旧调用点行为不变**（回归现有 Chat & 近期总结）。
 - **M2 — 两家非工具流式 + Gemini 下线**：把现有流式逻辑迁进各 Provider 的 `Stream`（无工具路径），移除 Gemini 协议（§15.1）；Chat 走 `Run` 单轮，行为对齐现状。
 - **M3 — 工具与 Loop**：`search_echos` 工具（Copilot Service 注入）、Loop 护栏、`AgentSearching/ToolResult`。**前端先抽 `service/request/sse.ts` 封装 + `buildCommonHeaders`（§17），再在其上加 SSE `searching` + `sources` 累积、状态条**。先 OpenAI 打通。
 - **M4 — Anthropic 工具**：补 Anthropic tool 适配（流式 tool_use 分片累积）。
-- **M5 — 打磨**：prompt cache、token 预算、多轮开关（可选）、`make check` + 两家联调。
+- **M5 — 打磨**：prompt cache、token 预算、多轮开关（可选）、`just check` + 两家联调。
 
 ## 15. 关键决策（已定）
 

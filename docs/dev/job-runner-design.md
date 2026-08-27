@@ -305,7 +305,7 @@ migration 现在「没在跑」时返回 `status: "idle"`（`MigrationStatusIdle
 - `Runner` 依赖领域 service（`ReindexRunner`←`EmbeddingService`，`MigrationRunner`←迁移 ETL），按现有分层别名规则注入（`jobService` 等）。
 - Runner 注册：一个 `RegisterRunners(svc, reindexRunner, migrationRunner)` provider，或在 `app` 组件 Start 时注册。
 - **set 归属**：`job.Service` 同时被 `HandlerSet`（HTTP 触发）和 `TaskerSet`（定时触发）需要，应放进共享的 `InfraSet`/`DomainSet`，避免 wire 为两个 Build 各生成一个实例——参考 `internal/di/wire.go:40` 的 `VisitorSet` 注释（同款坑：两个 Build 各生成一个 Tracker 导致读写不同实例）。
-- 改动后 `make wire` 重新生成 `wire_gen.go`，CI 跑 `make wire-check`。
+- 改动后 `just wire` 重新生成 `wire_gen.go`，CI 跑 `just wire-check`。
 
 ## 11. 前端轮询契约
 
@@ -315,7 +315,7 @@ migration 现在「没在跑」时返回 `status: "idle"`（`MigrationStatusIdle
 
 ## 12. 落地分期
 
-- **PR1：框架 + reindex**。建 `internal/job`（`Service`/`Runner`/`Adapt`/`JobRepository`/`Job` 表）、`ReindexRunner`、reindex handler 改异步 + status 端点、前端 reindex 轮询、DI 接线、`make wire`。migration **暂不动**（PR1 不碰它，短期并存可接受）。
+- **PR1：框架 + reindex**。建 `internal/job`（`Service`/`Runner`/`Adapt`/`JobRepository`/`Job` 表）、`ReindexRunner`、reindex handler 改异步 + status 端点、前端 reindex 轮询、DI 接线、`just wire`。migration **暂不动**（PR1 不碰它，短期并存可接受）。
 - **PR2：迁 migration**。`MigrationRunner`、删手写状态机、`idle` 哨兵适配、删 `MigrationJob` 死表、phase 上报增强、migration 回归测试。
 
 > §2.1-G3 要求最终「无两套状态机并存」，PR1↔PR2 间的短暂并存是过渡，不是终态。
