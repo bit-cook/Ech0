@@ -82,7 +82,6 @@ type VideoMeta = { duration: number; width: number; height: number }
 const props = withDefaults(
   defineProps<{
     files?: App.Api.Ech0.FileObject[]
-    /** 联邦(hub)卡片场景下用于把相对 URL 解析到远端服务器。 */
     baseUrl?: string
   }>(),
   { files: () => [] },

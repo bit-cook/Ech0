@@ -1,56 +1,40 @@
-# web 模块（Vue 3 SPA，构建产物输出到 ../template/dist 并嵌进 Go 二进制）。
-# 从仓库根用 `just web <recipe>` 调用；recipe 的工作目录就是 web/。
-# 这里只是 package.json script 的门面，脚本本体仍以 package.json 为准。
 
 set shell := ["bash", "-cu"]
 
-# 默认：列出 web 模块的 recipe
 default:
     @just --list
 
-# 安装依赖（严格按 lockfile）
 install:
     pnpm install --frozen-lockfile
 
-# 开发服务器（:5173，/api 反代到 :6277）
 dev:
     pnpm dev
 
-# 类型检查 + 构建到 ../template/dist
 build:
     pnpm build
 
-# 预览已构建产物
 preview:
     pnpm preview
 
-# 仅类型检查（vue-tsc）
 typecheck:
     pnpm type-check
 
-# 单元测试（vitest run）
 test:
     pnpm test:unit
 
-# ESLint（--fix）
 lint:
     pnpm lint
 
-# Stylelint（--fix，覆盖 vue/css/scss）
 lint-style:
     pnpm lint:style
 
-# Prettier 格式化 src/
 format:
     pnpm format
 
-# i18n 护栏：key 完整性 / 未使用 key / 硬编码文案 / 伪语言 smoke
 i18n-check:
     pnpm i18n:check
 
-# 设计 token 使用检查
 token-check:
     pnpm token:check
 
-# 前端自查合集（根 `just check` 会通过 scripts/check.sh 覆盖同样的步骤）
 check: format lint lint-style i18n-check

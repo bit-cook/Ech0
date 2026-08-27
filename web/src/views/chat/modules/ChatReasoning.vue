@@ -34,11 +34,8 @@ import { TheMdPreview } from '@/components/advanced/md'
 import Reasoning from '@/components/icons/reasoning.vue'
 
 const props = defineProps<{
-  /** 思考过程文本（markdown） */
   text: string
-  /** 是否仍在流式思考（true→「思考中…」并自动展开；false/缺省→已结束，展示耗时） */
   active?: boolean
-  /** 思考耗时（毫秒，后端权威值） */
   durationMs?: number
 }>()
 

@@ -105,7 +105,6 @@ jobs:
           ARM64_TOOLCHAIN: ${{ env.ARM64_TOOLCHAIN }}
         run: |
           set -euo pipefail
-          # Define linker flags for a static build + inject commit / build time so /hello returns the real values.
           GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
           BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           VERSION_PKG="github.com/lin-snow/ech0/internal/version"
@@ -119,16 +118,8 @@ jobs:
             else
               export CC="aarch64-linux-musl-gcc"
             fi
-            # sqlite-vec (asg017) 的 sqlite-vec.h 要 #include "sqlite3.h"，但 mattn/go-sqlite3
-            # 把头改名为 sqlite3-binding.h、不对外暴露 sqlite3.h。amd64 原生 gcc 靠系统
-            # libsqlite3-dev 的 /usr/include/sqlite3.h 兜底；musl 交叉编译的 sysroot 没有它。
-            # 取 mattn 自带的头（版本与实际链接进二进制的 sqlite 完全一致）复制为 sqlite3.h。
             SQLITE_INC="${RUNNER_TEMP}/sqlite-include"
             mkdir -p "${SQLITE_INC}"
-            # go list -m -f '{{.Dir}}' only resolves a path once the module is
-            # extracted into the module cache; the build below would fetch it, but
-            # that runs *after* this step, so download it explicitly first or .Dir
-            # comes back empty and the cp targets '/sqlite3-binding.h'.
             go mod download github.com/mattn/go-sqlite3
             MATTN_DIR="$(go list -m -f '{{.Dir}}' github.com/mattn/go-sqlite3)"
             if [ -z "${MATTN_DIR}" ] || [ ! -f "${MATTN_DIR}/sqlite3-binding.h" ]; then
@@ -136,16 +127,11 @@ jobs:
               exit 1
             fi
             cp "${MATTN_DIR}/sqlite3-binding.h" "${SQLITE_INC}/sqlite3.h"
-            # musl 无 BSD 的 u_int*_t（sqlite-vec.c 在非 Win/wasm 分支硬 typedef 它们），映射到标准
-            # 类型；-Wno-typedef-redefinition 消除随之的重复 typedef 警告；-fno-sanitize=undefined
-            # 关掉 zig cc 默认插入、却未链接 runtime 的 UBSan（__ubsan_handle_* 未定义符号，release 不需要）。
             export CGO_CFLAGS="-I${SQLITE_INC} -Du_int8_t=uint8_t -Du_int16_t=uint16_t -Du_int64_t=uint64_t -Wno-typedef-redefinition -fno-sanitize=undefined"
           else
             export CC="gcc"
           fi
 
-          # Build the binary. Go's 'embed' will automatically find the frontend
-          # files built in the previous steps.
           test -f cmd/ech0/main.go
           go build -tags netgo -ldflags "$STATIC_LDFLAGS" -o "${OUTPUT_NAME}" ./cmd/ech0/main.go
 

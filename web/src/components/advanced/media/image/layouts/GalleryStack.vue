@@ -37,7 +37,6 @@ import { computed } from 'vue'
 import GalleryImageItem from '../parts/GalleryImageItem.vue'
 import type { GalleryStackProps } from './types'
 
-/** 每行最多邮票数量 */
 const STACK_MAX_PER_ROW = 5
 
 const props = defineProps<GalleryStackProps>()
@@ -53,10 +52,6 @@ const imageRows = computed(() => {
   return rows
 })
 
-/**
- * 每张图唯一 z-index（10 起递增），但「谁在上」由确定性洗牌决定，
- * 避免始终从左到右单调叠高；同一次数据集顺序稳定。
- */
 function buildStackZIndices(count: number): number[] {
   if (count === 0) return []
   const order = Array.from({ length: count }, (_, i) => i)
@@ -77,7 +72,6 @@ function buildStackZIndices(count: number): number[] {
 
 const stackZIndices = computed(() => buildStackZIndices(props.images.length))
 
-/** 32-bit 混合，减轻「连续 idx」与线性同余带来的角度偏斜 */
 function mix32(n: number): number {
   let x = (Math.imul(n ^ 0x243f6a88, 0x9e3779b1) + 0x517cc1b7) >>> 0
   x ^= x >>> 16
@@ -88,16 +82,11 @@ function mix32(n: number): number {
   return x >>> 0
 }
 
-/**
- * 稳定角度 [-10°, 10°] 整数；CSS 中负值为逆时针、正值为顺时针。
- * 旧版 (idx*9301)%233280 对相邻下标分布不均，易出现「几乎不左转」。
- */
 function stackRotateDeg(idx: number): number {
   const u = mix32(idx) / 4294967296
   return Math.round(-10 + u * 20)
 }
 
-/** 波浪式垂直偏移（px），与邮票尺寸成比例 */
 function stackOffsetY(idx: number): number {
   return Math.round(Math.sin(idx * 1.07) * 10)
 }

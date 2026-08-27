@@ -69,7 +69,6 @@ const props = withDefaults(
   defineProps<{
     readonly?: boolean
     latLng?: LatLng | null
-    /** When true (editor), request browser geolocation on first mount. */
     autoLocate?: boolean
     class?: string
   }>(),

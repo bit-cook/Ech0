@@ -86,7 +86,6 @@ import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps<{
   scrollTarget?: HTMLElement | null
-  /** 首页窄栏：减少左右留白以贴合参考图时间线宽度 */
   compact?: boolean
 }>()
 

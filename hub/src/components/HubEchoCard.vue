@@ -1,7 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Copyright (C) 2025-2026 lin-snow -->
 <script setup lang="ts">
-/** 结构与 web/src/components/advanced/echo/cards/TheHubEcho.vue 一致（Hub 聚合侧不展示 Extension）。 */
 import Verified from '@/components/icons/verified.vue'
 import GrayLike from '@/components/icons/graylike.vue'
 import LinkTo from '@/components/icons/linkto.vue'
@@ -30,7 +29,6 @@ type Echo = App.Api.Hub.Echo
 const props = withDefaults(
   defineProps<{
     echo: Echo
-    /** `masonry`: full column width for multi-column feed */
     variant?: 'default' | 'masonry'
   }>(),
   { variant: 'default' },
@@ -51,7 +49,6 @@ watch(
   },
 )
 
-/** 与评论区 TheComment 一致：Dicebear micah；src 为空或图片加载失败时使用生成头像 */
 const logoUrl = computed(() => props.echo.logo?.trim() ?? '')
 const avatarFailed = ref(false)
 const avatarSeed = computed(

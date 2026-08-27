@@ -84,7 +84,6 @@ const props = withDefaults(
     images?: App.Api.Ech0.FileObject[]
     baseUrl?: string
     layout?: ImageLayout | string | undefined
-    /** 当本组的第一张图是页面 LCP 时设为 true。 */
     priority?: boolean
   }>(),
   { priority: false },

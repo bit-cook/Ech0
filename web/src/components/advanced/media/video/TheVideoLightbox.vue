@@ -45,7 +45,6 @@ const props = withDefaults(
   defineProps<{
     visible: boolean
     src: string
-    /** 从内联封面带过来的续播进度（秒）；0 表示从头播。 */
     startTime?: number
   }>(),
   { startTime: 0 },

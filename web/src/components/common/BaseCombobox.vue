@@ -100,27 +100,16 @@ import {
 type ClassValue = string | string[] | Record<string, boolean | number | string>
 
 const props = defineProps<{
-  /** 绑定到外部的值，支持单选或多选 */
   modelValue: string | object | null | (string | object)[]
-  /** 可供选择的选项列表 */
   options: string[] | object[]
-  /** 输入框上方显示的标签文本 */
   label?: string
-  /** 关联 label 与输入框的 id */
   id?: string
-  /** 输入框提示文本 */
   placeholder?: string
-  /** 自定义选项比对逻辑或字段名 */
   by?: string | ((a: object | string, b: object | string) => boolean)
-  /** 显示选项时使用的字段名 */
   labelField?: string
-  /** 是否允许创建新选项 */
   allowCreate?: boolean
-  /** 是否启用多选模式 */
   multiple?: boolean
-  /** 输入框额外的样式类 */
   inputClass?: ClassValue
-  /** 外层 wrapper 额外样式类 */
   wrapperClass?: ClassValue
 }>()
 

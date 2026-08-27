@@ -1,5 +1,4 @@
 
-# =================== 前端构建阶段 ===================
 FROM node:26-alpine AS frontend-builder
 
 WORKDIR /web

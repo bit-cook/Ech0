@@ -1,9 +1,3 @@
-# docker 模块（镜像构建与推送）。
-# 从仓库根用 `just docker <recipe>` 调用。构建上下文必须是仓库根，
-# 故构建类 recipe 用 [working-directory: '..'] 把工作目录切回根目录。
-#
-# 覆盖方式：DOCKER_REGISTRY=foo IMAGE_TAG=dev just docker build
-#          OS=linux ARCH=arm64 just docker build
 
 set shell := ["bash", "-cu"]
 
@@ -16,11 +10,9 @@ IMAGE_TAG       := env_var_or_default("IMAGE_TAG", "latest")
 OS              := env_var_or_default("OS", `go env GOHOSTOS`)
 ARCH            := env_var_or_default("ARCH", `go env GOHOSTARCH`)
 
-# 默认：列出 docker 模块的 recipe
 default:
     @just --list
 
-# 构建镜像（平台可用 OS=... ARCH=... 覆盖）
 [working-directory: '..']
 build:
     @echo "Building image for platform: {{OS}}/{{ARCH}}"
@@ -31,6 +23,5 @@ build:
         --build-arg BUILD_TIME={{BUILD_TIME}} \
         -t {{DOCKER_REGISTRY}}/{{IMAGE_NAME}}:{{IMAGE_TAG}} -f docker/build.Dockerfile .
 
-# 推送镜像
 push:
     docker push {{DOCKER_REGISTRY}}/{{IMAGE_NAME}}:{{IMAGE_TAG}}

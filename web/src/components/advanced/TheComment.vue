@@ -276,7 +276,6 @@
 </template>
 
 <script lang="ts">
-// TODO: cap.js 修复析构竞态后可移除（issue: #speculativePool 未在 cleanup 后守空）。
 let capRejectionGuardInstalled = false
 const installCapRejectionGuard = () => {
   if (capRejectionGuardInstalled || typeof window === 'undefined') return

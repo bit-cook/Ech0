@@ -184,9 +184,7 @@ const props = withDefaults(
     EnableCompressor: boolean
     fileCategory?: App.Api.File.Category
     allowedFileTypes?: string[]
-    /** Cap on the number of files in the queue (rejected entries beyond this are skipped). */
     maxFiles?: number
-    /** Per-file size cap in bytes; files above this are rejected with a toast. Unset = no cap. */
     maxFileSize?: number
   }>(),
   {

@@ -1,28 +1,20 @@
-# hub 模块（公共实例目录站，Vue 3 + Vite）。
-# 从仓库根用 `just hub <recipe>` 调用；recipe 的工作目录就是 hub/。
 
 set shell := ["bash", "-cu"]
 
-# 默认：列出 hub 模块的 recipe
 default:
     @just --list
 
-# 安装依赖（严格按 lockfile）
 install:
     pnpm install --frozen-lockfile
 
-# 开发服务器
 dev:
     pnpm dev
 
-# 类型检查 + 构建（prebuild 会先生成 SEO 资源）
 build:
     pnpm build
 
-# 预览已构建产物
 preview:
     pnpm preview
 
-# 生成 SEO 资源（sitemap / og 图等）
 seo-assets:
     pnpm generate:seo-assets

@@ -52,7 +52,6 @@ jobs:
             exit 1
           fi
 
-          # Package name is ech0-<version>.tgz — must change each app release or chart-releaser skips (skip_existing).
           sed -i -E 's|^version: .*|version: '"${app_version}"'|' charts/ech0/Chart.yaml
           sed -i -E 's/^appVersion: .*/appVersion: "'"${app_version}"'"/' charts/ech0/Chart.yaml
           echo "Synced chart version and appVersion to ${app_version} from tag ${release_tag}"
