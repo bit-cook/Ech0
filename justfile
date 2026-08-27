@@ -31,7 +31,7 @@ LDFLAGS       := "-X " + VERSION_PKG + ".Commit=" + GIT_COMMIT + " -X " + VERSIO
 
 # mockery 仅作代码生成器，不进 go.mod（用 go run 固定版本调用），保持模块图精简。
 # 版本 pin 死，保证任何机器/CI 生成结果一致，`just mocks-check` 才稳定。
-MOCKERY_VERSION := env_var_or_default("MOCKERY_VERSION", "v3.7.1")
+MOCKERY_VERSION := env_var_or_default("MOCKERY_VERSION", "v3.7.4")
 
 # 覆盖率过滤：mockery 生成的 mock 全 0%、Wire 生成的 wire_gen.go 几乎 0%，
 # 只稀释分母，不反映人写代码的覆盖情况。

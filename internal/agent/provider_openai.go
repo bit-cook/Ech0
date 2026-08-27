@@ -111,6 +111,9 @@ func (p *openaiProvider) Complete(ctx context.Context, req Request) (Response, e
 	if req.Temperature != nil {
 		chatReq.Temperature = *req.Temperature
 	}
+	// 刻意用已被 go-openai 标弃用的 MaxTokens（即 max_tokens）而非 MaxCompletionTokens：
+	// max_completion_tokens 是 OpenAI 自家的新字段，DeepSeek / Qwen / Moonshot / Ollama 等
+	// OpenAI 兼容端多数只认 max_tokens。对应的 SA1019 在 .golangci.yaml 里按文件+规则精确屏蔽。
 	if req.MaxTokens > 0 {
 		chatReq.MaxTokens = req.MaxTokens
 	}
@@ -145,6 +148,7 @@ func (p *openaiProvider) stream(ctx context.Context, req Request, ch chan<- Even
 	if req.Temperature != nil {
 		chatReq.Temperature = *req.Temperature
 	}
+	// 同 Complete：兼容性优先，继续发 max_tokens（理由见 Complete 内注释）。
 	if req.MaxTokens > 0 {
 		chatReq.MaxTokens = req.MaxTokens
 	}

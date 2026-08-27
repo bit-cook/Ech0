@@ -255,13 +255,10 @@ func (s *CommentService) CreateIntegrationComment(
 			commonModel.NewBizError(commonModel.ErrCodeInvalidRequest, "评论功能未启用")
 	}
 
+	// MustFromContext 永不返回 nil（缺身份时回落 NoopViewer），故这里不再判空。
 	v := viewer.MustFromContext(ctx)
-	userID := ""
-	tokenID := ""
-	if v != nil {
-		userID = strings.TrimSpace(v.UserID())
-		tokenID = strings.TrimSpace(v.TokenID())
-	}
+	userID := strings.TrimSpace(v.UserID())
+	tokenID := strings.TrimSpace(v.TokenID())
 
 	comment := model.Comment{
 		EchoID:    strings.TrimSpace(dto.EchoID),
@@ -882,7 +879,7 @@ func (s *CommentService) computeHMAC(payload string) string {
 
 func (s *CommentService) requireAdmin(ctx context.Context) error {
 	v := viewer.MustFromContext(ctx)
-	if v == nil || strings.TrimSpace(v.UserID()) == "" {
+	if strings.TrimSpace(v.UserID()) == "" {
 		return commonModel.NewBizError(commonModel.ErrCodePermissionDenied, commonModel.NO_PERMISSION_DENIED)
 	}
 	user, err := s.commonService.CommonGetUserByUserId(ctx, v.UserID())
@@ -897,7 +894,7 @@ func (s *CommentService) requireAdmin(ctx context.Context) error {
 
 func (s *CommentService) resolveRequestUser(ctx context.Context) (user userModel.User, valid bool, err error) {
 	v := viewer.MustFromContext(ctx)
-	if v == nil || strings.TrimSpace(v.UserID()) == "" {
+	if strings.TrimSpace(v.UserID()) == "" {
 		return user, false, nil
 	}
 	u, err := s.commonService.CommonGetUserByUserId(ctx, v.UserID())
