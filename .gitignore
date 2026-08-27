@@ -55,6 +55,10 @@ web/dist/
 npm-debug.log
 yarn-error.log
 
+# hub 的 prebuild 会 `npm install --prefix ../web`（只为让 vue-tsc 能解析 ../web/src），
+# 这会在 web/ 下生成一个 npm lockfile。web 用 pnpm，这个文件是副产物，别入库。
+web/package-lock.json
+
 # End of https://www.toptal.com/developers/gitignore/api/go,vue,vuejs,visualstudiocode
 /data/*
 # 运行/测试时 zap logger 会按当前工作目录写 data/app.log（如 internal/**/data/app.log），
