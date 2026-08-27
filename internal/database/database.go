@@ -166,7 +166,7 @@ func InitDatabase() {
 
 // MigrateDB 执行数据库迁移
 func MigrateDB() error {
-	models := []interface{}{
+	models := []any{
 		&userModel.User{},
 		&userModel.UserLocalAuth{},
 		&userModel.UserExternalIdentity{},

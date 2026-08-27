@@ -3,6 +3,8 @@
 
 package busen
 
+import "maps"
+
 // Event is the typed value delivered to handlers.
 type Event[T any] struct {
 	// Topic carries optional routing metadata supplied at publish time.
@@ -41,8 +43,6 @@ func cloneHeaders(headers map[string]string) map[string]string {
 	}
 
 	cloned := make(map[string]string, len(headers))
-	for k, v := range headers {
-		cloned[k] = v
-	}
+	maps.Copy(cloned, headers)
 	return cloned
 }

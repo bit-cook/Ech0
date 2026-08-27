@@ -18,7 +18,7 @@ import (
 func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("empty type returns nil without error", func(t *testing.T) {
 		// Type 为空白字符串 -> 视为「无扩展」，返回 nil,nil（即便 Payload 非空）。
-		got, err := normalizeEchoExtension(&model.EchoExtension{Type: "   ", Payload: map[string]interface{}{"x": "y"}})
+		got, err := normalizeEchoExtension(&model.EchoExtension{Type: "   ", Payload: map[string]any{"x": "y"}})
 		require.NoError(t, err)
 		assert.Nil(t, got)
 	})
@@ -32,7 +32,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("video ok", func(t *testing.T) {
 		got, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_VIDEO,
-			Payload: map[string]interface{}{"videoId": "  abc123  "},
+			Payload: map[string]any{"videoId": "  abc123  "},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "abc123", got.Payload["videoId"])
@@ -41,7 +41,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("video missing videoId", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_VIDEO,
-			Payload: map[string]interface{}{"videoId": "   "},
+			Payload: map[string]any{"videoId": "   "},
 		})
 		require.Error(t, err)
 	})
@@ -49,7 +49,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("github project ok", func(t *testing.T) {
 		got, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_GITHUBPROJ,
-			Payload: map[string]interface{}{"repoUrl": "https://github.com/lin-snow/ech0"},
+			Payload: map[string]any{"repoUrl": "https://github.com/lin-snow/ech0"},
 		})
 		require.NoError(t, err)
 		assert.NotEmpty(t, got.Payload["repoUrl"])
@@ -58,7 +58,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("github project missing repoUrl", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_GITHUBPROJ,
-			Payload: map[string]interface{}{},
+			Payload: map[string]any{},
 		})
 		require.Error(t, err)
 	})
@@ -66,7 +66,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("website ok", func(t *testing.T) {
 		got, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_WEBSITE,
-			Payload: map[string]interface{}{"title": "Ech0", "site": "https://ech0.app"},
+			Payload: map[string]any{"title": "Ech0", "site": "https://ech0.app"},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "Ech0", got.Payload["title"])
@@ -76,7 +76,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("website missing site", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_WEBSITE,
-			Payload: map[string]interface{}{"title": "Ech0"},
+			Payload: map[string]any{"title": "Ech0"},
 		})
 		require.Error(t, err)
 	})
@@ -84,7 +84,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("music missing url", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_MUSIC,
-			Payload: map[string]interface{}{"url": "  "},
+			Payload: map[string]any{"url": "  "},
 		})
 		require.Error(t, err)
 	})
@@ -92,7 +92,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("location ok", func(t *testing.T) {
 		got, err := normalizeEchoExtension(&model.EchoExtension{
 			Type: model.Extension_LOCATION,
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"latitude":    31.23,
 				"longitude":   121.47,
 				"placeholder": "Shanghai",
@@ -107,7 +107,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("location missing coordinates", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type:    model.Extension_LOCATION,
-			Payload: map[string]interface{}{"placeholder": "x"},
+			Payload: map[string]any{"placeholder": "x"},
 		})
 		require.Error(t, err)
 	})
@@ -115,7 +115,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("location out of range", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type: model.Extension_LOCATION,
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"latitude":    100.0, // > 90
 				"longitude":   0.0,
 				"placeholder": "x",
@@ -127,7 +127,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("location missing placeholder", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type: model.Extension_LOCATION,
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"latitude":  10.0,
 				"longitude": 20.0,
 			},
@@ -138,7 +138,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("tweet ok", func(t *testing.T) {
 		got, err := normalizeEchoExtension(&model.EchoExtension{
 			Type: model.Extension_TWEET,
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"url":      "https://x.com/u/status/1",
 				"username": "u",
 				"statusId": "1",
@@ -152,7 +152,7 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 	t.Run("tweet missing username", func(t *testing.T) {
 		_, err := normalizeEchoExtension(&model.EchoExtension{
 			Type: model.Extension_TWEET,
-			Payload: map[string]interface{}{
+			Payload: map[string]any{
 				"url":      "https://x.com/u/status/1",
 				"statusId": "1",
 			},
@@ -165,21 +165,21 @@ func TestNormalizeEchoExtension_AllTypes(t *testing.T) {
 func TestGetPayloadFloat(t *testing.T) {
 	cases := []struct {
 		name    string
-		payload map[string]interface{}
+		payload map[string]any
 		wantOK  bool
 		want    float64
 	}{
-		{"float64", map[string]interface{}{"v": float64(1.5)}, true, 1.5},
-		{"float32", map[string]interface{}{"v": float32(2.5)}, true, 2.5},
-		{"int", map[string]interface{}{"v": 3}, true, 3},
-		{"int64", map[string]interface{}{"v": int64(4)}, true, 4},
-		{"json.Number", map[string]interface{}{"v": json.Number("5.5")}, true, 5.5},
-		{"string number", map[string]interface{}{"v": " 6.25 "}, true, 6.25},
-		{"invalid string", map[string]interface{}{"v": "not-a-number"}, false, 0},
-		{"bad json.Number", map[string]interface{}{"v": json.Number("nan-ish")}, false, 0},
-		{"missing key", map[string]interface{}{}, false, 0},
-		{"nil value", map[string]interface{}{"v": nil}, false, 0},
-		{"unsupported type", map[string]interface{}{"v": true}, false, 0},
+		{"float64", map[string]any{"v": float64(1.5)}, true, 1.5},
+		{"float32", map[string]any{"v": float32(2.5)}, true, 2.5},
+		{"int", map[string]any{"v": 3}, true, 3},
+		{"int64", map[string]any{"v": int64(4)}, true, 4},
+		{"json.Number", map[string]any{"v": json.Number("5.5")}, true, 5.5},
+		{"string number", map[string]any{"v": " 6.25 "}, true, 6.25},
+		{"invalid string", map[string]any{"v": "not-a-number"}, false, 0},
+		{"bad json.Number", map[string]any{"v": json.Number("nan-ish")}, false, 0},
+		{"missing key", map[string]any{}, false, 0},
+		{"nil value", map[string]any{"v": nil}, false, 0},
+		{"unsupported type", map[string]any{"v": true}, false, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -194,10 +194,10 @@ func TestGetPayloadFloat(t *testing.T) {
 
 // TestGetPayloadString_NonString 补齐 getPayloadString 的非字符串/缺失/nil 回退分支。
 func TestGetPayloadString_NonString(t *testing.T) {
-	assert.Equal(t, "", getPayloadString(map[string]interface{}{"v": 123}, "v"))
-	assert.Equal(t, "", getPayloadString(map[string]interface{}{"v": nil}, "v"))
-	assert.Equal(t, "", getPayloadString(map[string]interface{}{}, "missing"))
-	assert.Equal(t, "ok", getPayloadString(map[string]interface{}{"v": "ok"}, "v"))
+	assert.Equal(t, "", getPayloadString(map[string]any{"v": 123}, "v"))
+	assert.Equal(t, "", getPayloadString(map[string]any{"v": nil}, "v"))
+	assert.Equal(t, "", getPayloadString(map[string]any{}, "missing"))
+	assert.Equal(t, "ok", getPayloadString(map[string]any{"v": "ok"}, "v"))
 }
 
 // TestCollectEchoFileIDs 覆盖文件 ID 收集的各分支：nil、空、FileID 优先、回退 File.ID、两者皆空跳过。

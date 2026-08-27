@@ -375,7 +375,7 @@ func TestChain_WithHooksInterop(t *testing.T) {
 
 	var logged bool
 	logMW := func(next FS) FS {
-		return &logTestFS{BaseFS: BaseFS{Inner: next}, logged: &logged}
+		return &logTestFS{Inner: next, logged: &logged}
 	}
 
 	encryptMW := func(next FS) FS {

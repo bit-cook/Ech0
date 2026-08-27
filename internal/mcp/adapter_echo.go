@@ -239,10 +239,7 @@ func (a *Adapter) registerEchoResources(reg *Registry) {
 func (a *Adapter) searchPosts(ctx context.Context, args map[string]any) (*ToolCallResult, error) {
 	query := stringArg(args, "query")
 	page := intArg(args, "page", 1)
-	pageSize := intArg(args, "page_size", 20)
-	if pageSize > 100 {
-		pageSize = 100
-	}
+	pageSize := min(intArg(args, "page_size", 20), 100)
 	sortBy := stringArg(args, "sort_by")
 	sortOrder := stringArg(args, "sort_order")
 
@@ -385,13 +382,7 @@ func (a *Adapter) deleteTag(ctx context.Context, args map[string]any) (*ToolCall
 }
 
 func (a *Adapter) getHotPosts(ctx context.Context, args map[string]any) (*ToolCallResult, error) {
-	limit := intArg(args, "limit", 5)
-	if limit < 1 {
-		limit = 1
-	}
-	if limit > 100 {
-		limit = 100
-	}
+	limit := min(max(intArg(args, "limit", 5), 1), 100)
 	posts, err := a.echoSvc.GetHotEchos(ctx, limit)
 	if err != nil {
 		return nil, err

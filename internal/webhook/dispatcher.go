@@ -48,7 +48,6 @@ func (wd *Dispatcher) HandleObservation(ctx context.Context, obs event.WebhookOb
 		return err
 	}
 	for _, wh := range webhooks {
-		wh := wh
 		wd.pool.Submit(func() error {
 			wd.Dispatch(ctx, &wh, obs)
 			return nil

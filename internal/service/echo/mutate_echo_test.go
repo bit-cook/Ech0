@@ -122,7 +122,7 @@ func TestDeleteEchoById_Success(t *testing.T) {
 
 	var got event.EchoDeleted
 	var fired int
-	unsub, err := busen.Subscribe(bus, func(_ context.Context, e busen.Event[event.EchoDeleted]) error {
+	unsub, err := bus.Subscribe(func(_ context.Context, e busen.Event[event.EchoDeleted]) error {
 		got = e.Value
 		fired++
 		return nil
@@ -246,7 +246,7 @@ func TestUpdateEcho_Success(t *testing.T) {
 
 	var got event.EchoUpdated
 	var fired int
-	unsub, err := busen.Subscribe(bus, func(_ context.Context, e busen.Event[event.EchoUpdated]) error {
+	unsub, err := bus.Subscribe(func(_ context.Context, e busen.Event[event.EchoUpdated]) error {
 		got = e.Value
 		fired++
 		return nil

@@ -405,10 +405,7 @@ func (o *ObjectFS) BatchDelete(ctx context.Context, keys []string) error {
 		if err := ctx.Err(); err != nil {
 			return &OpError{Op: "BatchDelete", Key: fmt.Sprintf("%d keys remaining", len(keys)-i), Err: err}
 		}
-		end := i + maxBatch
-		if end > len(keys) {
-			end = len(keys)
-		}
+		end := min(i+maxBatch, len(keys))
 		objects := make([]types.ObjectIdentifier, 0, end-i)
 		for _, key := range keys[i:end] {
 			s3k, err := o.s3Key(key)
@@ -446,16 +443,13 @@ var (
 
 // mapS3Error converts common S3 error types to virefs sentinel errors.
 func mapS3Error(err error) error {
-	var nsk *types.NoSuchKey
-	if errors.As(err, &nsk) {
+	if _, ok := errors.AsType[*types.NoSuchKey](err); ok {
 		return ErrNotFound
 	}
-	var nf *types.NotFound
-	if errors.As(err, &nf) {
+	if _, ok := errors.AsType[*types.NotFound](err); ok {
 		return ErrNotFound
 	}
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == "NotFound" || apiErr.ErrorCode() == "NoSuchKey" {
 			return ErrNotFound
 		}

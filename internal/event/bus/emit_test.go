@@ -20,7 +20,7 @@ func TestEmit_DeliversToSubscriber(t *testing.T) {
 	b := helpers.NewTestBus(t)
 
 	var got event.EchoCreated
-	unsub, err := busen.Subscribe(b, func(_ context.Context, e busen.Event[event.EchoCreated]) error {
+	unsub, err := b.Subscribe(func(_ context.Context, e busen.Event[event.EchoCreated]) error {
 		got = e.Value
 		return nil
 	})
@@ -36,7 +36,7 @@ func TestEmit_KeyedEventCarriesOrderingKey(t *testing.T) {
 	t.Run("keyed event attaches OrderingKey", func(t *testing.T) {
 		b := helpers.NewTestBus(t)
 		var key string
-		unsub, err := busen.Subscribe(b, func(_ context.Context, e busen.Event[event.EchoCreated]) error {
+		unsub, err := b.Subscribe(func(_ context.Context, e busen.Event[event.EchoCreated]) error {
 			key = e.Key
 			return nil
 		})
@@ -51,7 +51,7 @@ func TestEmit_KeyedEventCarriesOrderingKey(t *testing.T) {
 	t.Run("keyed event with empty key publishes without key", func(t *testing.T) {
 		b := helpers.NewTestBus(t)
 		var key string
-		unsub, err := busen.Subscribe(b, func(_ context.Context, e busen.Event[event.ResourceUploaded]) error {
+		unsub, err := b.Subscribe(func(_ context.Context, e busen.Event[event.ResourceUploaded]) error {
 			key = e.Key
 			return nil
 		})
@@ -69,7 +69,7 @@ func TestEmit_KeyedEventCarriesOrderingKey(t *testing.T) {
 			key       string
 			delivered bool
 		)
-		unsub, err := busen.Subscribe(b, func(_ context.Context, e busen.Event[event.SystemSnapshot]) error {
+		unsub, err := b.Subscribe(func(_ context.Context, e busen.Event[event.SystemSnapshot]) error {
 			key = e.Key
 			delivered = true
 			return nil
@@ -88,7 +88,7 @@ func TestEmit_PropagatesHandlerError(t *testing.T) {
 	b := helpers.NewTestBus(t)
 
 	sentinel := assert.AnError
-	unsub, err := busen.Subscribe(b, func(_ context.Context, _ busen.Event[event.EchoCreated]) error {
+	unsub, err := b.Subscribe(func(_ context.Context, _ busen.Event[event.EchoCreated]) error {
 		return sentinel
 	})
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestNotify_DeliversBestEffort(t *testing.T) {
 	b := helpers.NewTestBus(t)
 
 	var got string
-	unsub, err := busen.Subscribe(b, func(_ context.Context, e busen.Event[event.EchoCreated]) error {
+	unsub, err := b.Subscribe(func(_ context.Context, e busen.Event[event.EchoCreated]) error {
 		got = e.Value.Echo.ID
 		return nil
 	})

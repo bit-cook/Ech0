@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 )
 
 // Dispatch carries untyped event metadata through middleware.
@@ -82,8 +83,8 @@ func buildMiddlewareChain(middlewares []Middleware) func(Next) Next {
 	cached := append([]Middleware(nil), middlewares...)
 	return func(next Next) Next {
 		wrapped := next
-		for i := len(cached) - 1; i >= 0; i-- {
-			wrapped = cached[i](wrapped)
+		for _, c := range slices.Backward(cached) {
+			wrapped = c(wrapped)
 		}
 		return wrapped
 	}

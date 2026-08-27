@@ -82,8 +82,7 @@ func MessageKeyFromMessage(msg string) string {
 //  1. *BizError：取 Code；MessageKey 缺失时按 Code 映射；带 Params。
 //  2. 其余 error：无 error_code，按消息文本 base 映射 message_key。
 func ResolveFailureFields(err error, base string) (code, messageKey string, params map[string]any) {
-	var bizErr *BizError
-	if errors.As(err, &bizErr) {
+	if bizErr, ok := errors.AsType[*BizError](err); ok {
 		key := strings.TrimSpace(bizErr.MessageKey)
 		if key == "" {
 			key = MessageKeyFromErrorCode(bizErr.Code)

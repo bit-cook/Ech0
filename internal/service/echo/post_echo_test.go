@@ -125,7 +125,7 @@ func TestPostEcho_Success(t *testing.T) {
 	// 同步订阅 EchoCreated：busen 默认同步投递，Publish 返回前 handler 已执行，无需 sleep。
 	var gotEvent event.EchoCreated
 	var gotCount int
-	unsub, err := busen.Subscribe(bus, func(_ context.Context, e busen.Event[event.EchoCreated]) error {
+	unsub, err := bus.Subscribe(func(_ context.Context, e busen.Event[event.EchoCreated]) error {
 		gotEvent = e.Value
 		gotCount++
 		return nil
@@ -224,7 +224,7 @@ func TestPostEcho_SavedEchoNilSkipsEvent(t *testing.T) {
 	file.EXPECT().ConfirmTempFiles(mock.Anything, mock.Anything).Return(nil).Once()
 
 	var fired int
-	unsub, err := busen.Subscribe(bus, func(_ context.Context, _ busen.Event[event.EchoCreated]) error {
+	unsub, err := bus.Subscribe(func(_ context.Context, _ busen.Event[event.EchoCreated]) error {
 		fired++
 		return nil
 	})

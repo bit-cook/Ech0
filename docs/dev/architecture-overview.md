@@ -12,7 +12,7 @@ Ech0 是一个**自托管的轻量个人微博（时间线）平台**，以**单
 
 | 维度 | 选型 |
 | --- | --- |
-| 后端语言 | Go 1.26+（CGO，因 SQLite + sqlite-vec） |
+| 后端语言 | Go 1.27+（CGO，因 SQLite + sqlite-vec） |
 | Web 框架 | Gin |
 | 依赖注入 | Google Wire（编译期生成，`internal/di/wire_gen.go`） |
 | ORM / 存储 | GORM + SQLite（`gorm.io/driver/sqlite` + `mattn/go-sqlite3`），向量检索用 `sqlite-vec` |
@@ -469,7 +469,7 @@ internal/mcp/Adapter（adapter_*.go）── 注入 8 个领域 service：
 
 | 库 | 一句话 | 核心 API | 被谁用 |
 | --- | --- | --- | --- |
-| **busen**（`router`/`dispatch`） | 类型安全、有界、异步的进程内事件总线，支持 topic 路由、中间件、可观测 hook | `Bus`、`Publish[T]`/`Subscribe[T]`、`SubscribeTopic`、`Event[T]`、`Hooks`、`Shutdown(mode)` | `internal/event/bus` 封装为领域事件总线 |
+| **busen**（`router`/`dispatch`） | 类型安全、有界、异步的进程内事件总线，支持 topic 路由、中间件、可观测 hook | `Bus`、`Bus.Publish[T]`/`Bus.Subscribe[T]`（Go 1.27 泛型方法）、`Bus.SubscribeTopic`、`Event[T]`、`Hooks`、`Shutdown(mode)` | `internal/event/bus` 封装为领域事件总线 |
 | **gocap**（`cap`/`core`/`store`/`transport`） | 内嵌的 PoW 验证码引擎（challenge→redeem→siteverify），内存态 + 限流 + 可插存储 | `cap.Engine`(`Handler()`/`SiteVerify()`/`RegisterSite()`)、`core.Service`、`store.Store` | `internal/captcha` |
 | **virefs**（`plugin/zip`） | 基于 key 的统一文件系统，覆盖本地盘与 S3，支持中间件、迁移、多后端路由 | `FS` 接口、`LocalFS`/`ObjectFS`、`MountTable`/`Schema`、`Migrate`、`Copier/Presigner/BatchDeleter` | `internal/storage`、`internal/migrator/snapshot` |
 | **viewer** | 请求级身份/鉴权上下文抽象（user/token/scope/audience） | `Context` 接口、`NewUserViewer*`、`WithContext`/`FromContext`/`MustFromContext` | auth 中间件、comment/user/file/copilot service、mcp、scope 中间件 |

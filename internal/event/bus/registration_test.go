@@ -51,7 +51,7 @@ func TestOnWithMeta_ForwardsMetadata(t *testing.T) {
 	t.Cleanup(unsub)
 
 	// Metadata is supplied at publish time; OnWithMeta must forward the envelope Meta.
-	require.NoError(t, busen.Publish(context.Background(), b,
+	require.NoError(t, b.Publish(context.Background(),
 		event.EchoCreated{Echo: echoModel.Echo{ID: "meta-1"}},
 		busen.WithMetadata(map[string]string{"source": "ech0", "trace_id": "t-9"})))
 
@@ -79,7 +79,7 @@ func TestOn_DropsMetadata(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(unsub)
 
-	require.NoError(t, busen.Publish(context.Background(), b,
+	require.NoError(t, b.Publish(context.Background(),
 		event.EchoCreated{Echo: echoModel.Echo{ID: "drop-1"}},
 		busen.WithMetadata(map[string]string{"source": "ech0"})))
 

@@ -7,8 +7,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -91,4 +93,34 @@ func TestRetry_exhausts_attempts(t *testing.T) {
 	if calls != 3 {
 		t.Fatalf("expected 3 attempts, got %d", calls)
 	}
+}
+
+// TestRetry_backoff_schedule pins the schedule Retry documents: the first attempt
+// runs immediately, every retry waits twice as long as the previous one, and no
+// sleep happens after the final attempt. Running inside a testing/synctest bubble
+// makes the fake clock exact, so the assertions are on nanosecond boundaries and
+// the test itself is instant.
+func TestRetry_backoff_schedule(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		const initial = 100 * time.Millisecond
+		start := time.Now()
+
+		sentinel := errors.New("boom")
+		var offsets []time.Duration
+		err := Retry(4, initial, func() error {
+			offsets = append(offsets, time.Since(start))
+			return sentinel
+		})
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("expected sentinel error, got %v", err)
+		}
+
+		want := []time.Duration{0, initial, 3 * initial, 7 * initial}
+		if !slices.Equal(offsets, want) {
+			t.Fatalf("attempt offsets = %v, want %v", offsets, want)
+		}
+		if elapsed := time.Since(start); elapsed != want[len(want)-1] {
+			t.Fatalf("Retry slept after the final attempt: elapsed = %v, want %v", elapsed, want[len(want)-1])
+		}
+	})
 }

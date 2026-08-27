@@ -306,9 +306,9 @@ func TestGetConnectsInfo_RetryThenSuccess(t *testing.T) {
 	repo := connectmock.NewMockRepository(t)
 	repo.EXPECT().GetAllConnects(mock.Anything).Return(connects, nil).Once()
 
-	var calls int32
+	var calls atomic.Int32
 	fetcher := func(url string, _ time.Duration) (model.Connect, error) {
-		if atomic.AddInt32(&calls, 1) == 1 {
+		if calls.Add(1) == 1 {
 			return model.Connect{}, errors.New("transient")
 		}
 		return model.Connect{ServerName: "flaky", ServerURL: "https://flaky.srv"}, nil
@@ -322,7 +322,7 @@ func TestGetConnectsInfo_RetryThenSuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "https://flaky.srv", got[0].ServerURL)
-	assert.Equal(t, int32(2), atomic.LoadInt32(&calls), "expected one failed attempt then one success")
+	assert.Equal(t, int32(2), calls.Load(), "expected one failed attempt then one success")
 }
 
 func TestGetConnectsInfo_CacheHitAndInvalidation(t *testing.T) {
@@ -337,9 +337,9 @@ func TestGetConnectsInfo_CacheHitAndInvalidation(t *testing.T) {
 	cs := adminCommon(t, userID)
 	tx := passthroughTx(t)
 
-	var fetchCount int32
+	var fetchCount atomic.Int32
 	fetcher := func(string, time.Duration) (model.Connect, error) {
-		atomic.AddInt32(&fetchCount, 1)
+		fetchCount.Add(1)
 		return model.Connect{ServerName: "peer", ServerURL: "https://peer.srv"}, nil
 	}
 	svc := connectService.NewConnectService(tx, repo, nil, cs, nil).WithPeerFetcher(fetcher)
@@ -348,13 +348,13 @@ func TestGetConnectsInfo_CacheHitAndInvalidation(t *testing.T) {
 	first, err := svc.GetConnectsInfo()
 	require.NoError(t, err)
 	require.Len(t, first, 1)
-	assert.Equal(t, int32(1), atomic.LoadInt32(&fetchCount))
+	assert.Equal(t, int32(1), fetchCount.Load())
 
 	// 第二次：命中缓存，不再拉取。
 	second, err := svc.GetConnectsInfo()
 	require.NoError(t, err)
 	assert.Equal(t, first, second)
-	assert.Equal(t, int32(1), atomic.LoadInt32(&fetchCount), "second call must hit cache")
+	assert.Equal(t, int32(1), fetchCount.Load(), "second call must hit cache")
 
 	// 删除连接后缓存失效，下一次必须重新拉取。
 	require.NoError(t, svc.DeleteConnect(helpers.CtxAsUser(userID), "id-1"))
@@ -362,7 +362,7 @@ func TestGetConnectsInfo_CacheHitAndInvalidation(t *testing.T) {
 	third, err := svc.GetConnectsInfo()
 	require.NoError(t, err)
 	require.Len(t, third, 1)
-	assert.Equal(t, int32(2), atomic.LoadInt32(&fetchCount), "cache invalidation must force a re-fetch")
+	assert.Equal(t, int32(2), fetchCount.Load(), "cache invalidation must force a re-fetch")
 }
 
 // TestGetConnectsInfo_SingleflightCollapsesConcurrentCalls 验证 singleflight：
@@ -370,23 +370,23 @@ func TestGetConnectsInfo_CacheHitAndInvalidation(t *testing.T) {
 func TestGetConnectsInfo_SingleflightCollapsesConcurrentCalls(t *testing.T) {
 	connects := []model.Connected{{ID: "1", ConnectURL: "https://peer.example"}}
 
-	var getAllCount int32
+	var getAllCount atomic.Int32
 	repo := connectmock.NewMockRepository(t)
 	repo.EXPECT().
 		GetAllConnects(mock.Anything).
 		RunAndReturn(func(context.Context) ([]model.Connected, error) {
-			atomic.AddInt32(&getAllCount, 1)
+			getAllCount.Add(1)
 			return connects, nil
 		})
 
 	var (
-		fetchCount  int32
+		fetchCount  atomic.Int32
 		startedOnce sync.Once
 		started     = make(chan struct{})
 		release     = make(chan struct{})
 	)
 	fetcher := func(string, time.Duration) (model.Connect, error) {
-		atomic.AddInt32(&fetchCount, 1)
+		fetchCount.Add(1)
 		startedOnce.Do(func() { close(started) })
 		<-release // 让首个 fetch 飞行期间，后续调用堆叠到 singleflight。
 		return model.Connect{ServerName: "peer", ServerURL: "https://peer.srv"}, nil
@@ -408,7 +408,7 @@ func TestGetConnectsInfo_SingleflightCollapsesConcurrentCalls(t *testing.T) {
 	// 其余调用：在首个调用仍飞行时进入 singleflight，应作为等待者堆叠。
 	var launched sync.WaitGroup
 	launched.Add(callers - 1)
-	for i := 0; i < callers-1; i++ {
+	for range callers - 1 {
 		go func() {
 			launched.Done()
 			got, err := svc.GetConnectsInfo()
@@ -418,13 +418,13 @@ func TestGetConnectsInfo_SingleflightCollapsesConcurrentCalls(t *testing.T) {
 	}
 	launched.Wait()
 	// 让等待者们都进入（阻塞在）singleflight.Do 之后再放行首个调用。
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		runtime.Gosched()
 	}
 	close(release)
 
 	var first []model.Connect
-	for i := 0; i < callers; i++ {
+	for range callers {
 		require.NoError(t, <-errs)
 		got := <-results
 		require.Len(t, got, 1)
@@ -435,8 +435,8 @@ func TestGetConnectsInfo_SingleflightCollapsesConcurrentCalls(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, int32(1), atomic.LoadInt32(&fetchCount), "singleflight must collapse to a single peer fetch")
-	assert.Equal(t, int32(1), atomic.LoadInt32(&getAllCount), "singleflight must collapse to a single repository read")
+	assert.Equal(t, int32(1), fetchCount.Load(), "singleflight must collapse to a single peer fetch")
+	assert.Equal(t, int32(1), getAllCount.Load(), "singleflight must collapse to a single repository read")
 }
 
 // -----------------------------------------------------------------------------

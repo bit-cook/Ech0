@@ -117,7 +117,7 @@ func TestGateLeaveUnderflowIsSafeNoop(t *testing.T) {
 	g := dispatch.NewGate()
 
 	// Several surplus Leave calls on a fresh (idle) gate must not panic.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		g.Leave()
 	}
 

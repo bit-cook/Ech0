@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -51,8 +52,8 @@ func historyForModel(msgs []ChatMessage, locale string, budgetTokens int, loc *t
 
 	// 定位最近一条带非空 Sources 的 assistant；仅此一轮把检索原文折进文本。
 	lastSourced := -1
-	for i := len(msgs) - 1; i >= 0; i-- {
-		if msgs[i].Role == "assistant" && len(msgs[i].Sources) > 0 {
+	for i, msg := range slices.Backward(msgs) {
+		if msg.Role == "assistant" && len(msg.Sources) > 0 {
 			lastSourced = i
 			break
 		}
@@ -75,7 +76,7 @@ func historyForModel(msgs []ChatMessage, locale string, budgetTokens int, loc *t
 	// 反向遍历累加 token，超预算即停（但至少留最近一条，避免极小预算下返回空）。
 	collected := make([]agent.Message, 0, len(msgs))
 	used := 0
-	for i := len(msgs) - 1; i >= 0; i-- {
+	for i, msg := range slices.Backward(msgs) {
 		content := contentOf(i)
 		if content == "" {
 			continue
@@ -85,7 +86,7 @@ func historyForModel(msgs []ChatMessage, locale string, budgetTokens int, loc *t
 		} else {
 			used += t
 		}
-		collected = append(collected, agent.Message{Role: roleFromString(msgs[i].Role), Content: content})
+		collected = append(collected, agent.Message{Role: roleFromString(msg.Role), Content: content})
 	}
 
 	// collected 为逆序（最近在前），反转回时间正序。

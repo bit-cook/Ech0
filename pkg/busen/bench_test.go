@@ -20,7 +20,7 @@ func BenchmarkPublishSync(b *testing.B) {
 		b.Run(fmt.Sprintf("subs_%d", subs), func(b *testing.B) {
 			bus := New()
 			for range subs {
-				unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+				unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 					return nil
 				})
 				if err != nil {
@@ -33,7 +33,7 @@ func BenchmarkPublishSync(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if err := Publish(ctx, bus, i); err != nil {
+				if err := bus.Publish(ctx, i); err != nil {
 					b.Fatalf("Publish() error = %v", err)
 				}
 			}
@@ -45,7 +45,7 @@ func BenchmarkPublishAsyncSequential(b *testing.B) {
 	bus := New()
 	var processed atomic.Int64
 
-	unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+	unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 		processed.Add(1)
 		return nil
 	}, Async(), Sequential(), WithBuffer(4096))
@@ -58,7 +58,7 @@ func BenchmarkPublishAsyncSequential(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := Publish(ctx, bus, i); err != nil {
+		if err := bus.Publish(ctx, i); err != nil {
 			b.Fatalf("Publish() error = %v", err)
 		}
 	}
@@ -85,7 +85,7 @@ func BenchmarkPublishWithHooks(b *testing.B) {
 
 		b.Run(name, func(b *testing.B) {
 			bus := New(opts...)
-			unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+			unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 				return nil
 			})
 			if err != nil {
@@ -97,7 +97,7 @@ func BenchmarkPublishWithHooks(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if err := Publish(ctx, bus, i); err != nil {
+				if err := bus.Publish(ctx, i); err != nil {
 					b.Fatalf("Publish() error = %v", err)
 				}
 			}
@@ -123,7 +123,7 @@ func BenchmarkPublishWithMiddleware(b *testing.B) {
 		}
 
 		b.Run(name, func(b *testing.B) {
-			unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+			unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 				return nil
 			})
 			if err != nil {
@@ -135,7 +135,7 @@ func BenchmarkPublishWithMiddleware(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if err := Publish(ctx, bus, i); err != nil {
+				if err := bus.Publish(ctx, i); err != nil {
 					b.Fatalf("Publish() error = %v", err)
 				}
 			}
@@ -156,7 +156,7 @@ func BenchmarkPublishWithMiddlewareAndHooks(b *testing.B) {
 		}),
 	)
 
-	unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+	unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 		return nil
 	})
 	if err != nil {
@@ -168,7 +168,7 @@ func BenchmarkPublishWithMiddlewareAndHooks(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := Publish(ctx, bus, i); err != nil {
+		if err := bus.Publish(ctx, i); err != nil {
 			b.Fatalf("Publish() error = %v", err)
 		}
 	}
@@ -190,7 +190,7 @@ func BenchmarkPublishWithMetadata(b *testing.B) {
 		}
 
 		b.Run(name, func(b *testing.B) {
-			unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+			unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 				return nil
 			})
 			if err != nil {
@@ -202,7 +202,7 @@ func BenchmarkPublishWithMetadata(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if err := Publish(ctx, bus, i, opts...); err != nil {
+				if err := bus.Publish(ctx, i, opts...); err != nil {
 					b.Fatalf("Publish() error = %v", err)
 				}
 			}
@@ -225,7 +225,7 @@ func BenchmarkPublishWithObserver(b *testing.B) {
 		}
 
 		b.Run(name, func(b *testing.B) {
-			unsubscribe, err := SubscribeTopic(bus, "orders.>", func(_ context.Context, _ Event[int]) error {
+			unsubscribe, err := bus.SubscribeTopic("orders.>", func(_ context.Context, _ Event[int]) error {
 				return nil
 			})
 			if err != nil {
@@ -237,7 +237,7 @@ func BenchmarkPublishWithObserver(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if err := Publish(ctx, bus, i, WithTopic("orders.created")); err != nil {
+				if err := bus.Publish(ctx, i, WithTopic("orders.created")); err != nil {
 					b.Fatalf("Publish() error = %v", err)
 				}
 			}
@@ -258,7 +258,7 @@ func BenchmarkPublishTopic(b *testing.B) {
 	for _, tc := range cases {
 		b.Run(tc.name, func(b *testing.B) {
 			bus := New()
-			unsubscribe, err := SubscribeTopic(bus, tc.pattern, func(_ context.Context, _ Event[int]) error {
+			unsubscribe, err := bus.SubscribeTopic(tc.pattern, func(_ context.Context, _ Event[int]) error {
 				return nil
 			})
 			if err != nil {
@@ -270,7 +270,7 @@ func BenchmarkPublishTopic(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				if err := Publish(ctx, bus, i, WithTopic(tc.topic)); err != nil {
+				if err := bus.Publish(ctx, i, WithTopic(tc.topic)); err != nil {
 					b.Fatalf("Publish() error = %v", err)
 				}
 			}
@@ -282,7 +282,7 @@ func BenchmarkPublishAsyncKeyed(b *testing.B) {
 	bus := New()
 	var processed atomic.Int64
 
-	unsubscribe, err := Subscribe(bus, func(_ context.Context, _ Event[int]) error {
+	unsubscribe, err := bus.Subscribe(func(_ context.Context, _ Event[int]) error {
 		processed.Add(1)
 		return nil
 	}, Async(), WithParallelism(4), WithBuffer(4096))
@@ -296,7 +296,7 @@ func BenchmarkPublishAsyncKeyed(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := Publish(ctx, bus, i, WithKey(keys[i%len(keys)])); err != nil {
+		if err := bus.Publish(ctx, i, WithKey(keys[i%len(keys)])); err != nil {
 			b.Fatalf("Publish() error = %v", err)
 		}
 	}
@@ -311,7 +311,7 @@ func BenchmarkPublishAsyncKeyedTopic(b *testing.B) {
 	bus := New()
 	var processed atomic.Int64
 
-	unsubscribe, err := SubscribeTopic(bus, "orders.>", func(_ context.Context, _ Event[int]) error {
+	unsubscribe, err := bus.SubscribeTopic("orders.>", func(_ context.Context, _ Event[int]) error {
 		processed.Add(1)
 		return nil
 	}, Async(), WithParallelism(4), WithBuffer(4096))
@@ -325,7 +325,7 @@ func BenchmarkPublishAsyncKeyedTopic(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := Publish(ctx, bus, i, WithTopic("orders.eu.created"), WithKey(keys[i%len(keys)])); err != nil {
+		if err := bus.Publish(ctx, i, WithTopic("orders.eu.created"), WithKey(keys[i%len(keys)])); err != nil {
 			b.Fatalf("Publish() error = %v", err)
 		}
 	}

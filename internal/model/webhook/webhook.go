@@ -23,7 +23,7 @@ type Webhook struct {
 
 func (w *Webhook) BeforeCreate(_ *gorm.DB) error {
 	if w.ID == "" {
-		w.ID = uuidUtil.MustNewV7()
+		w.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

@@ -1088,10 +1088,7 @@ func exchangeGoogleCodeForToken(
 	}
 	expiresIn := int64(0)
 	if !token.Expiry.IsZero() {
-		expiresIn = int64(time.Until(token.Expiry).Seconds())
-		if expiresIn < 0 {
-			expiresIn = 0
-		}
+		expiresIn = max(int64(time.Until(token.Expiry).Seconds()), 0)
 	}
 	return &authModel.GoogleTokenResponse{
 		AccessToken:  token.AccessToken,

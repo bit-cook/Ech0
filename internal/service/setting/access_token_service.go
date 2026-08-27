@@ -83,7 +83,7 @@ func (settingService *SettingService) CreateAccessToken(
 	if err != nil {
 		return "", err
 	}
-	jti := uuidUtil.MustNewV7()
+	jti := uuidUtil.NewV7()
 	var expiryDuration time.Duration
 
 	switch expiry {

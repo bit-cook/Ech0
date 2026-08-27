@@ -4,6 +4,7 @@
 package bus
 
 import (
+	"slices"
 	"sync/atomic"
 
 	"github.com/lin-snow/ech0/pkg/busen"
@@ -73,8 +74,8 @@ func (er *EventRegistrar) Stop() error {
 }
 
 func (er *EventRegistrar) stopSubscriptions() {
-	for i := len(er.unsub) - 1; i >= 0; i-- {
-		er.unsub[i]()
+	for _, v := range slices.Backward(er.unsub) {
+		v()
 	}
 	er.unsub = nil
 }

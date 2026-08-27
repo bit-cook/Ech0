@@ -324,7 +324,7 @@ func (connectService *ConnectService) fetchConnectsInfo() ([]model.Connect, erro
 			defer func() { <-semaphore }()
 
 			var lastErr error
-			for attempt := 0; attempt < maxRetries; attempt++ {
+			for attempt := range maxRetries {
 				select {
 				case <-ctx.Done():
 					logUtil.GetLogger().

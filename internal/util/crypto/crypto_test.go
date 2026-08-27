@@ -84,7 +84,7 @@ func TestGenerateRandomString_NoCollisions(t *testing.T) {
 		length = 32
 	)
 	seen := make(map[string]struct{}, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		s := GenerateRandomString(length)
 		_, dup := seen[s]
 		require.Falsef(t, dup, "collision after %d generations: %q", i, s)

@@ -543,26 +543,26 @@ func normalizeEchoExtension(ext *model.EchoExtension) (*model.EchoExtension, err
 		if url == "" {
 			return nil, fmt.Errorf("extension payload.url is required for MUSIC")
 		}
-		ext.Payload = map[string]interface{}{"url": urlUtil.TrimURL(url)}
+		ext.Payload = map[string]any{"url": urlUtil.TrimURL(url)}
 	case model.Extension_VIDEO:
 		videoID := strings.TrimSpace(getPayloadString(ext.Payload, "videoId"))
 		if videoID == "" {
 			return nil, fmt.Errorf("extension payload.videoId is required for VIDEO")
 		}
-		ext.Payload = map[string]interface{}{"videoId": videoID}
+		ext.Payload = map[string]any{"videoId": videoID}
 	case model.Extension_GITHUBPROJ:
 		repoURL := strings.TrimSpace(getPayloadString(ext.Payload, "repoUrl"))
 		if repoURL == "" {
 			return nil, fmt.Errorf("extension payload.repoUrl is required for GITHUBPROJ")
 		}
-		ext.Payload = map[string]interface{}{"repoUrl": urlUtil.TrimURL(repoURL)}
+		ext.Payload = map[string]any{"repoUrl": urlUtil.TrimURL(repoURL)}
 	case model.Extension_WEBSITE:
 		title := strings.TrimSpace(getPayloadString(ext.Payload, "title"))
 		site := strings.TrimSpace(getPayloadString(ext.Payload, "site"))
 		if title == "" || site == "" {
 			return nil, fmt.Errorf("extension payload.title and payload.site are required for WEBSITE")
 		}
-		ext.Payload = map[string]interface{}{
+		ext.Payload = map[string]any{
 			"title": title,
 			"site":  urlUtil.TrimURL(site),
 		}
@@ -579,7 +579,7 @@ func normalizeEchoExtension(ext *model.EchoExtension) (*model.EchoExtension, err
 		if placeholder == "" {
 			return nil, fmt.Errorf("extension payload.placeholder is required for LOCATION")
 		}
-		ext.Payload = map[string]interface{}{
+		ext.Payload = map[string]any{
 			"latitude":    lat,
 			"longitude":   lng,
 			"placeholder": placeholder,
@@ -591,7 +591,7 @@ func normalizeEchoExtension(ext *model.EchoExtension) (*model.EchoExtension, err
 		if url == "" || username == "" || statusID == "" {
 			return nil, fmt.Errorf("extension payload.url, payload.username and payload.statusId are required for TWEET")
 		}
-		ext.Payload = map[string]interface{}{
+		ext.Payload = map[string]any{
 			"url":      urlUtil.TrimURL(url),
 			"username": username,
 			"statusId": statusID,
@@ -603,7 +603,7 @@ func normalizeEchoExtension(ext *model.EchoExtension) (*model.EchoExtension, err
 	return ext, nil
 }
 
-func getPayloadString(payload map[string]interface{}, key string) string {
+func getPayloadString(payload map[string]any, key string) string {
 	raw, ok := payload[key]
 	if !ok || raw == nil {
 		return ""
@@ -617,7 +617,7 @@ func getPayloadString(payload map[string]interface{}, key string) string {
 
 // getPayloadFloat extracts a float64 from a JSON-decoded payload.
 // JSON numbers land as float64 by default; accept int and string-encoded numbers as fallbacks.
-func getPayloadFloat(payload map[string]interface{}, key string) (float64, bool) {
+func getPayloadFloat(payload map[string]any, key string) (float64, bool) {
 	raw, ok := payload[key]
 	if !ok || raw == nil {
 		return 0, false

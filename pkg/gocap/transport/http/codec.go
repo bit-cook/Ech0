@@ -44,8 +44,7 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 }
 
 func writeCoreError(w http.ResponseWriter, err error) {
-	var ce *core.Error
-	if errors.As(err, &ce) {
+	if ce, ok := errors.AsType[*core.Error](err); ok {
 		writeJSON(w, ce.StatusCode, errorBody{
 			Success: false,
 			Code:    string(ce.Code),
@@ -61,13 +60,11 @@ func writeCoreError(w http.ResponseWriter, err error) {
 }
 
 func writeDecodeError(w http.ResponseWriter, err error) {
-	var ce *core.Error
-	if errors.As(err, &ce) {
+	if ce, ok := errors.AsType[*core.Error](err); ok {
 		writeCoreError(w, ce)
 		return
 	}
-	var mbe *http.MaxBytesError
-	if errors.As(err, &mbe) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		writeCoreError(w, core.NewBadRequest("Request body too large"))
 		return
 	}

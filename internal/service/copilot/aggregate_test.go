@@ -36,19 +36,13 @@ func (f *pagingEchoSvc) QueryEchos(
 	if ps < 1 || ps > serverMaxPageSize { // 压到服务端实际上限（小于请求值）
 		ps = serverMaxPageSize
 	}
-	page := dto.Page
-	if page < 1 {
-		page = 1
-	}
+	page := max(dto.Page, 1)
 	start := (page - 1) * ps
 	total := int64(len(f.all))
 	if start >= len(f.all) {
 		return commonModel.PageQueryResult[[]echoModel.Echo]{Items: nil, Total: total}, nil
 	}
-	end := start + ps
-	if end > len(f.all) {
-		end = len(f.all)
-	}
+	end := min(start+ps, len(f.all))
 	return commonModel.PageQueryResult[[]echoModel.Echo]{Items: f.all[start:end], Total: total}, nil
 }
 
@@ -56,7 +50,7 @@ func (f *pagingEchoSvc) QueryEchos(
 func makeEchos(n int) []echoModel.Echo {
 	echos := make([]echoModel.Echo, 0, n)
 	base := time.Date(2025, 7, 1, 12, 0, 0, 0, time.UTC)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// 每条间隔约 1.8 天，n=102 时跨越 ~6 个月（7~12 月）。
 		ts := base.Add(time.Duration(i) * 43 * time.Hour)
 		echos = append(echos, echoModel.Echo{ID: string(rune('a' + i%26)), Content: "echo", CreatedAt: ts.Unix()})

@@ -49,7 +49,7 @@ func (e *Importer) Import(ctx context.Context, req spec.ImportRequest) (spec.Imp
 	if err := sourceDB.Table("echos").Count(&total).Error; err != nil {
 		return spec.ImportResult{}, fmt.Errorf("count source echos: %w", err)
 	}
-	jobID := uuidUtil.MustNewV7()
+	jobID := uuidUtil.NewV7()
 	report := map[string]any{
 		"job_id":        jobID,
 		"source_db":     sourceDBPath,
@@ -241,7 +241,7 @@ func migrateTags(ctx context.Context, tx *gorm.DB, sourceDB *gorm.DB) error {
 			continue
 		}
 		if strings.TrimSpace(tag.ID) == "" {
-			tag.ID = uuidUtil.MustNewV7()
+			tag.ID = uuidUtil.NewV7()
 		}
 		newTags = append(newTags, tag)
 		existing[tag.Name] = tag.ID
@@ -301,7 +301,7 @@ func migrateFiles(ctx context.Context, tx *gorm.DB, sourceDB *gorm.DB, sourceRoo
 		key := fileRouteKey(file.StorageType, file.Provider, file.Bucket, file.Key)
 		routeKeyToID[key] = file.ID
 		if strings.TrimSpace(file.ID) == "" {
-			file.ID = uuidUtil.MustNewV7()
+			file.ID = uuidUtil.NewV7()
 			routeKeyToID[key] = file.ID
 		}
 		newFiles = append(newFiles, file)
@@ -359,7 +359,7 @@ func migrateFiles(ctx context.Context, tx *gorm.DB, sourceDB *gorm.DB, sourceRoo
 			continue
 		}
 		if strings.TrimSpace(row.ID) == "" {
-			row.ID = uuidUtil.MustNewV7()
+			row.ID = uuidUtil.NewV7()
 		}
 		row.FileID = mappedFileID
 		newEchoFiles = append(newEchoFiles, row)

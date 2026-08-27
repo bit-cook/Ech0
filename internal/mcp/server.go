@@ -259,14 +259,14 @@ func (s *Server) handleDiscover() *DiscoverResult {
 			Resources: &ResourcesCapability{Subscribe: false, ListChanged: false},
 		},
 		Instructions: "Ech0 personal microblog. Manage posts, tags, comments, files, connects and webhooks via tools; read site data via ech0:// resources.",
-		CacheInfo:    CacheInfo{TTLMs: discoverTTLMs, CacheScope: cacheScopePublic},
+		TTLMs:        discoverTTLMs, CacheScope: cacheScopePublic,
 	}
 }
 
 func (s *Server) handleToolsList() (*ToolsListResult, *RPCError) {
 	return &ToolsListResult{
-		CacheInfo: CacheInfo{TTLMs: listTTLMs, CacheScope: cacheScopePublic},
-		Tools:     s.registry.ToolDefinitions(),
+		TTLMs: listTTLMs, CacheScope: cacheScopePublic,
+		Tools: s.registry.ToolDefinitions(),
 	}, nil
 }
 
@@ -309,7 +309,7 @@ func (s *Server) handleToolsCall(r *http.Request, req *Request, v viewer.Context
 
 func (s *Server) handleResourcesList() (*ResourcesListResult, *RPCError) {
 	return &ResourcesListResult{
-		CacheInfo: CacheInfo{TTLMs: listTTLMs, CacheScope: cacheScopePublic},
+		TTLMs: listTTLMs, CacheScope: cacheScopePublic,
 		Resources: s.registry.ResourceDefinitions(),
 	}, nil
 }

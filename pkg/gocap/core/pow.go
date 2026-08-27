@@ -33,7 +33,7 @@ func PRNG(seed string, length int) string {
 // BuildChallengePairs derives all salt/target pairs for one challenge token.
 func BuildChallengePairs(seed string, count, saltSize, difficulty int) [][2]string {
 	pairs := make([][2]string, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		idx := strconv.Itoa(i + 1)
 		salt := PRNG(seed+idx, saltSize)
 		target := PRNG(seed+idx+"d", difficulty)

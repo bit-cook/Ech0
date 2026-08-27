@@ -451,9 +451,7 @@ func TestLogout_LegacyNeverExpireAccessToken_DoesNotPanic(t *testing.T) {
 		Userid:   "u",
 		Username: "u",
 		Type:     authModel.TokenTypeAccess,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID: "legacy-jti",
-		},
+		ID:       "legacy-jti",
 	})
 	signed, err := legacy.SignedString(config.Config().Security.JWTSecret)
 	if err != nil {

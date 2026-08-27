@@ -82,7 +82,7 @@ func DoImportSnapshot(path string, yes bool) error {
 
 	// 引擎读的是已解包目录，且 resolveTmpDir 只接受 data/files/tmp 之下的相对路径，
 	// 故这里复刻 Web 上传通道的落点约定，而不是随便找个临时目录。
-	folder := "ech0_" + uuidUtil.MustNewV7()
+	folder := "ech0_" + uuidUtil.NewV7()
 	relativeTmpDir := filepath.ToSlash(filepath.Join(migrator.TmpRelativeDir, folder))
 	extractDir := filepath.Join("data", relativeTmpDir)
 	if err := os.MkdirAll(extractDir, 0o755); err != nil {

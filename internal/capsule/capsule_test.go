@@ -19,9 +19,9 @@ import (
 func TestSiteKeysMatchSystemSetting(t *testing.T) {
 	const behaviourOnly = "allow_register"
 
-	want := tagSet(t, reflect.TypeOf(settingModel.SystemSetting{}), "json")
+	want := tagSet(t, reflect.TypeFor[settingModel.SystemSetting](), "json")
 	delete(want, behaviourOnly)
-	got := tagSet(t, reflect.TypeOf(Site{}), "yaml")
+	got := tagSet(t, reflect.TypeFor[Site](), "yaml")
 
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("capsule.Site 键集合与 SystemSetting 不一致\nSystemSetting(-allow_register): %v\nSite: %v", keys(want), keys(got))
@@ -31,12 +31,12 @@ func TestSiteKeysMatchSystemSetting(t *testing.T) {
 // TestFileRefKeysAreFileColumns 守卫 files[] 与 File 列的 1:1 关系：胶囊里的每个键
 // 都必须是真实存在的 File 列，且被明确排除的运行时拓扑列不得混进来。
 func TestFileRefKeysAreFileColumns(t *testing.T) {
-	fileCols := tagSet(t, reflect.TypeOf(fileModel.File{}), "json")
+	fileCols := tagSet(t, reflect.TypeFor[fileModel.File](), "json")
 	excluded := map[string]struct{}{
 		"storage_type": {}, "provider": {}, "bucket": {}, "user_id": {}, "created_at": {},
 	}
 
-	for k := range tagSet(t, reflect.TypeOf(FileRef{}), "yaml") {
+	for k := range tagSet(t, reflect.TypeFor[FileRef](), "yaml") {
 		if _, ok := fileCols[k]; !ok {
 			t.Errorf("FileRef.%s 不是 File 的列", k)
 		}
@@ -49,8 +49,8 @@ func TestFileRefKeysAreFileColumns(t *testing.T) {
 func tagSet(t *testing.T, typ reflect.Type, tag string) map[string]struct{} {
 	t.Helper()
 	out := make(map[string]struct{}, typ.NumField())
-	for i := range typ.NumField() {
-		name, _, _ := strings.Cut(typ.Field(i).Tag.Get(tag), ",")
+	for field := range typ.Fields() {
+		name, _, _ := strings.Cut(field.Tag.Get(tag), ",")
 		if name == "" || name == "-" {
 			continue
 		}

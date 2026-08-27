@@ -238,7 +238,7 @@ func (echoRepository *EchoRepository) UpdateEcho(ctx context.Context, echo *mode
 		return err
 	}
 
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"content": echo.Content,
 		"private": echo.Private,
 		"layout":  echo.Layout,

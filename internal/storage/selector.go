@@ -214,8 +214,8 @@ func (r *StorageSelector) ResolveKeyCandidatesByPath(storageType StorageType, fi
 
 	if NormalizeStorageType(string(storageType)) == StorageTypeObject && r != nil && r.objectPrefix != "" {
 		prefix := r.objectPrefix + "/"
-		if strings.HasPrefix(cleanPath, prefix) {
-			candidates = appendUnique(candidates, seen, strings.TrimPrefix(cleanPath, prefix))
+		if after, ok := strings.CutPrefix(cleanPath, prefix); ok {
+			candidates = appendUnique(candidates, seen, after)
 		}
 	}
 
@@ -223,8 +223,8 @@ func (r *StorageSelector) ResolveKeyCandidatesByPath(storageType StorageType, fi
 	baseSnapshot := append([]string(nil), candidates...)
 	for _, base := range baseSnapshot {
 		for _, route := range routePrefixes {
-			if strings.HasPrefix(base, route) {
-				candidates = appendUnique(candidates, seen, strings.TrimPrefix(base, route))
+			if after, ok := strings.CutPrefix(base, route); ok {
+				candidates = appendUnique(candidates, seen, after)
 			}
 		}
 	}

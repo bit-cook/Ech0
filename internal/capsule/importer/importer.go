@@ -358,7 +358,7 @@ func (s *session) ensureTag(name string) (string, error) {
 	}
 
 	// UsageCount 不从胶囊取，导入完统一按 echo_tags 行数重算，这里留零值。
-	tag = echoModel.Tag{ID: uuidUtil.MustNewV7(), Name: name}
+	tag = echoModel.Tag{ID: uuidUtil.NewV7(), Name: name}
 	if err := s.db.Create(&tag).Error; err != nil {
 		return "", err
 	}

@@ -23,8 +23,6 @@ func newRepo(t *testing.T) (*commentRepository.CommentRepository, *gorm.DB) {
 	return commentRepository.NewCommentRepository(func() *gorm.DB { return db }), db
 }
 
-func ptr[T any](v T) *T { return &v }
-
 // newComment 构造带合理默认值的评论；用 option 覆写字段。
 func newComment(opts ...func(*model.Comment)) model.Comment {
 	c := model.Comment{
@@ -74,8 +72,8 @@ func TestCountWithin_WindowAndFieldMatch(t *testing.T) {
 	// email / user 各 1 条窗口内 + 1 条窗口外。
 	insert(t, repo, newComment(func(c *model.Comment) { c.Email = "bob@example.com"; c.CreatedAt = now - 5 }))
 	insert(t, repo, newComment(func(c *model.Comment) { c.Email = "bob@example.com"; c.CreatedAt = now - 10000 }))
-	insert(t, repo, newComment(func(c *model.Comment) { c.UserID = ptr("u-1"); c.CreatedAt = now - 5 }))
-	insert(t, repo, newComment(func(c *model.Comment) { c.UserID = ptr("u-1"); c.CreatedAt = now - 10000 }))
+	insert(t, repo, newComment(func(c *model.Comment) { c.UserID = new("u-1"); c.CreatedAt = now - 5 }))
+	insert(t, repo, newComment(func(c *model.Comment) { c.UserID = new("u-1"); c.CreatedAt = now - 10000 }))
 
 	const window int64 = 3600
 
@@ -156,7 +154,7 @@ func TestExistsRecentDuplicate_IdentityPrecedence(t *testing.T) {
 	insert(t, repo, newComment(func(c *model.Comment) {
 		c.EchoID = "echo-dup"
 		c.Content = "duplicate content"
-		c.UserID = ptr("u-x")
+		c.UserID = new("u-x")
 		c.Email = "dup@example.com"
 		c.IPHash = "ip-x"
 		c.CreatedAt = now - 5
@@ -233,7 +231,7 @@ func TestExistsRecentDuplicate_WindowExcludesOld(t *testing.T) {
 	insert(t, repo, newComment(func(c *model.Comment) {
 		c.EchoID = "echo-old"
 		c.Content = "old duplicate"
-		c.UserID = ptr("u-old")
+		c.UserID = new("u-old")
 		c.CreatedAt = now - 10000
 	}))
 
@@ -324,12 +322,12 @@ func TestListComments_Filters(t *testing.T) {
 		},
 		{
 			name:      "filter by hot true",
-			query:     model.ListCommentQuery{Page: 1, PageSize: 100, Hot: ptr(true)},
+			query:     model.ListCommentQuery{Page: 1, PageSize: 100, Hot: new(true)},
 			wantTotal: 2, wantItems: 2,
 		},
 		{
 			name:      "filter by hot false",
-			query:     model.ListCommentQuery{Page: 1, PageSize: 100, Hot: ptr(false)},
+			query:     model.ListCommentQuery{Page: 1, PageSize: 100, Hot: new(false)},
 			wantTotal: 3, wantItems: 3,
 		},
 		{
@@ -518,8 +516,7 @@ func TestListPublicComments(t *testing.T) {
 	ctx := context.Background()
 	base := time.Now().UTC().Unix() - 100
 
-	for i := 0; i < 3; i++ {
-		i := i
+	for i := range 3 {
 		insert(t, repo, newComment(func(c *model.Comment) {
 			c.Status = model.StatusApproved
 			c.CreatedAt = base + int64(i)

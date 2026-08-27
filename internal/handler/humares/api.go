@@ -59,13 +59,10 @@ func packageQualifiedName(t reflect.Type, hint string) string {
 		return r == '[' || r == ']' || r == '*' || r == ','
 	}) {
 		typeName, pkgSeg := part, ""
-		if dot := strings.LastIndex(part, "."); dot >= 0 {
-			typeName = part[dot+1:]
-			pkgPart := part[:dot]
-			if slash := strings.LastIndex(pkgPart, "/"); slash >= 0 {
-				pkgSeg = pkgPart[slash+1:]
-			} else {
-				pkgSeg = pkgPart
+		if pkgPath, tn, ok := strings.CutLast(part, "."); ok {
+			typeName, pkgSeg = tn, pkgPath
+			if _, seg, ok := strings.CutLast(pkgPath, "/"); ok {
+				pkgSeg = seg
 			}
 		}
 		seg, tn := titleCase(pkgSeg), titleCase(typeName)

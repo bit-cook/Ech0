@@ -13,32 +13,32 @@ import (
 )
 
 // Subscribe registers a type-based subscription.
-func Subscribe[T any](b *Bus, handler Handler[T], opts ...SubscribeOption) (func(), error) {
-	return subscribeWithMatcher(b, nil, nil, handler, opts...)
+func (b *Bus) Subscribe[T any](handler Handler[T], opts ...SubscribeOption) (func(), error) {
+	return b.subscribeWithMatcher(nil, nil, handler, opts...)
 }
 
 // SubscribeTopic registers a type-based subscription constrained by a topic pattern.
-func SubscribeTopic[T any](b *Bus, pattern string, handler Handler[T], opts ...SubscribeOption) (func(), error) {
+func (b *Bus) SubscribeTopic[T any](pattern string, handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	matcher, err := router.Compile(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidPattern, pattern)
 	}
 
-	return subscribeWithMatcher(b, matcher, nil, handler, opts...)
+	return b.subscribeWithMatcher(matcher, nil, handler, opts...)
 }
 
 // SubscribeTopics registers a type-based subscription constrained by multiple topic patterns.
-func SubscribeTopics[T any](b *Bus, patterns []string, handler Handler[T], opts ...SubscribeOption) (func(), error) {
+func (b *Bus) SubscribeTopics[T any](patterns []string, handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	matcher, err := compileMatchers(patterns)
 	if err != nil {
 		return nil, err
 	}
 
-	return subscribeWithMatcher(b, matcher, nil, handler, opts...)
+	return b.subscribeWithMatcher(matcher, nil, handler, opts...)
 }
 
 // SubscribeMatch registers a type-based subscription constrained by a predicate filter.
-func SubscribeMatch[T any](b *Bus, match func(Event[T]) bool, handler Handler[T], opts ...SubscribeOption) (func(), error) {
+func (b *Bus) SubscribeMatch[T any](match func(Event[T]) bool, handler Handler[T], opts ...SubscribeOption) (func(), error) {
 	if match == nil {
 		return nil, fmt.Errorf("%w: match predicate is nil", ErrInvalidOption)
 	}
@@ -47,11 +47,10 @@ func SubscribeMatch[T any](b *Bus, match func(Event[T]) bool, handler Handler[T]
 		return match(typedEvent[T](env))
 	}
 
-	return subscribeWithMatcher(b, nil, predicate, handler, opts...)
+	return b.subscribeWithMatcher(nil, predicate, handler, opts...)
 }
 
-func subscribeWithMatcher[T any](
-	b *Bus,
+func (b *Bus) subscribeWithMatcher[T any](
 	matcher router.Matcher,
 	basePredicate func(envelope) bool,
 	handler Handler[T],

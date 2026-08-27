@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	webhookModel "github.com/lin-snow/ech0/internal/model/webhook"
@@ -124,11 +125,11 @@ func TestSendWithRetry_ExhaustsOn5xx(t *testing.T) {
 // TestSendWithRetry_RecoversAfterTransient 校验：前几次 5xx、随后 2xx 时最终成功，命中次数=失败次数+1。
 func TestSendWithRetry_RecoversAfterTransient(t *testing.T) {
 	const failBefore = 2 // 前 2 次失败，第 3 次成功
-	var hits int32
+	var hits atomic.Int32
 	rec := &requestRecorder{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		rec.record(req)
-		if atomic.AddInt32(&hits, 1) <= failBefore {
+		if hits.Add(1) <= failBefore {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -198,11 +199,11 @@ func TestSendWithRetry_NoSecretNoSignature(t *testing.T) {
 // （buildRequest 每次重建请求并设置 GetBody，body 可被重复读取）。
 func TestSendWithRetry_BodyDeliveredEachAttempt(t *testing.T) {
 	const secret = "k"
-	var hits int32
+	var hits atomic.Int32
 	rec := &requestRecorder{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		rec.record(req)
-		if atomic.AddInt32(&hits, 1) == 1 {
+		if hits.Add(1) == 1 {
 			w.WriteHeader(http.StatusInternalServerError) // 第一次失败触发重试
 			return
 		}
@@ -263,4 +264,38 @@ func TestSendWithRetry_BuildRequestError(t *testing.T) {
 
 	require.Error(t, err, "非法 URL 必须导致 buildRequest 报错")
 	assert.Zero(t, atomic.LoadInt32(&calls), "buildRequest 失败时不应触达 transport")
+}
+
+// TestSendWithRetry_BackoffScheduleIsExponential 端到端校验重试节奏：真实的 HTTP 往返
+// （httptest.NewTestServer 走内存网络）跑在 testing/synctest 的 bubble 里，假时钟让
+// 秒级 backoff 既可精确断言又瞬时完成——其余用例靠 fastBackoff 规避等待，只能断言命中次数。
+func TestSendWithRetry_BackoffScheduleIsExponential(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		const initialBackoff = time.Second
+		const maxRetries = 3
+
+		start := time.Now()
+		var mu sync.Mutex
+		var offsets []time.Duration
+		srv := httptest.NewTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			mu.Lock()
+			offsets = append(offsets, time.Since(start))
+			mu.Unlock()
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+
+		client := srv.Client() // 内存网络下，srv.URL 由首次 Client() 调用填充。
+		wh := &webhookModel.Webhook{URL: srv.URL, Secret: "s"}
+		err := sendWithRetry(client, wh, newObs(t), maxRetries, initialBackoff)
+		require.Error(t, err, "持续 5xx 必须最终报错")
+
+		mu.Lock()
+		defer mu.Unlock()
+		assert.Equal(t,
+			[]time.Duration{0, initialBackoff, 3 * initialBackoff},
+			offsets,
+			"两次重试之间的等待必须逐次翻倍，且最后一次尝试后不再等待",
+		)
+		assert.Equal(t, 3*initialBackoff, time.Since(start), "最后一次尝试之后不应再 sleep")
+	})
 }

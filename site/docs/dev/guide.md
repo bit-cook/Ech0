@@ -27,7 +27,7 @@ Ech0 主仓库通常包含（以你克隆的 `main` 为准）：
 
 ### 后端（Go）
 
-- **Go 版本**：不低于 `go.mod` 中声明的版本（当前为 1.26+）。
+- **Go 版本**：不低于 `go.mod` 中声明的版本（当前为 1.27+）。
 - **CGO**：若使用含 SQLite 的构建，需要本机 C 编译器（Windows 可用 MinGW-w64，macOS `brew install gcc`，Linux `build-essential`）。
 - **Wire**：若修改了依赖注入，在相应包执行 `wire` 生成 `wire_gen.go`（见 `internal/di/` 等）。
 - **代码风格**：可用 **golangci-lint**（`golangci-lint run`、`golangci-lint fmt`）。

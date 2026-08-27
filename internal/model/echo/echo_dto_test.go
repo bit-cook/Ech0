@@ -33,7 +33,7 @@ func TestEchoUpsertDto_ToModel(t *testing.T) {
 	})
 
 	t.Run("non_nil_extension_is_projected", func(t *testing.T) {
-		payload := map[string]interface{}{"url": "https://x", "n": 1}
+		payload := map[string]any{"url": "https://x", "n": 1}
 		dto := &EchoUpsertDto{
 			ID:        "e1",
 			Extension: &EchoExtensionDto{Type: Extension_MUSIC, Payload: payload},

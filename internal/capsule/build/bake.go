@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/lin-snow/ech0/internal/capsule"
 	"github.com/lin-snow/ech0/internal/storage"
+	uuidUtil "github.com/lin-snow/ech0/internal/util/uuid"
 	versionPkg "github.com/lin-snow/ech0/internal/version"
 )
 
@@ -24,13 +24,13 @@ const heatmapDays = 30
 // （Tag / EchoFile 在 spec §11 里被降解成「内容字段」），但前端要按 tagIds
 // 过滤、按 id 做列表 key，所以必须现造。用 SHA-1 命名 UUID 而不是随机 UUID：
 // 同一个胶囊重复 build 必须得到同一份 dataset，否则前端缓存与外部引用全部失效。
-var idNamespace = uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://github.com/lin-snow/Ech0/capsule/build"))
+var idNamespace = uuidUtil.NewV5(uuidUtil.NameSpaceURL, []byte("https://github.com/lin-snow/Ech0/capsule/build"))
 
 // derivedID 由「种类 + 定位要素」派生稳定 id。用 \x00 分隔避免拼接歧义
 // （("ab","c") 与 ("a","bc") 必须派生出不同的 id）。
 func derivedID(kind string, parts ...string) string {
 	name := kind + "\x00" + strings.Join(parts, "\x00")
-	return uuid.NewSHA1(idNamespace, []byte(name)).String()
+	return uuidUtil.NewV5(idNamespace, []byte(name)).String()
 }
 
 // mediaSchema 与胶囊 / 实例本地存储用的是同一份路由表，

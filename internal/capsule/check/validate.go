@@ -322,7 +322,7 @@ func hasTraversal(p string) bool {
 // 用 EncodeEcho 重写而非插一行 YAML：正文逐字保留由编码器保证，
 // 手工拼字符串迟早会在 CRLF / 无正文这类边角上出错。
 func fixEchoID(r *Report, loaded *capsule.Loaded, e *capsule.LoadedEcho) error {
-	id := uuidUtil.MustNewV7()
+	id := uuidUtil.NewV7()
 	e.Doc.ID = id
 
 	data, err := capsule.EncodeEcho(e.Doc)

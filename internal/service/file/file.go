@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1041,12 +1042,7 @@ func isTempCleanupDryRun() bool {
 }
 
 func isAllowedType(contentType string, allowedTypes []string) bool {
-	for _, allowed := range allowedTypes {
-		if contentType == allowed {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowedTypes, contentType)
 }
 
 // Extensions that must never be stored, regardless of allowlist configuration.
@@ -1128,11 +1124,8 @@ func validateFileUpload(filename string, detectedMIME string, allowedTypes []str
 	// determine a more specific type — common for AVIF, FLAC, etc.).
 	mimeOK := detectedMIME == "application/octet-stream"
 	if !mimeOK {
-		for _, m := range expectedMIMEs {
-			if detectedMIME == m {
-				mimeOK = true
-				break
-			}
+		if slices.Contains(expectedMIMEs, detectedMIME) {
+			mimeOK = true
 		}
 	}
 	if !mimeOK {
@@ -1173,13 +1166,7 @@ func validateFileUploadByName(filename string, declaredMIME string, allowedTypes
 		return errors.New(commonModel.FILE_TYPE_NOT_ALLOWED)
 	}
 
-	mimeMatchesExt := false
-	for _, m := range expectedMIMEs {
-		if declaredMIME == m {
-			mimeMatchesExt = true
-			break
-		}
-	}
+	mimeMatchesExt := slices.Contains(expectedMIMEs, declaredMIME)
 	if !mimeMatchesExt {
 		return errors.New(commonModel.FILE_TYPE_NOT_ALLOWED)
 	}

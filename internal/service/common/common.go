@@ -66,7 +66,7 @@ func (s *CommonService) GetHeatMap(timezone string) ([]commonModel.Heatmap, erro
 	}
 
 	var results [30]commonModel.Heatmap
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		date := startUser.AddDate(0, 0, i).Format("2006-01-02")
 		results[i] = commonModel.Heatmap{
 			Date:  date,

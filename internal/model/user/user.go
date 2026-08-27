@@ -25,7 +25,7 @@ type User struct {
 
 func (u *User) BeforeCreate(_ *gorm.DB) error {
 	if u.ID == "" {
-		u.ID = uuidUtil.MustNewV7()
+		u.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

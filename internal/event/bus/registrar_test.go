@@ -121,7 +121,7 @@ func TestEventRegistrar_StopUnsubscribesInReverseOrder(t *testing.T) {
 func TestEventRegistrar_StopDrainsDrainingSubscribers(t *testing.T) {
 	var unsubLog []int
 	d := &drainingSubscriber{
-		fakeSubscriber: fakeSubscriber{regs: []eventbus.Registration{recordingReg(1, &unsubLog)}},
+		regs: []eventbus.Registration{recordingReg(1, &unsubLog)},
 	}
 	reg := eventbus.NewEventRegistry(newProvider(t), []eventbus.Subscriber{d})
 
@@ -136,7 +136,7 @@ func TestEventRegistrar_StopDrainsDrainingSubscribers(t *testing.T) {
 func TestEventRegistrar_StopBeforeRegisterIsNoop(t *testing.T) {
 	var unsubLog []int
 	d := &drainingSubscriber{
-		fakeSubscriber: fakeSubscriber{regs: []eventbus.Registration{recordingReg(1, &unsubLog)}},
+		regs: []eventbus.Registration{recordingReg(1, &unsubLog)},
 	}
 	reg := eventbus.NewEventRegistry(newProvider(t), []eventbus.Subscriber{d})
 

@@ -29,17 +29,15 @@ func CreateClaims(user userModel.User) jwt.Claims {
 		Userid:   user.ID,
 		Username: user.Username,
 		Type:     authModel.TokenTypeSession,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:   config.Config().Auth.Jwt.Issuer,
-			Subject:  user.Username,
-			Audience: jwt.ClaimStrings{config.Config().Auth.Jwt.Audience},
-			ExpiresAt: jwt.NewNumericDate(
-				now.Add(time.Duration(config.Config().Auth.Jwt.Expires) * time.Second),
-			),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now.Add(-leeway)),
-			ID:        cryptoUtil.GenerateRandomString(16),
-		},
+		Issuer:   config.Config().Auth.Jwt.Issuer,
+		Subject:  user.Username,
+		Audience: jwt.ClaimStrings{config.Config().Auth.Jwt.Audience},
+		ExpiresAt: jwt.NewNumericDate(
+			now.Add(time.Duration(config.Config().Auth.Jwt.Expires) * time.Second),
+		),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now.Add(-leeway)),
+		ID:        cryptoUtil.GenerateRandomString(16),
 	}
 
 	return claims
@@ -55,17 +53,15 @@ func CreateRefreshClaims(user userModel.User) jwt.Claims {
 		Userid:   user.ID,
 		Username: user.Username,
 		Type:     authModel.TokenTypeRefresh,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:   config.Config().Auth.Jwt.Issuer,
-			Subject:  user.Username,
-			Audience: jwt.ClaimStrings{config.Config().Auth.Jwt.Audience},
-			ExpiresAt: jwt.NewNumericDate(
-				now.Add(time.Duration(config.Config().Auth.Jwt.RefreshExpires) * time.Second),
-			),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now.Add(-leeway)),
-			ID:        cryptoUtil.GenerateRandomString(16),
-		},
+		Issuer:   config.Config().Auth.Jwt.Issuer,
+		Subject:  user.Username,
+		Audience: jwt.ClaimStrings{config.Config().Auth.Jwt.Audience},
+		ExpiresAt: jwt.NewNumericDate(
+			now.Add(time.Duration(config.Config().Auth.Jwt.RefreshExpires) * time.Second),
+		),
+		IssuedAt:  jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now.Add(-leeway)),
+		ID:        cryptoUtil.GenerateRandomString(16),
 	}
 
 	return claims
@@ -98,19 +94,17 @@ func CreateAccessClaimsWithExpiry(
 	}
 
 	claims := authModel.MyClaims{
-		Userid:   user.ID,
-		Username: user.Username,
-		Type:     authModel.TokenTypeAccess,
-		Scopes:   scopes,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    config.Config().Auth.Jwt.Issuer,
-			Subject:   user.Username,
-			Audience:  audiences,
-			ID:        jti,
-			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Duration(expiry) * time.Second)),
-			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-			NotBefore: jwt.NewNumericDate(time.Now().UTC().Add(-leeway)),
-		},
+		Userid:    user.ID,
+		Username:  user.Username,
+		Type:      authModel.TokenTypeAccess,
+		Scopes:    scopes,
+		Issuer:    config.Config().Auth.Jwt.Issuer,
+		Subject:   user.Username,
+		Audience:  audiences,
+		ID:        jti,
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Duration(expiry) * time.Second)),
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		NotBefore: jwt.NewNumericDate(time.Now().UTC().Add(-leeway)),
 	}
 
 	return claims
@@ -158,7 +152,7 @@ func parseTokenRaw(tokenString string) (*authModel.MyClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenString,
 		claims,
-		func(token *jwt.Token) (interface{}, error) {
+		func(token *jwt.Token) (any, error) {
 			return config.Config().Security.JWTSecret, nil
 		},
 	)
@@ -208,7 +202,7 @@ func GenerateOAuthState(
 func ParseOAuthState(stateStr string) (*authModel.OAuthState, error) {
 	claims := jwt.MapClaims{}
 
-	_, err := jwt.ParseWithClaims(stateStr, claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(stateStr, claims, func(token *jwt.Token) (any, error) {
 		return config.Config().Security.JWTSecret, nil
 	})
 	if err != nil {

@@ -4,8 +4,8 @@
 package model
 
 type EchoExtensionDto struct {
-	Type    string                 `json:"type"`
-	Payload map[string]interface{} `json:"payload"`
+	Type    string         `json:"type"`
+	Payload map[string]any `json:"payload"`
 }
 
 type CreateTagDto struct {

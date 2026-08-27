@@ -88,7 +88,7 @@ func TestAppendTurn_CapsAtMax(t *testing.T) {
 
 	// 一次性追加 maxStoredChatMessages + 5 条，确认封顶且保留的是最近的。
 	turns := make([]ChatMessage, 0, maxStoredChatMessages+5)
-	for i := 0; i < maxStoredChatMessages+5; i++ {
+	for i := range maxStoredChatMessages + 5 {
 		turns = append(turns, ChatMessage{Role: "user", Content: string(rune('A' + i%26))})
 	}
 	s.appendTurn(context.Background(), "u1", turns...)

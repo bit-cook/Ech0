@@ -188,7 +188,7 @@ type PasskeyUpdateDeviceNameReq struct {
 
 func (p *Passkey) BeforeCreate(_ *gorm.DB) error {
 	if p.ID == "" {
-		p.ID = uuidUtil.MustNewV7()
+		p.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

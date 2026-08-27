@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"slices"
 	"sync"
 )
 
@@ -223,8 +224,8 @@ func (a *App) runHooks(ctx context.Context, op string, hooks []Hook) error {
 
 func (a *App) stopComponentsReverse(ctx context.Context, components []Component) []error {
 	errs := make([]error, 0)
-	for i := len(components) - 1; i >= 0; i-- {
-		component := components[i]
+	for _, component := range slices.Backward(components) {
+
 		if component == nil {
 			continue
 		}

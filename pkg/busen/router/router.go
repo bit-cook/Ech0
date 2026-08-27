@@ -6,6 +6,7 @@ package router
 
 import (
 	"errors"
+	"slices"
 	"strings"
 )
 
@@ -95,10 +96,8 @@ func split(topic string) ([]string, error) {
 	}
 
 	parts := strings.Split(topic, ".")
-	for _, part := range parts {
-		if part == "" {
-			return nil, ErrInvalidPattern
-		}
+	if slices.Contains(parts, "") {
+		return nil, ErrInvalidPattern
 	}
 
 	return parts, nil

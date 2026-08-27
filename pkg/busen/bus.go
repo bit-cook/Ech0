@@ -341,14 +341,11 @@ func (s *subscription) callHandler(ctx context.Context, env envelope) (err error
 func (s *subscription) startWorkers() {
 	var wg sync.WaitGroup
 	for _, mailbox := range s.mailboxes {
-		mailbox := mailbox
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for item := range mailbox {
 				_ = s.callHandler(item.ctx, item.env)
 			}
-		}()
+		})
 	}
 
 	go func() {

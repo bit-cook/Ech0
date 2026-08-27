@@ -182,7 +182,7 @@ func redeemViaHTTP(t *testing.T, h http.Handler) string {
 
 func bruteSolution(seed string, _ int, saltSize, difficulty int) int {
 	salt, target := buildPair(seed, 1, saltSize, difficulty)
-	for nonce := 0; nonce < 10_000_000; nonce++ {
+	for nonce := range 10_000_000 {
 		sum := sha256.Sum256([]byte(salt + strconv.Itoa(nonce)))
 		h := hex.EncodeToString(sum[:])
 		if h[:len(target)] == target {

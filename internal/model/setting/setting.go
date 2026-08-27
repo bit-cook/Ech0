@@ -93,7 +93,7 @@ type AccessTokenSetting struct {
 
 func (a *AccessTokenSetting) BeforeCreate(_ *gorm.DB) error {
 	if a.ID == "" {
-		a.ID = uuidUtil.MustNewV7()
+		a.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

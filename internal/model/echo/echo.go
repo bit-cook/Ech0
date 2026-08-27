@@ -27,12 +27,12 @@ type Echo struct {
 }
 
 type EchoExtension struct {
-	ID        string                 `gorm:"type:char(36);primaryKey"      json:"id"`
-	EchoID    string                 `gorm:"type:char(36);not null;uniqueIndex" json:"echo_id"`
-	Type      string                 `gorm:"type:varchar(100);not null"    json:"type"`
-	Payload   map[string]interface{} `gorm:"serializer:json;type:text;not null" json:"payload"`
-	CreatedAt int64                  `gorm:"autoCreateTime"                         json:"created_at"`
-	UpdatedAt int64                  `gorm:"autoUpdateTime"                         json:"updated_at"`
+	ID        string         `gorm:"type:char(36);primaryKey"      json:"id"`
+	EchoID    string         `gorm:"type:char(36);not null;uniqueIndex" json:"echo_id"`
+	Type      string         `gorm:"type:varchar(100);not null"    json:"type"`
+	Payload   map[string]any `gorm:"serializer:json;type:text;not null" json:"payload"`
+	CreatedAt int64          `gorm:"autoCreateTime"                         json:"created_at"`
+	UpdatedAt int64          `gorm:"autoUpdateTime"                         json:"updated_at"`
 }
 
 // Tag 定义Tag实体
@@ -51,21 +51,21 @@ type EchoTag struct {
 
 func (e *Echo) BeforeCreate(_ *gorm.DB) error {
 	if e.ID == "" {
-		e.ID = uuidUtil.MustNewV7()
+		e.ID = uuidUtil.NewV7()
 	}
 	return nil
 }
 
 func (t *Tag) BeforeCreate(_ *gorm.DB) error {
 	if t.ID == "" {
-		t.ID = uuidUtil.MustNewV7()
+		t.ID = uuidUtil.NewV7()
 	}
 	return nil
 }
 
 func (e *EchoExtension) BeforeCreate(_ *gorm.DB) error {
 	if e.ID == "" {
-		e.ID = uuidUtil.MustNewV7()
+		e.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

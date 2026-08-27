@@ -21,7 +21,7 @@ func Emit[T any](ctx context.Context, b *busen.Bus, evt T) error {
 			opts = append(opts, busen.WithKey(key))
 		}
 	}
-	return busen.Publish(ctx, b, evt, opts...)
+	return b.Publish(ctx, evt, opts...)
 }
 
 // Notify 发布一个“最佳努力”副作用事件：失败仅以 Warn 记录（带事件名），绝不影响主流程。

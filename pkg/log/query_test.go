@@ -122,7 +122,7 @@ func TestQueryLogFileTailDefaultLimit(t *testing.T) {
 	// Write more than the default cap (200) to verify tail retention.
 	const total = 205
 	lines := make([]string, total)
-	for i := 0; i < total; i++ {
+	for i := range total {
 		lines[i] = fmt.Sprintf(`{"level":"info","msg":"%d"}`, i)
 	}
 	path := writeLogFile(t, lines)
@@ -147,7 +147,7 @@ func TestQueryLogFileTailMaxLimit(t *testing.T) {
 	// Write more than the hard cap (5000) to verify clamping.
 	const total = 5005
 	lines := make([]string, total)
-	for i := 0; i < total; i++ {
+	for i := range total {
 		lines[i] = `{"level":"info","msg":"x"}`
 	}
 	path := writeLogFile(t, lines)
@@ -163,7 +163,7 @@ func TestQueryLogFileTailMaxLimit(t *testing.T) {
 
 func TestQueryLogFileTailExplicitLimitTail(t *testing.T) {
 	lines := make([]string, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		lines[i] = fmt.Sprintf(`{"level":"info","msg":"%d"}`, i)
 	}
 	path := writeLogFile(t, lines)

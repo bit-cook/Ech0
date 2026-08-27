@@ -31,16 +31,16 @@ func TestWorkerPool_SubmitWaitRunsAllJobs(t *testing.T) {
 			pool := NewWorkerPool(tc.workerCount, tc.queueSize)
 			defer pool.Stop()
 
-			var done int32
+			var done atomic.Int32
 			for range tc.jobs {
 				pool.Submit(func() error {
-					atomic.AddInt32(&done, 1)
+					done.Add(1)
 					return nil
 				})
 			}
 			pool.Wait()
 
-			assert.Equal(t, int32(tc.jobs), atomic.LoadInt32(&done), "全部任务都应被执行")
+			assert.Equal(t, int32(tc.jobs), done.Load(), "全部任务都应被执行")
 		})
 	}
 }
@@ -51,11 +51,11 @@ func TestWorkerPool_JobErrorsDoNotBlockWait(t *testing.T) {
 	defer pool.Stop()
 
 	const total = 60
-	var executed int32
+	var executed atomic.Int32
 	for i := range total {
 		failing := i%2 == 0
 		pool.Submit(func() error {
-			atomic.AddInt32(&executed, 1)
+			executed.Add(1)
 			if failing {
 				return errors.New("boom")
 			}
@@ -64,45 +64,45 @@ func TestWorkerPool_JobErrorsDoNotBlockWait(t *testing.T) {
 	}
 	pool.Wait()
 
-	assert.Equal(t, int32(total), atomic.LoadInt32(&executed), "返回错误的任务也应计入执行并不阻塞 Wait")
+	assert.Equal(t, int32(total), executed.Load(), "返回错误的任务也应计入执行并不阻塞 Wait")
 }
 
 // TestWorkerPool_SubmitAfterStopIsNoop 校验：Stop 之后 Submit 直接丢弃（no-op），不执行、不 panic、Wait 立即返回。
 func TestWorkerPool_SubmitAfterStopIsNoop(t *testing.T) {
 	pool := NewWorkerPool(2, 4)
 
-	var before int32
+	var before atomic.Int32
 	for range 10 {
 		pool.Submit(func() error {
-			atomic.AddInt32(&before, 1)
+			before.Add(1)
 			return nil
 		})
 	}
 	pool.Stop() // 内部会 Wait 直到前述任务全部完成
-	require.Equal(t, int32(10), atomic.LoadInt32(&before), "Stop 前提交的任务应全部完成")
+	require.Equal(t, int32(10), before.Load(), "Stop 前提交的任务应全部完成")
 
-	var after int32
+	var after atomic.Int32
 	require.NotPanics(t, func() {
 		for range 10 {
 			pool.Submit(func() error {
-				atomic.AddInt32(&after, 1)
+				after.Add(1)
 				return nil
 			})
 		}
 	}, "Stop 之后 Submit 不应 panic")
 
 	pool.Wait() // 不应阻塞
-	assert.Zero(t, atomic.LoadInt32(&after), "Stop 之后提交的任务应被丢弃，不被执行")
+	assert.Zero(t, after.Load(), "Stop 之后提交的任务应被丢弃，不被执行")
 }
 
 // TestWorkerPool_StopIsIdempotent 校验：多次 Stop 不会因重复 close channel 而 panic（stopOnce 保护）。
 func TestWorkerPool_StopIsIdempotent(t *testing.T) {
 	pool := NewWorkerPool(2, 2)
 
-	var done int32
+	var done atomic.Int32
 	for range 5 {
 		pool.Submit(func() error {
-			atomic.AddInt32(&done, 1)
+			done.Add(1)
 			return nil
 		})
 	}
@@ -112,7 +112,7 @@ func TestWorkerPool_StopIsIdempotent(t *testing.T) {
 		pool.Stop()
 		pool.Stop()
 	}, "重复 Stop 不应 panic")
-	assert.Equal(t, int32(5), atomic.LoadInt32(&done))
+	assert.Equal(t, int32(5), done.Load())
 }
 
 // TestWorkerPool_StopWaitsForInFlightJobs 校验：Stop 会阻塞直到已入队任务全部执行完毕（内部 Wait）。
@@ -122,13 +122,13 @@ func TestWorkerPool_StopWaitsForInFlightJobs(t *testing.T) {
 
 	release := make(chan struct{})
 	started := make(chan struct{})
-	var finished int32
+	var finished atomic.Int32
 
 	// 第一个任务阻塞直到收到 release，占住唯一 worker。
 	pool.Submit(func() error {
 		close(started)
 		<-release
-		atomic.AddInt32(&finished, 1)
+		finished.Add(1)
 		return nil
 	})
 	<-started // 确认任务已被 worker 取走并开始执行
@@ -137,7 +137,7 @@ func TestWorkerPool_StopWaitsForInFlightJobs(t *testing.T) {
 	const queued = 5
 	for range queued {
 		pool.Submit(func() error {
-			atomic.AddInt32(&finished, 1)
+			finished.Add(1)
 			return nil
 		})
 	}
@@ -159,7 +159,7 @@ func TestWorkerPool_StopWaitsForInFlightJobs(t *testing.T) {
 	close(release) // 放行，全部任务得以完成
 	<-stopReturned // Stop 现在应当返回
 
-	assert.Equal(t, int32(queued+1), atomic.LoadInt32(&finished), "Stop 返回时所有入队任务都应已执行")
+	assert.Equal(t, int32(queued+1), finished.Load(), "Stop 返回时所有入队任务都应已执行")
 }
 
 // TestWorkerPool_ConcurrentSubmitAndStop 是关停竞争的回归测试：大量 goroutine 并发 Submit
@@ -174,7 +174,7 @@ func TestWorkerPool_ConcurrentSubmitAndStop(t *testing.T) {
 	const submitters = 16
 	const perSubmitter = 50
 
-	var executed int32
+	var executed atomic.Int32
 	var submittersWg sync.WaitGroup
 	submittersWg.Add(submitters)
 	for range submitters {
@@ -182,7 +182,7 @@ func TestWorkerPool_ConcurrentSubmitAndStop(t *testing.T) {
 			defer submittersWg.Done()
 			for range perSubmitter {
 				pool.Submit(func() error {
-					atomic.AddInt32(&executed, 1)
+					executed.Add(1)
 					return nil
 				})
 			}
@@ -199,7 +199,7 @@ func TestWorkerPool_ConcurrentSubmitAndStop(t *testing.T) {
 	}, "并发 Submit/Stop 不应 panic 或死锁")
 
 	// 关停后被丢弃的任务数不确定，但执行数必须落在 [0, 全部] 内。
-	got := atomic.LoadInt32(&executed)
+	got := executed.Load()
 	assert.GreaterOrEqual(t, got, int32(0))
 	assert.LessOrEqual(t, got, int32(submitters*perSubmitter), "执行数不应超过提交总数")
 }

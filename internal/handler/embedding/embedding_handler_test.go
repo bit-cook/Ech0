@@ -18,8 +18,6 @@ import (
 	"gorm.io/gorm"
 )
 
-func i64(v int64) *int64 { return &v }
-
 // ---------------------------------------------------------------------------
 // mapJobToReindexStatus（纯函数，表驱动）
 // ---------------------------------------------------------------------------
@@ -38,16 +36,16 @@ func TestMapJobToReindexStatus(t *testing.T) {
 				Phase:      "embedding",
 				Error:      "",
 				Payload:    `{"total":10,"indexed":4}`,
-				StartedAt:  i64(1000),
-				FinishedAt: i64(2000),
+				StartedAt:  new(int64(1000)),
+				FinishedAt: new(int64(2000)),
 			},
 			want: ReindexStatusResponse{
 				Status:     "running",
 				Phase:      "embedding",
 				Error:      "",
 				Payload:    json.RawMessage(`{"total":10,"indexed":4}`),
-				StartedAt:  i64(1000),
-				FinishedAt: i64(2000),
+				StartedAt:  new(int64(1000)),
+				FinishedAt: new(int64(2000)),
 			},
 		},
 		{
@@ -118,7 +116,7 @@ func TestReindexStatus_ExistingJobMapped(t *testing.T) {
 		Status:    jobModel.StatusRunning,
 		Phase:     "embedding",
 		Payload:   `{"total":10}`,
-		StartedAt: i64(1234),
+		StartedAt: new(int64(1234)),
 	}))
 
 	out, err := h.ReindexStatus(context.Background(), &ReindexStatusInput{})

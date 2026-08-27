@@ -38,7 +38,7 @@ func (UserExternalIdentity) TableName() string {
 
 func (e *UserExternalIdentity) BeforeCreate(_ *gorm.DB) error {
 	if e.ID == "" {
-		e.ID = uuidUtil.MustNewV7()
+		e.ID = uuidUtil.NewV7()
 	}
 	return nil
 }
@@ -64,7 +64,7 @@ func (WebAuthnCredential) TableName() string {
 
 func (w *WebAuthnCredential) BeforeCreate(_ *gorm.DB) error {
 	if w.ID == "" {
-		w.ID = uuidUtil.MustNewV7()
+		w.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

@@ -3,7 +3,10 @@
 
 package uuid
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestIsValid(t *testing.T) {
 	tests := []struct {
@@ -30,41 +33,25 @@ func TestIsValid(t *testing.T) {
 	}
 }
 
-func TestNewV7RoundTrip(t *testing.T) {
-	id, err := NewV7()
-	if err != nil {
-		t.Fatalf("NewV7() error = %v", err)
-	}
-	if !IsValid(id) {
-		t.Fatalf("NewV7() produced invalid uuid: %q", id)
-	}
-}
-
-func TestNewV7Unique(t *testing.T) {
+// TestNewV7 pins the three properties every persisted primary key relies on:
+// canonical form, RFC 9562 version 7 + variant bits, and uniqueness.
+func TestNewV7(t *testing.T) {
 	const n = 1000
 	seen := make(map[string]struct{}, n)
-	for i := 0; i < n; i++ {
-		id, err := NewV7()
-		if err != nil {
-			t.Fatalf("NewV7() error = %v", err)
-		}
+	for range n {
+		id := NewV7()
 		if !IsValid(id) {
 			t.Fatalf("NewV7() produced invalid uuid: %q", id)
+		}
+		if id[14] != '7' {
+			t.Fatalf("NewV7() = %q, want version nibble 7", id)
+		}
+		if !strings.ContainsRune("89ab", rune(id[19])) {
+			t.Fatalf("NewV7() = %q, want RFC 9562 variant nibble", id)
 		}
 		if _, dup := seen[id]; dup {
 			t.Fatalf("NewV7() produced duplicate uuid: %q", id)
 		}
 		seen[id] = struct{}{}
-	}
-}
-
-func TestMustNewV7(t *testing.T) {
-	id := MustNewV7()
-	if !IsValid(id) {
-		t.Fatalf("MustNewV7() produced invalid uuid: %q", id)
-	}
-	// Second call must differ.
-	if other := MustNewV7(); other == id {
-		t.Fatalf("MustNewV7() returned identical ids: %q", id)
 	}
 }

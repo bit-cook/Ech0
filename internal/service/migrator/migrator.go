@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -134,7 +135,7 @@ func (s *MigratorService) UploadSourceZip(
 		return migratorModel.UploadMigrationSourceZipResponse{}, fmt.Errorf("create migration tmp dir: %w", err)
 	}
 
-	uploadID := uuidUtil.MustNewV7()
+	uploadID := uuidUtil.NewV7()
 	folderName := fmt.Sprintf("%s_%s", strings.TrimSpace(sourceType), uploadID)
 	zipPath := filepath.Join(baseTmpDir, folderName+".zip")
 	extractDir := filepath.Join(baseTmpDir, folderName)
@@ -465,8 +466,6 @@ func cloneMap(input map[string]any) map[string]any {
 		return map[string]any{}
 	}
 	out := make(map[string]any, len(input))
-	for k, v := range input {
-		out[k] = v
-	}
+	maps.Copy(out, input)
 	return out
 }

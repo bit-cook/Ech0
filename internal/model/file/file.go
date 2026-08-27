@@ -69,7 +69,7 @@ type TempFile struct {
 
 func (f *File) BeforeCreate(_ *gorm.DB) error {
 	if f.ID == "" {
-		f.ID = uuidUtil.MustNewV7()
+		f.ID = uuidUtil.NewV7()
 	}
 	return nil
 }
@@ -91,14 +91,14 @@ func (f *File) AfterFind(_ *gorm.DB) error {
 
 func (e *EchoFile) BeforeCreate(_ *gorm.DB) error {
 	if e.ID == "" {
-		e.ID = uuidUtil.MustNewV7()
+		e.ID = uuidUtil.NewV7()
 	}
 	return nil
 }
 
 func (t *TempFile) BeforeCreate(_ *gorm.DB) error {
 	if t.ID == "" {
-		t.ID = uuidUtil.MustNewV7()
+		t.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

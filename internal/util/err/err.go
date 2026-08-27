@@ -27,8 +27,7 @@ func ExtractBizErrorCode(err error) string {
 	if err == nil {
 		return ""
 	}
-	var bizErr *model.BizError
-	if errors.As(err, &bizErr) {
+	if bizErr, ok := errors.AsType[*model.BizError](err); ok {
 		return bizErr.Code
 	}
 	return ""

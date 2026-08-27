@@ -11,7 +11,7 @@ import (
 )
 
 // Publish delivers a typed event to matching subscribers.
-func Publish[T any](ctx context.Context, b *Bus, value T, opts ...PublishOption) error {
+func (b *Bus) Publish[T any](ctx context.Context, value T, opts ...PublishOption) error {
 	if b == nil {
 		return fmt.Errorf("%w: nil bus", ErrInvalidOption)
 	}

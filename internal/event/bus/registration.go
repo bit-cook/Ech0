@@ -20,7 +20,7 @@ type Subscriber interface {
 // On 构造一条按 Go 类型路由的订阅（busen.Subscribe[T]），把强类型事件交给 handler。
 func On[T any](handler func(context.Context, T) error, opts ...busen.SubscribeOption) Registration {
 	return func(b *busen.Bus) (func(), error) {
-		return busen.Subscribe(b, func(ctx context.Context, e busen.Event[T]) error {
+		return b.Subscribe(func(ctx context.Context, e busen.Event[T]) error {
 			return handler(ctx, e.Value)
 		}, opts...)
 	}
@@ -33,7 +33,7 @@ func OnWithMeta[T any](
 	opts ...busen.SubscribeOption,
 ) Registration {
 	return func(b *busen.Bus) (func(), error) {
-		return busen.Subscribe(b, func(ctx context.Context, e busen.Event[T]) error {
+		return b.Subscribe(func(ctx context.Context, e busen.Event[T]) error {
 			return handler(ctx, e.Value, e.Meta)
 		}, opts...)
 	}

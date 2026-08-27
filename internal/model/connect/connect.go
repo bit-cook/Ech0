@@ -35,7 +35,7 @@ type ConnectedHealth struct {
 
 func (c *Connected) BeforeCreate(_ *gorm.DB) error {
 	if c.ID == "" {
-		c.ID = uuidUtil.MustNewV7()
+		c.ID = uuidUtil.NewV7()
 	}
 	return nil
 }

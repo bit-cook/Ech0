@@ -169,8 +169,8 @@ func TestCommentHandler_ListPanelComments(t *testing.T) {
 		wantHot *bool
 	}{
 		{"empty leaves hot unset", "", nil},
-		{"true parses to pointer true", "true", boolPtr(true)},
-		{"false parses to pointer false", "false", boolPtr(false)},
+		{"true parses to pointer true", "true", new(true)},
+		{"false parses to pointer false", "false", new(false)},
 		{"unparseable leaves hot unset", "garbage", nil},
 		{"whitespace-only leaves hot unset", "   ", nil},
 	}
@@ -416,8 +416,6 @@ func TestCommentHandler_TestCommentEmail(t *testing.T) {
 		require.ErrorIs(t, err, errBoom)
 	})
 }
-
-func boolPtr(b bool) *bool { return &b }
 
 func eqBoolPtr(a, b *bool) bool {
 	if a == nil || b == nil {
