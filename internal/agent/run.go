@@ -367,8 +367,7 @@ func applyMutation(ctx context.Context, tool Tool, args json.RawMessage, strs Ru
 		return malformedTool(tool, strs)
 	}
 
-	decision, err := Decision{Approved: true}, error(nil)
-	_ = m.Confirm
+	decision, err := m.Confirm(ctx, plan)
 	if err != nil {
 		return ToolOutput{}, err
 	}
