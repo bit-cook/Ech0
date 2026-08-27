@@ -273,18 +273,6 @@ Besonderen Dank an die [LinuxDO](https://linux.do/) Community für ihre Anerkenn
 
 ---
 
-## Star-Verlauf
-
-<a href="https://www.star-history.com/?repos=lin-snow%2FEch0&type=timeline&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=lin-snow/Ech0&type=timeline&legend=top-left&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=lin-snow/Ech0&type=timeline&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=lin-snow/Ech0&type=timeline&legend=top-left" />
- </picture>
-</a>
-
----
-
 ```cpp
 
 ███████╗     ██████╗    ██╗  ██╗     ██████╗
