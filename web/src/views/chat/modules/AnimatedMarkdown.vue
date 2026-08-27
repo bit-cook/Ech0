@@ -11,15 +11,15 @@
 -->
 <script lang="ts">
 import { defineComponent, h, computed, watch, type VNode, type PropType } from 'vue'
-import MarkdownIt from 'markdown-it'
+import markdownit, { type Token } from 'markdown-it'
 import DiffText from './DiffText.vue'
 import { useSmoothReveal } from './useSmoothReveal'
 import '@/editor/styles/markdown.scss'
 
-type Token = ReturnType<MarkdownIt['parse']>[number]
+// Token 类型自 markdown-it 15 起由包内声明直接导出，无需再从 parse() 返回值反推。
 type Child = VNode | string
 
-const md = new MarkdownIt({
+const md = markdownit({
   html: false,
   linkify: true,
   typographer: false,
@@ -50,7 +50,7 @@ function textLeaf(text: string, ctx: BuildCtx, key: string): VNode {
 }
 
 function linkAttrs(token: Token): Record<string, string> {
-  const href = token.attrGet('href') ?? ''
+  const href = String(token.attrGet('href') ?? '')
   const attrs: Record<string, string> = { href }
   if (/^https?:\/\//i.test(href)) {
     attrs.target = '_blank'
@@ -95,7 +95,7 @@ function renderInline(children: Token[], ctx: BuildCtx, baseLine: number): Child
         break
       case 'image':
         sink().push(
-          h('img', { key: nk(), src: t.attrGet('src') ?? '', alt: t.content, loading: 'lazy' }),
+          h('img', { key: nk(), src: String(t.attrGet('src') ?? ''), alt: t.content, loading: 'lazy' }),
         )
         break
       case 'link_open':
