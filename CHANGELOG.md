@@ -11,29 +11,122 @@ For releases prior to v4.6.5, see the [GitHub releases page](https://github.com/
 
 ### Added
 
-- **The Agent can now talk to OpenAI's Responses API, not just Chat Completions.** *Panel → Copilot → Agent settings* gains a third **API Protocol** option, **OpenAI Responses**, alongside *OpenAI Compatible* (`/v1/chat/completions`) and *Anthropic*. Pick it and the same model name / API key / Base URL fields drive `POST /v1/responses` instead — with real streaming, tool-calling retrieval and image input, so Chat, `search_echos` and the recent-summary widget behave identically on either protocol. The new provider (`internal/agent/provider_openai_responses.go`, built on the official `github.com/openai/openai-go/v3` SDK) maps the wire format the Responses API actually expects: a flat `input` item array where tool calls and tool results are standalone `function_call` / `function_call_output` items, flat function tools with no `function` wrapper, flat `image_url` strings for attached images, and `max_output_tokens` instead of `max_tokens`. Tool calls are read from the complete `response.output_item.done` item (the `call_id` you have to echo back never appears on the argument-delta events), with the terminal `response.completed` payload as a fallback for endpoints that only send the final response. Failures are surfaced loudly rather than as an empty answer: a `response.failed` event, an in-stream `error` event, or a `status: "failed"` body all abort with the provider's own code and message. `store: false` is always sent so nothing is retained server-side — every turn ships its own full history, no `previous_response_id`. `reasoning` is deliberately never sent, because OpenAI rejects it with `unsupported_parameter` on non-reasoning models; reasoning text still streams whenever the endpoint emits it on its own. Besides OpenAI's own gpt-5 / o-series, this protocol works against Azure OpenAI, vLLM, Ollama (≥ 0.13.3), OpenRouter and LiteLLM, and — like the OpenAI-compatible option — accepts an empty API key for local endpoints.
+* **OpenAI Responses API support for Agent.** *Panel → Copilot → Agent settings* now has a third **API Protocol** option: **OpenAI Responses**, alongside *OpenAI Compatible* (`/v1/chat/completions`) and *Anthropic*. It uses the same model name, API key, and Base URL fields, but sends requests to `POST /v1/responses`. The protocol supports real streaming, tool-calling retrieval, and image input, so Chat, `search_echos`, and the recent-summary widget behave identically across both OpenAI protocols.
+
+  * Implemented in `internal/agent/provider_openai_responses.go` using the official `github.com/openai/openai-go/v3` SDK.
+  * Maps the Responses API wire format correctly: a flat `input` item array; standalone `function_call` / `function_call_output` items; flat function tools without a `function` wrapper; flat `image_url` strings for attached images; and `max_output_tokens` instead of `max_tokens`.
+  * Tool calls are read from the complete `response.output_item.done` item, because the required `call_id` is not present on argument-delta events. `response.completed` is used as a fallback for endpoints that only emit the final response.
+  * Provider failures are surfaced instead of becoming empty answers: `response.failed`, in-stream `error`, and response bodies with `status: "failed"` all abort with the provider's own code and message.
+  * `store: false` is always sent. Responses are not retained server-side, and every turn sends its complete history without using `previous_response_id`.
+  * `reasoning` is intentionally never sent because OpenAI rejects it with `unsupported_parameter` on non-reasoning models. Reasoning text is still streamed when the endpoint emits it.
+  * Besides OpenAI's gpt-5 / o-series, the protocol works with Azure OpenAI, vLLM, Ollama (≥ 0.13.3), OpenRouter, and LiteLLM. As with the OpenAI-compatible option, local endpoints may use an empty API key.
 
 ### Changed
 
-- **Bare domains are no longer turned into links automatically.** `markdown-it` 15 ships `linkify-it` v6, which only auto-links addresses that carry a scheme (`https://…`, `ftp://…`, `mailto:`) plus e-mail addresses — writing `ech0.cc` on its own now renders as plain text. Use the explicit `[text](url)` syntax when you want a link. The upstream default was kept rather than restored, because the same change also stops false positives like `README.md` becoming a link and improves link termination in CJK text. Two smaller upstream fixes come along: inline code inside an image's `alt` text is preserved, and `user:pass@example.com` is no longer mistaken for an e-mail address.
-- **Node.js floor raised to 26.** `jsdom` 30 (the frontend test environment) supports `^22.22.2 || ^24.15.0 || >=26.0.0`, and the repo's previous floor — Node 25 — is EOL and outside that range. `web/package.json` `engines`, every `setup-node` step, the `node:` build image, and the docs now all say Node 26.
-- **`Makefile` removed — `just` is the only task runner.** The Makefile and justfile had been maintained in parallel and had already drifted (the justfile still carried the retired `swagger` recipe and was missing `test-race` / `test-cover` / `mocks` / `openapi`). The root `justfile` now holds the backend and repo-wide recipes and aggregates the sub-projects as `just` modules: `just web build`, `just site typecheck`, `just hub dev`, `just docker build`. Each module has its own justfile and runs in its own directory. CI runs `just mocks-check`. Every `make …` reference in the docs, PR template, and Dockerfile comments was rewritten, and the stale `make swagger` instructions now point at `just openapi` / `internal/openapi/openapi.yaml`.
-- **Dependency bumps (Go, `go-patch-minor` group)**: `anthropics/anthropic-sdk-go` 1.61.0 → 1.66.0, `aws/aws-sdk-go-v2` 1.43.0 → 1.43.7 (plus `config` / `credentials` / `service/s3`), `danielgtaylor/huma/v2` 2.39.0 → 2.39.1, `sashabaranov/go-openai` 1.41.2 → 1.42.0, `stretchr/testify` 1.11.1 → 1.12.1, `golang.org/x/crypto` 0.54.0 → 0.55.0, `golang.org/x/mod` 0.38.0 → 0.40.0, `golang.org/x/net` 0.57.0 → 0.58.0.
-- **Dependency bumps (`web/`)**: `markdown-it` 14.3.0 → 15.0.0 (major — see the linkify note above; the package now ships its own TypeScript declarations, so `@types/markdown-it` was dropped, and `attrGet` may return numbers), `jsdom` 29.1.1 → 30.0.1 (major, dev-only), `@dicebear/core` 10.3.0 → 10.6.1, `@dicebear/styles` 10.2.0 → 10.5.0, `@vueuse/core` 14.3.0 → 14.4.0, `highlight.js` 11.11.1 → 11.12.0, `vue` 3.5.40 → 3.5.41, `pinia` 4.0.2 → 4.0.3, `vue-virtual-scroller` 3.0.4 → 3.0.5, `@cap.js/widget` 0.1.56 → 0.1.57, plus dev tooling (`vite` 8.2.2, `vitest` 4.1.11, `unocss` 66.8.0, `sass-embedded` 1.103.1, `eslint` 10.8.1, `vue-tsc` 3.3.10, `tsx` 4.23.12, `@types/node` 26.2.0).
-- **Dependency bumps (`site/`)**: React Router 7.15.1 → **8.3.0** across the whole family (`react-router`, `@react-router/node`, `@react-router/dev`), fixing [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) and a pre-existing unmet peer dependency (the adapters pinned `react-router` to exactly 7.14.0 while 7.15.1 was installed). `react` / `react-dom` moved to `^19.2.7` (v8's peer floor), the `meta` functions switched from the removed `data` argument to `loaderData`, and `@react-router/serve` was dropped — an `ssr: false` build produces no server, and the site is served by the `serve` package.
-- **Dependency bumps (`hub/`, `site/`)**: `brace-expansion` patched for [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg) — 2.1.2 → 2.1.4 in `hub/`, and 1.1.14 → 1.1.18 / 5.0.6 → 5.0.9 in `site/`, which the original bump had missed.
+* **Bare domains are no longer auto-linked.** `markdown-it` 15 ships `linkify-it` v6, which only auto-links addresses with a scheme (`https://…`, `ftp://…`, `mailto:`) and e-mail addresses. Writing `ech0.cc` now renders as plain text; use explicit `[text](url)` syntax when a link is intended. The upstream default is retained because it also prevents false positives such as `README.md` becoming a link and improves link termination in CJK text. The upgrade also preserves inline code inside image `alt` text and prevents `user:pass@example.com` from being misidentified as an e-mail address.
+
+* **Node.js minimum version raised to 26.** `jsdom` 30, used as the frontend test environment, supports `^22.22.2 || ^24.15.0 || >=26.0.0`; the previous Node 25 floor is EOL and outside that range. `web/package.json` `engines`, all `setup-node` steps, the `node:` build image, and the documentation now require Node 26.
+
+* **`just` is now the only task runner.** The `Makefile` has been removed. The previous Makefile and justfile were maintained in parallel and had already diverged: the justfile still contained the retired `swagger` recipe and lacked `test-race`, `test-cover`, `mocks`, and `openapi`.
+
+  * The root `justfile` now contains backend and repository-wide recipes and aggregates sub-projects as `just` modules: `just web build`, `just site typecheck`, `just hub dev`, `just docker build`.
+  * Each module has its own justfile and runs in its own directory.
+  * CI now runs `just mocks-check`.
+  * All `make …` references in the documentation, PR template, and Dockerfile comments have been replaced.
+  * Stale `make swagger` instructions now point to `just openapi` / `internal/openapi/openapi.yaml`.
+
+* **Go dependency updates (`go-patch-minor`).**
+
+  * `anthropics/anthropic-sdk-go`: 1.61.0 → 1.66.0
+  * `aws/aws-sdk-go-v2`: 1.43.0 → 1.43.7, including `config`, `credentials`, and `service/s3`
+  * `danielgtaylor/huma/v2`: 2.39.0 → 2.39.1
+  * `sashabaranov/go-openai`: 1.41.2 → 1.42.0
+  * `stretchr/testify`: 1.11.1 → 1.12.1
+  * `golang.org/x/crypto`: 0.54.0 → 0.55.0
+  * `golang.org/x/mod`: 0.38.0 → 0.40.0
+  * `golang.org/x/net`: 0.57.0 → 0.58.0
+
+* **Frontend dependency updates (`web/`).**
+
+  * `markdown-it`: 14.3.0 → 15.0.0. This is a major upgrade; see the linkify behavior above. The package now ships its own TypeScript declarations, so `@types/markdown-it` was removed. `attrGet` may now return numbers.
+  * `jsdom`: 29.1.1 → 30.0.1 (major, dev-only)
+  * `@dicebear/core`: 10.3.0 → 10.6.1
+  * `@dicebear/styles`: 10.2.0 → 10.5.0
+  * `@vueuse/core`: 14.3.0 → 14.4.0
+  * `highlight.js`: 11.11.1 → 11.12.0
+  * `vue`: 3.5.40 → 3.5.41
+  * `pinia`: 4.0.2 → 4.0.3
+  * `vue-virtual-scroller`: 3.0.4 → 3.0.5
+  * `@cap.js/widget`: 0.1.56 → 0.1.57
+  * Dev tooling: `vite` 8.2.2, `vitest` 4.1.11, `unocss` 66.8.0, `sass-embedded` 1.103.1, `eslint` 10.8.1, `vue-tsc` 3.3.10, `tsx` 4.23.12, `@types/node` 26.2.0
+
+* **Site dependency updates (`site/`).** React Router was upgraded from 7.15.1 to **8.3.0** across `react-router`, `@react-router/node`, and `@react-router/dev`. This fixes [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) and an existing unmet peer dependency caused by adapters pinning `react-router` to exactly 7.14.0 while 7.15.1 was installed.
+
+  * `react` / `react-dom` now use `^19.2.7`, the peer floor required by v8.
+  * `meta` functions now use `loaderData` instead of the removed `data` argument.
+  * `@react-router/serve` was removed. With `ssr: false`, the build produces no server and the site is served by the `serve` package.
+
+* **Security dependency updates (`hub/`, `site/`).** `brace-expansion` was patched for [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg). The original bump had missed these versions:
+
+  * `hub/`: 2.1.2 → 2.1.4
+  * `site/`: 1.1.14 → 1.1.18 and 5.0.6 → 5.0.9
 
 ### Internal
 
-- **The toolchain moved to Go 1.27.0.** `go.mod` declares `go 1.27.0`, and every build surface follows: the `test` / `release` / `release_zigcc` / `docker-test-image` workflows pin `1.27.0`, `docker/build.Dockerfile` builds on `golang:1.27.0-alpine`, and `CONTRIBUTING.md` / `docs/dev/development.md` / `site/docs/dev/guide.md` state Go 1.27.0+. `go mod tidy` under the new directive also collapsed `go.mod` into the two-require-block layout Go 1.27 enforces. Two knock-on effects come for free: `go test` now runs the `stdversion` vet check, and tracebacks carry `runtime/pprof` goroutine labels.
-- **UUIDs now come from the new `uuid` standard library package — `github.com/google/uuid` is no longer a direct dependency.** `internal/util/uuid` is the single entry point and wraps stdlib `uuid`. `MustNewV7()` collapsed into `NewV7() string` (stdlib UUIDv7 generation returns no error, so there was nothing left to must-wrap) and all call sites were migrated. Deterministic name-based derivation is *not* in the standard library, so RFC 9562 §5.5 (name-based, SHA-1) lives in `internal/util/uuid.NewV5` — used by capsule build for stable tag/file ids — with golden tests pinning the exact ids the previous `google/uuid` implementation produced, so already-published capsule datasets keep byte-identical entity ids.
-- **`busen`'s publish/subscribe entry points are now generic methods on `*Bus`.** Go 1.27 lets a method declare its own type parameters, so the bus no longer has to be threaded through as an argument: `busen.Publish(ctx, bus, evt)` became `bus.Publish(ctx, evt)`, and `Subscribe` / `SubscribeTopic` / `SubscribeTopics` / `SubscribeMatch` moved the same way. Call sites, runnable examples and `pkg/busen/README.md` were updated together; the benchmark table in that README was re-measured on Go 1.27 (`-count=5` medians).
-- **`go fix`'s modernizers were applied across the backend** (52 files): `atomictypes` (bare `atomic.AddInt32(&x, 1)` → `atomic.Int32` methods) and `slicesbackward` are new in Go 1.27, alongside `any`, `errorsastype`, `forvar`, `mapsloop`, `minmax`, `newexpr`, `rangeint`, `reflecttypefor`, `slicescontains`, `stditerators`, `stringscutprefix`, `stringsseq` and `waitgroupgo` (`wg.Add(1)`/`defer wg.Done()` → `wg.Go(...)`). `omitzero` was deliberately skipped: swapping `omitempty` for `omitzero` changes JSON output.
-- **`strings.CutLast` (new in Go 1.27) replaced the nested `LastIndex` slicing** in the huma schema namer (`internal/handler/humares/api.go`). The logging hot path in `pkg/log` keeps its `LastIndexByte` arithmetic on purpose — `CutLast` there would force a string concatenation per log record.
-- **Retry backoff is now covered by fake-clock tests.** `egress.Retry` documents an exponential schedule with no sleep after the final attempt, but nothing verified it: the existing tests passed a 1 ns/1 ms backoff and only counted attempts. Two new tests run inside a `testing/synctest` bubble — one on `egress.Retry` directly, one end-to-end through `sendWithRetry` over Go 1.27's `httptest.NewTestServer` (in-memory network, so the whole HTTP round trip lives in the bubble). Both assert second-scale backoff on exact nanosecond boundaries and finish instantly.
-- **Goroutine leak detection is now a test gate.** Go 1.27 promoted the runtime's `goroutineleak` profile to GA: the GC marks goroutines that are blocked on a concurrency primitive unreachable from every runnable goroutine, i.e. ones that can never wake up. New `pkg/leakcheck` (stdlib-only, so `pkg/*` libraries can use it without depending on `internal/*`) turns it into one line of `TestMain`, wired into the six packages whose subject *is* concurrency: `internal/util/async`, `internal/cache`, `internal/event/bus`, `internal/job`, `internal/webhook` and `pkg/busen`. All six are leak-free today, so from now on a regression fails the package with the leaked goroutine's stack instead of quietly retaining a stack per request. The check is skipped when tests already failed (failing paths abandon goroutines on purpose) and it is a lower bound, not a proof: goroutines still reachable from a global or a runnable goroutine are not reported.
-- **The JSON engine change was measured, not assumed.** Go 1.27 re-implements `encoding/json` on top of `encoding/json/v2`, which is on by default and needs no code change. On a real timeline payload (50 echoes with tags and attachments, ~57 KB, `-count=5` medians, Apple M4): unmarshal **319 µs → 192 µs** with allocations down from 1317/88 KB to 458/61 KB, while marshal regressed **57 µs → 74 µs**. So the decode side (request bodies, stored payloads, provider responses) got materially cheaper and the encode side got ~30% dearer on this shape — worth knowing for a read-heavy instance, though 17 µs per 57 KB page is far below the DB and network cost. Calling the `encoding/json/v2` API directly measured 128 µs unmarshal / 72 µs marshal, but its stricter defaults (case-sensitive field matching, duplicate names rejected) change behavior on client- and third-party-supplied JSON, so the v1 API stays. `GOEXPERIMENT=nojsonv2` remains the escape hatch if a compatibility problem shows up.
-- **6 pre-existing `staticcheck SA4023` findings were cleared** in `internal/service/comment`: `viewer.MustFromContext` never returns nil (it falls back to `NoopViewer`, whose `UserID()`/`TokenID()` are empty strings), so three `v == nil` branches were dead code — the surviving `UserID() == ""` checks keep exactly the same behavior. `golangci-lint run` is now clean.
+* **Toolchain upgraded to Go 1.27.0.** `go.mod` now declares `go 1.27.0`, and every build surface follows the same version: the `test`, `release`, `release_zigcc`, and `docker-test-image` workflows; `docker/build.Dockerfile` (`golang:1.27.0-alpine`); and `CONTRIBUTING.md`, `docs/dev/development.md`, and `site/docs/dev/guide.md` all use or require Go 1.27.0+.
+
+  * `go mod tidy` under the new directive collapsed `go.mod` into the two-require-block layout enforced by Go 1.27.
+  * `go test` now runs the `stdversion` vet check.
+  * Tracebacks now carry `runtime/pprof` goroutine labels.
+
+* **UUID generation moved to the Go standard library.** `github.com/google/uuid` is no longer a direct dependency. `internal/util/uuid` remains the single entry point and now wraps the standard-library `uuid`.
+
+  * `MustNewV7()` became `NewV7() string`; standard-library UUIDv7 generation returns no error, so the `Must` wrapper was unnecessary.
+  * All call sites were migrated.
+  * Deterministic name-based UUID generation is not provided by the standard library, so RFC 9562 §5.5 name-based SHA-1 generation remains available as `internal/util/uuid.NewV5`.
+  * `NewV5` is used by capsule build for stable tag/file IDs. Golden tests pin the exact IDs produced by the previous `google/uuid` implementation, preserving byte-identical entity IDs for already-published capsule datasets.
+
+* **`busen` publish/subscribe APIs are now generic methods on `*Bus`.** Go 1.27 allows methods to declare their own type parameters, so the bus no longer needs to be passed separately: `busen.Publish(ctx, bus, evt)` is now `bus.Publish(ctx, evt)`. `Subscribe`, `SubscribeTopic`, `SubscribeTopics`, and `SubscribeMatch` were migrated in the same way.
+
+  * Call sites, runnable examples, and `pkg/busen/README.md` were updated together.
+  * The benchmark table in the README was re-measured on Go 1.27 using `-count=5` medians.
+
+* **Go 1.27 `go fix` modernizers applied across the backend (52 files).** The migration includes `atomictypes` (`atomic.AddInt32(&x, 1)` → `atomic.Int32` methods), `slicesbackward`, `any`, `errorsastype`, `forvar`, `mapsloop`, `minmax`, `newexpr`, `rangeint`, `reflecttypefor`, `slicescontains`, `stditerators`, `stringscutprefix`, `stringsseq`, and `waitgroupgo` (`wg.Add(1)` / `defer wg.Done()` → `wg.Go(...)`).
+
+  * `omitzero` was deliberately skipped because replacing `omitempty` with `omitzero` changes JSON output.
+
+* **`strings.CutLast` replaces nested `LastIndex` slicing** in the huma schema namer (`internal/handler/humares/api.go`). The logging hot path in `pkg/log` intentionally retains its `LastIndexByte` arithmetic because using `CutLast` there would introduce a string concatenation for every log record.
+
+* **Retry backoff now has fake-clock coverage.** `egress.Retry` documents an exponential schedule with no sleep after the final attempt, but the previous tests only used a 1 ns / 1 ms backoff and counted attempts. Two new tests run inside a `testing/synctest` bubble:
+
+  * One tests `egress.Retry` directly.
+  * One tests `sendWithRetry` end-to-end through Go 1.27's `httptest.NewTestServer`.
+  * The in-memory network keeps the entire HTTP round trip inside the bubble.
+  * Both tests assert second-scale backoff at exact nanosecond boundaries while completing instantly.
+
+* **Goroutine leak detection is now a test gate.** Go 1.27 promoted the runtime's `goroutineleak` profile to GA. It identifies goroutines blocked on a concurrency primitive that is unreachable from every runnable goroutine, meaning they can never wake up.
+
+  * New `pkg/leakcheck` is stdlib-only, allowing `pkg/*` libraries to use it without depending on `internal/*`.
+  * It is wired into `TestMain` for the six packages whose subject is concurrency: `internal/util/async`, `internal/cache`, `internal/event/bus`, `internal/job`, `internal/webhook`, and `pkg/busen`.
+  * All six are currently leak-free. Future regressions fail the package with the leaked goroutine's stack instead of silently retaining a stack per request.
+  * The check is skipped when tests have already failed because failing paths may intentionally abandon goroutines.
+  * This is a lower bound, not a proof: goroutines still reachable from a global or a runnable goroutine are not reported.
+
+* **The `encoding/json` performance impact of Go 1.27 was measured.** Go 1.27 re-implements `encoding/json` on top of `encoding/json/v2`, enabled by default without requiring code changes. On a real timeline payload containing 50 echoes with tags and attachments (~57 KB), using `-count=5` medians on an Apple M4:
+
+  * Unmarshal: **319 µs → 192 µs**
+  * Unmarshal allocations: **1317 / 88 KB → 458 / 61 KB**
+  * Marshal: **57 µs → 74 µs**
+
+  Decode therefore became materially cheaper while encode became roughly 30% more expensive for this payload shape. For a read-heavy instance, the change is worth noting, although 17 µs per 57 KB page remains far below typical database and network costs.
+
+  Direct use of the `encoding/json/v2` API measured 128 µs unmarshal / 72 µs marshal, but its stricter defaults—case-sensitive field matching and rejection of duplicate names—would change behavior for client- and third-party-supplied JSON. The v1 API therefore remains in use. `GOEXPERIMENT=nojsonv2` remains available as a compatibility escape hatch.
+
+* **Six pre-existing `staticcheck SA4023` findings were cleared** in `internal/service/comment`. `viewer.MustFromContext` never returns nil because it falls back to `NoopViewer`, whose `UserID()` and `TokenID()` return empty strings. As a result, three `v == nil` branches were dead code.
+
+  * The remaining `UserID() == ""` checks preserve exactly the same behavior.
+  * `golangci-lint run` is now clean.
+
 
 ## [5.5.0] - 2026-08-02
 
