@@ -97,7 +97,7 @@ In-process async event bus. Publishers at `internal/event/publisher`, subscriber
 - Env vars parsed from `.env` (loaded via `joho/godotenv`). See `.env.example` for the full set.
 - Defaults target `./data/` for SQLite + uploads. Docker images mount `/app/data`.
 - Server port: 6277 (default).
-- Node.js 25.5.0+, pnpm 10+, Go 1.26.0+, C toolchain for CGO.
+- Node.js 26.0.0+, pnpm 10+, Go 1.26.0+, C toolchain for CGO.
 
 ## Key in-repo docs
 

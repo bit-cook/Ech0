@@ -4,7 +4,7 @@
 # - 运行镜像：根目录 Dockerfile 最终阶段（alpine + tzdata、data 目录）
 
 # =================== 前端构建阶段 ===================
-FROM node:25-alpine AS frontend-builder
+FROM node:26-alpine AS frontend-builder
 
 WORKDIR /web
 

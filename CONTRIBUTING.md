@@ -28,7 +28,7 @@ make dev-lint  # backend fmt/lint + web format/lint + i18n
 
 ### Frontend
 
-- Node.js `25.5.0+`
+- Node.js `26.0.0+`
 - pnpm `10+`
 
 Common commands (`web` directory):

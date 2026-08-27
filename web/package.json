@@ -7,7 +7,7 @@
   "homepage": "https://github.com/lin-snow/Ech0",
   "type": "module",
   "engines": {
-    "node": ">=25.9.0"
+    "node": ">=26.0.0"
   },
   "scripts": {
     "dev": "vite",
