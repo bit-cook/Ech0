@@ -22,10 +22,12 @@ const agentTestTimeout = 15 * time.Second
 // normalizeAgentProtocol 把协议字段归一到受支持的取值：未识别的接口协议（含已下线的 gemini）
 // 一律按 OpenAI 兼容协议处理。UpdateAgentSettings 与 TestAgentConnection 共用。
 func normalizeAgentProtocol(protocol string) string {
-	if protocol != string(commonModel.OpenAI) && protocol != string(commonModel.Anthropic) {
+	switch protocol {
+	case string(commonModel.OpenAI), string(commonModel.OpenAIResponses), string(commonModel.Anthropic):
+		return protocol
+	default:
 		return string(commonModel.OpenAI)
 	}
-	return protocol
 }
 
 // GetAgentInfo 获取 Agent 信息（公开读，缺省值由 setting 引擎处理）。

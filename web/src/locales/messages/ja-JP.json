@@ -699,6 +699,7 @@
     "enableAgent": "Agent を有効化",
     "protocol": "API プロトコル",
     "protocolOpenAI": "OpenAI 互換",
+    "protocolOpenAIResponses": "OpenAI Responses",
     "protocolAnthropic": "Anthropic",
     "modelName": "モデル名",
     "modelPlaceholder": "モデル名を入力",

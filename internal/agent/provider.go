@@ -30,6 +30,8 @@ func providerFor(setting model.AgentSetting) (Provider, error) {
 	switch setting.Protocol {
 	case string(commonModel.OpenAI):
 		return &openaiProvider{setting: setting}, nil
+	case string(commonModel.OpenAIResponses):
+		return &openaiResponsesProvider{setting: setting}, nil
 	case string(commonModel.Anthropic):
 		return &anthropicProvider{setting: setting}, nil
 	default:

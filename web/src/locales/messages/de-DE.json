@@ -699,6 +699,7 @@
     "enableAgent": "Agent aktivieren",
     "protocol": "API-Protokoll",
     "protocolOpenAI": "OpenAI-kompatibel",
+    "protocolOpenAIResponses": "OpenAI Responses",
     "protocolAnthropic": "Anthropic",
     "modelName": "Modellname",
     "modelPlaceholder": "Modellname eingeben",

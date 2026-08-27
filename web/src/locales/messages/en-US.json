@@ -699,6 +699,7 @@
     "enableAgent": "Enable Agent",
     "protocol": "API Protocol",
     "protocolOpenAI": "OpenAI Compatible",
+    "protocolOpenAIResponses": "OpenAI Responses",
     "protocolAnthropic": "Anthropic",
     "modelName": "Model name",
     "modelPlaceholder": "Enter model name",

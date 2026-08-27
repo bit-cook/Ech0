@@ -165,6 +165,7 @@ const onContextWindowBlur = () => {
 
 const agentProtocolOptions = computed<{ label: string; value: AgentProtocol }[]>(() => [
   { label: t('agentSetting.protocolOpenAI'), value: AgentProtocol.OPENAI },
+  { label: t('agentSetting.protocolOpenAIResponses'), value: AgentProtocol.OPENAI_RESPONSES },
   { label: t('agentSetting.protocolAnthropic'), value: AgentProtocol.ANTHROPIC },
 ])
 

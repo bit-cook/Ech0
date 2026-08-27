@@ -45,6 +45,8 @@ const (
 const (
 	// OpenAI 协议（覆盖 OpenAI 官方、DeepSeek、Qwen、Ollama 以及任意 OpenAI 兼容服务）
 	OpenAI AgentProtocol = "openai"
+	// OpenAI Responses 协议（/v1/responses）
+	OpenAIResponses AgentProtocol = "openai-responses"
 	// Anthropic 协议
 	Anthropic AgentProtocol = "anthropic"
 )

@@ -31,11 +31,16 @@ func validate(setting model.AgentSetting) error {
 	if setting.Protocol == "" {
 		return errors.New(commonModel.AGENT_PROTOCOL_NOT_FOUND)
 	}
-	if setting.ApiKey == "" && setting.Protocol != string(commonModel.OpenAI) {
-		// OpenAI 兼容场景下 Ollama 等本地服务允许空 ApiKey
+	if setting.ApiKey == "" && !allowsEmptyAPIKey(setting.Protocol) {
+		// OpenAI 兼容 / OpenAI Responses 场景下 Ollama 等本地服务允许空 ApiKey
 		return errors.New(commonModel.AGENT_API_KEY_MISSING)
 	}
 	return nil
+}
+
+// allowsEmptyAPIKey 标记哪些协议容许空 ApiKey（本地 OpenAI 兼容服务，如 Ollama）。
+func allowsEmptyAPIKey(protocol string) bool {
+	return protocol == string(commonModel.OpenAI) || protocol == string(commonModel.OpenAIResponses)
 }
 
 // applyPrompt 在 usePrompt 且配置了自定义 Prompt 时，把它作为 user 消息追加在末尾
@@ -88,8 +93,8 @@ func Ping(ctx context.Context, setting model.AgentSetting) error {
 	if setting.Protocol == "" {
 		return errors.New(commonModel.AGENT_PROTOCOL_NOT_FOUND)
 	}
-	if setting.ApiKey == "" && setting.Protocol != string(commonModel.OpenAI) {
-		// OpenAI 兼容场景下 Ollama 等本地服务允许空 ApiKey（与 validate 保持一致）
+	if setting.ApiKey == "" && !allowsEmptyAPIKey(setting.Protocol) {
+		// OpenAI 兼容 / OpenAI Responses 场景下 Ollama 等本地服务允许空 ApiKey（与 validate 保持一致）
 		return errors.New(commonModel.AGENT_API_KEY_MISSING)
 	}
 

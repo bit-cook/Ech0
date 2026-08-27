@@ -83,5 +83,6 @@ export enum AccessTokenExpiration {
 // Agent LLM 接口协议 —— 仅按协议族区分；OPENAI 同时承担所有 OpenAI 兼容协议（DeepSeek、Qwen、Ollama 等）
 export enum AgentProtocol {
   OPENAI = 'openai',
+  OPENAI_RESPONSES = 'openai-responses',
   ANTHROPIC = 'anthropic',
 }

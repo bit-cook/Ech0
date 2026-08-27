@@ -103,6 +103,11 @@ func TestNormalizeAgentProtocol(t *testing.T) {
 		want string
 	}{
 		{"openai passthrough", string(commonModel.OpenAI), string(commonModel.OpenAI)},
+		{
+			"openai responses passthrough",
+			string(commonModel.OpenAIResponses),
+			string(commonModel.OpenAIResponses),
+		},
 		{"anthropic passthrough", string(commonModel.Anthropic), string(commonModel.Anthropic)},
 		{"retired gemini falls back to openai", "gemini", string(commonModel.OpenAI)},
 		{"empty falls back to openai", "", string(commonModel.OpenAI)},

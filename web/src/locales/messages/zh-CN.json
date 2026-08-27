@@ -699,6 +699,7 @@
     "enableAgent": "启用 Agent",
     "protocol": "接口协议",
     "protocolOpenAI": "OpenAI 兼容",
+    "protocolOpenAIResponses": "OpenAI Responses",
     "protocolAnthropic": "Anthropic",
     "modelName": "模型名称",
     "modelPlaceholder": "输入模型名称",
