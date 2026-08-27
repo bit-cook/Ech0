@@ -7,7 +7,7 @@
   "homepage": "https://github.com/lin-snow/Ech0",
   "type": "module",
   "engines": {
-    "node": ">=25.9.0"
+    "node": ">=26.0.0"
   },
   "scripts": {
     "dev": "vite",
@@ -60,7 +60,7 @@
     "eslint": "^10.8.1",
     "eslint-plugin-vue": "~10.10.0",
     "jiti": "^2.7.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "npm-run-all2": "^9.0.3",
     "postcss-html": "^1.8.1",
     "postcss-scss": "^4.0.9",

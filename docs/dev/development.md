@@ -46,7 +46,7 @@ Install [Swagger](https://github.com/swaggo/gin-swagger) to generate/use OpenAPI
 
 ## Frontend Requirements
 
-📌 **NodeJS v25.5.0+, PNPM v10.30.0+**
+📌 **NodeJS v26.0.0+, PNPM v10.30.0+**
 > Note: if you need multiple Node.js versions, use [fnm](https://github.com/Schniz/fnm) to manage them.
 
 ## Start Backend & Frontend

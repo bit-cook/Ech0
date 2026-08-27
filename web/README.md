@@ -33,7 +33,7 @@ that exposes the REST API.
 | Tests             | **Vitest 4** + `@vue/test-utils` + `jsdom`                                |
 | Package manager   | **pnpm 10** (see `packageManager` field)                                  |
 
-**Engine:** Node `>=25.9.0` (declared in [package.json:6-8](package.json#L6-L8)). Use Volta / nvm to pin.
+**Engine:** Node `>=26.0.0` (declared in [package.json:6-8](package.json#L6-L8)). Use Volta / nvm to pin.
 
 ---
 
