@@ -53,7 +53,8 @@ func (s *CopilotService) searchEchosTool(allTags []echoModel.Tag, multimodal boo
 			Description: "检索用户过往发布的 Echo（微博客/碎碎念）。可用 query 做语义/关键词检索，并可选地用 tags（标签名）与 date_from/date_to（日期范围）做精确筛选；三者可组合，但至少提供其一。query 传精炼核心词，不要整句。",
 			Parameters:  json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"语义/关键词检索词，传与问题最相关的核心词（精炼，不要整句）；仅按标签或时间筛选时可省略"},"tags":{"type":"array","items":{"type":"string"},"description":"按标签名筛选（标签名而非ID），如 [\"读书\",\"旅行\"]；可用标签见系统提示"},"date_from":{"type":"string","description":"起始日期，格式 YYYY-MM-DD，含当天"},"date_to":{"type":"string","description":"结束日期，格式 YYYY-MM-DD，含当天"},"limit":{"type":"integer","description":"可选，返回条数（1~20），默认按上下文自动取值；需要更多结果再综合时可调大"}}}`),
 		},
-		Execute: func(ctx context.Context, args json.RawMessage) (agent.ToolOutput, error) {
+		Effect: agent.EffectRead,
+		Run: func(ctx context.Context, args json.RawMessage) (agent.ToolOutput, error) {
 			var a searchArgs
 			_ = json.Unmarshal(args, &a)
 			a.Query = strings.TrimSpace(a.Query)

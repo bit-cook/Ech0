@@ -89,6 +89,83 @@ components:
         protocol:
           type: string
       type: object
+    AnswerAskInputBody:
+      additionalProperties: true
+      properties:
+        answers:
+          description: 每个问题的回答，按问题 ID 对应
+          items:
+            $ref: "#/components/schemas/AskAnswer"
+          minItems: 1
+          type:
+            - array
+            - "null"
+        ask_id:
+          description: 要回答的提问轮次 ID，来自 SSE 的 ask 事件
+          minLength: 1
+          type: string
+      type: object
+    AskAnswer:
+      additionalProperties: true
+      properties:
+        custom:
+          type: string
+        question_id:
+          type: string
+        selected:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      type: object
+    AskExchange:
+      additionalProperties: true
+      properties:
+        answers:
+          items:
+            $ref: "#/components/schemas/AskAnswer"
+          type:
+            - array
+            - "null"
+        questions:
+          items:
+            $ref: "#/components/schemas/AskQuestion"
+          type:
+            - array
+            - "null"
+      type: object
+    AskOption:
+      additionalProperties: true
+      properties:
+        description:
+          type: string
+        label:
+          type: string
+      type: object
+    AskQuestion:
+      additionalProperties: true
+      properties:
+        detail:
+          type: string
+        header:
+          type: string
+        id:
+          type: string
+        multi:
+          type: boolean
+        options:
+          items:
+            $ref: "#/components/schemas/AskOption"
+          type:
+            - array
+            - "null"
+        recommended:
+          format: int64
+          type: integer
+        text:
+          type: string
+      type: object
     BatchCommentActionDto:
       additionalProperties: true
       properties:
@@ -104,6 +181,12 @@ components:
     ChatMessage:
       additionalProperties: true
       properties:
+        asks:
+          items:
+            $ref: "#/components/schemas/AskExchange"
+          type:
+            - array
+            - "null"
         content:
           type: string
         reasoning:
@@ -2446,6 +2529,34 @@ paths:
       summary: 测试 Copilot 连接
       tags:
         - Setting
+  /chat/answer:
+    post:
+      operationId: copilot-chat-answer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerAskInputBody"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultInterface {}"
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+          description: Error
+      security:
+        - bearerAuth:
+            - admin:settings
+      summary: 回答 Copilot 正在等待的提问/确认
+      tags:
+        - Copilot
   /chat/session:
     delete:
       operationId: copilot-session-clear
