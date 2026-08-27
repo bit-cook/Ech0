@@ -12,7 +12,7 @@ on:
       - "go.mod"
       - "go.sum"
       - ".mockery.yaml"
-      - "Makefile"
+      - "justfile"
       - ".github/workflows/test.yml"
   push:
     branches: [main]
@@ -43,6 +43,10 @@ jobs:
       - name: Set Go proxy
         run: go env -w GOPROXY=https://proxy.golang.org,direct
 
+      # 仓库的任务入口是 justfile（不再有 Makefile），mock 校验走 `just mocks-check`。
+      - name: Setup just
+        uses: extractions/setup-just@v4
+
       # template/dist 是前端构建产物（gitignore，不入库）。后端测试不需要真实前端，
       # 但 template 包用 //go:embed all:dist，dist 为空会编译失败；故放一个最小占位 index.html，
       # 既让 embed 通过，也满足 handler/web 的 SPA 回退测试（GET /app/* → 返回 index.html）。
@@ -53,7 +57,7 @@ jobs:
 
       # 校验提交的 mock 与接口一致（mockery 用 go run 固定版本，无需预装）。
       - name: Verify generated mocks are up-to-date
-        run: make mocks-check
+        run: just mocks-check
 
       # CGO 必须开启：mattn/go-sqlite3、sqlite-vec 与 -race 都依赖它；ubuntu-latest 自带 gcc，无需 musl/zig。
       - name: Run tests (race + coverage)

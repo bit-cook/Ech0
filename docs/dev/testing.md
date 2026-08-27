@@ -5,7 +5,7 @@
 ## 工具与依赖
 
 - **断言**：`github.com/stretchr/testify`（`require` 致命 / `assert` 非致命）。
-- **mock**：`github.com/vektra/mockery/v3`（testify 模板）。mockery 只是代码生成器，**不进 `go.mod`**——通过 `go run github.com/vektra/mockery/v3@<pin>` 调用，版本在 `Makefile` 的 `MOCKERY_VERSION` 固定，保证任何机器/CI 生成结果一致。
+- **mock**：`github.com/vektra/mockery/v3`（testify 模板）。mockery 只是代码生成器，**不进 `go.mod`**——通过 `go run github.com/vektra/mockery/v3@<pin>` 调用，版本在 `justfile` 的 `MOCKERY_VERSION` 固定，保证任何机器/CI 生成结果一致。
 - **不重写既有 stdlib 测试**：历史上用裸 `t.Fatalf` 的优质测试（如 `internal/handler/auth/auth_handler_test.go`）保持原样；新测试统一用 testify。
 
 ## 目录结构
@@ -33,7 +33,7 @@ internal/test/mocks/<domain>mock/ # mockery 生成（mocks.go），如 commentmo
 - **安全/回归测试绑定来源**：注释里写明 `GHSA-xxxx` 或 issue 号（仓库既有惯例）。
 - **禁止**：`time.Sleep` 等异步、真实网络、硬编码端口。异步用 channel/同步钩子，HTTP 用 `httptest`。
 - **DB 测试**：用 `helpers.NewTestDB(t)`（embedding/vec0 用 `NewTestDBWithVec`）；因依赖全局 `database.SetDB` 单例，**不要 `t.Parallel()`**。
-- **SPDX 头**：每个 `.go`（含 `_test.go`）都要有许可证头，`make spdx` 可补齐，CI `make spdx-check` 强制。
+- **SPDX 头**：每个 `.go`（含 `_test.go`）都要有许可证头，`just spdx` 可补齐，CI `just spdx-check` 强制。
 - 生成的 mock 带 `// Code generated ... DO NOT EDIT.`，golangci-lint 自动跳过，**勿手改**。
 
 ## 示例
@@ -96,7 +96,7 @@ func TestEchoRepository_Create(t *testing.T) {
 ## 新增一个 mock
 
 1. 在 `.mockery.yaml` 对应 package 下加接口名（或新增 package 块，指定 `config.dir` / `config.pkgname`）。
-2. `make mocks` 重新生成，`make mocks-check` 确认无漂移。
+2. `just mocks` 重新生成，`just mocks-check` 确认无漂移。
 3. 提交生成的 `internal/test/mocks/<domain>mock/mocks.go`。
 
 > 并行写测试时**不要各自改 `.mockery.yaml`**——所需 mock 应一次性在基建阶段生成好，避免冲突。
@@ -104,14 +104,14 @@ func TestEchoRepository_Create(t *testing.T) {
 ## 常用命令
 
 ```bash
-make test         # go test ./...
-make test-race    # CGO_ENABLED=1 go test -race ./...
-make test-cover   # 覆盖率 + 打印总数
-make mocks        # 重新生成 mock
-make mocks-check  # mock 漂移即失败
+just test         # go test ./...
+just test-race    # CGO_ENABLED=1 go test -race ./...
+just test-cover   # 覆盖率 + 打印总数
+just mocks        # 重新生成 mock
+just mocks-check  # mock 漂移即失败
 ```
 
 ## CI
 
-`.github/workflows/test.yml`（PR + push main 触发）：`make mocks-check` → `CGO_ENABLED=1 go test -race -coverprofile`。
+`.github/workflows/test.yml`（PR + push main 触发）：`just mocks-check` → `CGO_ENABLED=1 go test -race -coverprofile`。
 覆盖率写入 job summary、上传 artifact，**report-only 不阻断合并**。需要 CGO（sqlite + race），ubuntu-latest 自带 gcc，无需 musl/zig。

@@ -1,4 +1,4 @@
-# 本地 / make build-image 用多阶段构建；逻辑对齐：
+# 本地 / just docker build 用多阶段构建；逻辑对齐：
 # - 前端：.github/workflows/release.yml（pnpm + vite → ../template/dist）
 # - 后端 go build：同上 workflow 的 STATIC_LDFLAGS 与 ./cmd/ech0/main.go
 # - 运行镜像：根目录 Dockerfile 最终阶段（alpine + tzdata、data 目录）
@@ -34,7 +34,7 @@ COPY --from=frontend-builder /template/dist /app/template/dist
 
 ARG TARGETOS
 ARG TARGETARCH
-# 构建元数据：commit / build_time。当宿主传入了 ARG（make build-image 默认会传），
+# 构建元数据：commit / build_time。当宿主传入了 ARG（just docker build 默认会传），
 # 直接使用；否则回退到容器内 git / date（要求构建上下文包含 .git）。
 ARG GIT_COMMIT
 ARG BUILD_TIME

@@ -95,7 +95,12 @@ function renderInline(children: Token[], ctx: BuildCtx, baseLine: number): Child
         break
       case 'image':
         sink().push(
-          h('img', { key: nk(), src: String(t.attrGet('src') ?? ''), alt: t.content, loading: 'lazy' }),
+          h('img', {
+            key: nk(),
+            src: String(t.attrGet('src') ?? ''),
+            alt: t.content,
+            loading: 'lazy',
+          }),
         )
         break
       case 'link_open':
