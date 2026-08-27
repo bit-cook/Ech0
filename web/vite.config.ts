@@ -10,8 +10,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import UnoCSS from 'unocss/vite'
 import viteCompression from 'vite-plugin-compression'
 
-import { fingerprintPlugin } from './src/plugins/fingerprint-plugin'
-import { welcomePlugin } from './src/plugins/welcome-plugin'
+import { fingerprintPlugin } from './src/plugins/fingerprint-plugin.ts'
+import { welcomePlugin } from './src/plugins/welcome-plugin.ts'
 
 export default defineConfig(({ command }) => ({
   plugins: [

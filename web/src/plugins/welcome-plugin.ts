@@ -2,7 +2,7 @@
 // Copyright (C) 2025-2026 lin-snow
 
 import type { Plugin } from 'vite'
-import { printWelcome } from '../scripts/welcome.js'
+import { printWelcome } from '../scripts/welcome.ts'
 
 export function welcomePlugin(): Plugin {
   let hasShown = false
