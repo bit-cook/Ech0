@@ -9,34 +9,35 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
+var LightDark = sync.OnceValue(func() lipgloss.LightDarkFunc {
+	return lipgloss.LightDark(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
+})
+
 var (
-	// 信息样式（每行）
-	infoStyle = lipgloss.NewStyle().
+	infoStyle = sync.OnceValue(func() lipgloss.Style {
+		return lipgloss.NewStyle().
 			PaddingLeft(2).
-			Foreground(lipgloss.AdaptiveColor{
-			Light: "236", Dark: "252",
-		})
+			Foreground(LightDark()(lipgloss.Color("236"), lipgloss.Color("252")))
+	})
 
-	// 标题样式
-	titleStyle = lipgloss.NewStyle().
+	titleStyle = sync.OnceValue(func() lipgloss.Style {
+		return lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.AdaptiveColor{
-			Light: "#4338ca", Dark: "#FF7F7F",
-		})
+			Foreground(LightDark()(lipgloss.Color("#4338ca"), lipgloss.Color("#FF7F7F")))
+	})
 
-	// 高亮样式
-	highlight = lipgloss.NewStyle().
+	highlight = sync.OnceValue(func() lipgloss.Style {
+		return lipgloss.NewStyle().
 			Bold(false).
 			Italic(true).
-			Foreground(lipgloss.AdaptiveColor{
-			Light: "#7c3aed", Dark: "#53b7f5ff",
-		})
+			Foreground(LightDark()(lipgloss.Color("#7c3aed"), lipgloss.Color("#53b7f5ff")))
+	})
 
-	// 外框
 	boxStyle = lipgloss.NewStyle().
 			Bold(true).
 			BorderStyle(lipgloss.RoundedBorder()).
@@ -55,19 +56,18 @@ const (
 `
 )
 
-// GetLogoBanner 获取Logo横幅
 func GetLogoBanner() string {
 	lines := strings.Split(banner, "\n")
 	var rendered []string
 
 	colors := []string{
-		"#FF7F7F", // 珊瑚红
-		"#FFB347", // 桃橙色
-		"#FFEB9C", // 金黄色
-		"#B8E6B8", // 薄荷绿
-		"#87CEEB", // 天空蓝
-		"#DDA0DD", // 梅花紫
-		"#F0E68C", // 卡其色
+		"#FF7F7F",
+		"#FFB347",
+		"#FFEB9C",
+		"#B8E6B8",
+		"#87CEEB",
+		"#DDA0DD",
+		"#F0E68C",
 	}
 
 	for i, line := range lines {
@@ -84,7 +84,6 @@ func GetLogoBanner() string {
 	return full
 }
 
-// PrintCLIBanner 打印CLI横幅
 func PrintCLIBanner() {
 	banner := GetLogoBanner()
 
@@ -93,35 +92,25 @@ func PrintCLIBanner() {
 	}
 }
 
-// PrintCLIInfo 打印CLI信息
 func PrintCLIInfo(title, msg string) {
-	// 使用 lipgloss 渲染 CLI 信息
-	if _, err := fmt.Fprintln(os.Stdout, infoStyle.Render(titleStyle.Render(title)+": "+highlight.Render(msg))); err != nil {
+	if _, err := fmt.Fprintln(os.Stdout, infoStyle().Render(titleStyle().Render(title)+": "+highlight().Render(msg))); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to print cli info: %v\n", err)
 	}
 }
 
-// CLIInfoItem 是信息框里的一条统计项。Title 为空表示自由文本块（整体缩进，不参与列对齐）。
 type CLIInfoItem struct {
 	Title string
 	Msg   string
 }
 
-// CLIBoxHeader 是信息框的标题行：图标 + 主语 + 值（通常是产物路径）。
-//
-// 标题行与下方统计项分开渲染，因为两者回答的是不同问题——「这是什么、在哪」对「有多少」。
-// 图标尤其必须待在这里：emoji 是宽度不定的字形（部分还带变体选择符），一旦混进统计项的
-// 标签列，整列对齐就会被它顶歪。
 type CLIBoxHeader struct {
 	Icon  string
 	Title string
 	Value string
 }
 
-// boxLabelGap 是标签列与值列之间的间距。
 const boxLabelGap = 2
 
-// GetCLIPrintWithBox 渲染带边框的信息框：一行标题，下面是标签对齐的统计项。
 func GetCLIPrintWithBox(header CLIBoxHeader, items ...CLIInfoItem) string {
 	lines := make([]string, 0, len(items)+2)
 
@@ -132,8 +121,6 @@ func GetCLIPrintWithBox(header CLIBoxHeader, items ...CLIInfoItem) string {
 		}
 	}
 
-	// 标签列补齐到最宽一项，让所有值的左端落在同一列，纵向一扫就能比。
-	// 用 lipgloss.Width 而非 len：宽字符与转义序列都得算对。
 	labelWidth := 0
 	for _, item := range items {
 		if w := lipgloss.Width(item.Title); w > labelWidth {
@@ -141,7 +128,6 @@ func GetCLIPrintWithBox(header CLIBoxHeader, items ...CLIInfoItem) string {
 		}
 	}
 
-	// 有标题时统计项缩进一级，视觉上归属于标题。
 	indent := ""
 	if header.Title != "" || header.Value != "" {
 		indent = "  "
@@ -167,12 +153,12 @@ func renderBoxHeader(h CLIBoxHeader) string {
 		b.WriteString(h.Icon)
 		b.WriteString("  ")
 	}
-	b.WriteString(titleStyle.Render(h.Title))
+	b.WriteString(titleStyle().Render(h.Title))
 	if h.Value != "" {
 		b.WriteString("  ")
-		b.WriteString(highlight.Render(h.Value))
+		b.WriteString(highlight().Render(h.Value))
 	}
-	return infoStyle.Render(b.String())
+	return infoStyle().Render(b.String())
 }
 
 func renderBoxItem(item CLIInfoItem, labelWidth int, indent string) []string {
@@ -181,37 +167,34 @@ func renderBoxItem(item CLIInfoItem, labelWidth int, indent string) []string {
 	if item.Title == "" {
 		out := make([]string, 0, len(parts))
 		for _, line := range parts {
-			out = append(out, infoStyle.Render(indent+highlight.Render(line)))
+			out = append(out, infoStyle().Render(indent+highlight().Render(line)))
 		}
 		return out
 	}
 
-	label := indent + titleStyle.Render(item.Title) +
+	label := indent + titleStyle().Render(item.Title) +
 		strings.Repeat(" ", labelWidth-lipgloss.Width(item.Title)+boxLabelGap)
-	out := []string{infoStyle.Render(label + highlight.Render(parts[0]))}
+	out := []string{infoStyle().Render(label + highlight().Render(parts[0]))}
 
-	// 续行对齐到值列，多行值不会甩回标签列下面。
 	continuation := indent + strings.Repeat(" ", labelWidth+boxLabelGap)
 	for _, line := range parts[1:] {
-		out = append(out, infoStyle.Render(continuation+highlight.Render(line)))
+		out = append(out, infoStyle().Render(continuation+highlight().Render(line)))
 	}
 	return out
 }
 
-// PrintCLIWithBox 打印带边框的CLI信息
 func PrintCLIWithBox(header CLIBoxHeader, items ...CLIInfoItem) {
 	if _, err := fmt.Fprintln(os.Stdout, GetCLIPrintWithBox(header, items...)); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to print cli box: %v\n", err)
 	}
 }
 
-// ClearScreen 清屏函数，根据操作系统执行不同的清屏命令
 func ClearScreen() {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", "cls") // Windows 清屏命令
+		cmd = exec.Command("cmd", "/c", "cls")
 	} else {
-		cmd = exec.Command("clear") // Linux/macOS 清屏命令
+		cmd = exec.Command("clear")
 	}
 	cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {

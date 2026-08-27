@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 	"github.com/lin-snow/ech0/internal/config"
 	"github.com/lin-snow/ech0/internal/di"
 	tuiUtil "github.com/lin-snow/ech0/internal/util/tui"
@@ -58,7 +58,6 @@ func DoVersion() {
 		{Title: "Version", Msg: "v" + versionPkg.Version},
 		{Title: "Commit", Msg: versionPkg.Commit},
 	}
-	// 源码构建不注入 BuildTime，空值就不占一行。
 	if versionPkg.BuildTime != "" {
 		items = append(items, tuiUtil.CLIInfoItem{Title: "Build Time", Msg: versionPkg.BuildTime})
 	}
@@ -67,7 +66,6 @@ func DoVersion() {
 		tuiUtil.CLIInfoItem{Title: "Website", Msg: "https://ech0.app/"},
 		tuiUtil.CLIInfoItem{Title: "License", Msg: versionPkg.License},
 		tuiUtil.CLIInfoItem{Title: "Source", Msg: versionPkg.RepoURL},
-		// 空项渲染成空行，把版权与上面的字段表分开，免得它看着像个没有值的标签。
 		tuiUtil.CLIInfoItem{},
 		tuiUtil.CLIInfoItem{Msg: versionPkg.Copyright()},
 	)
@@ -105,7 +103,7 @@ func DoTui() {
 			Title("Welcome to the Ech0 TUI.").
 			Options(options...).
 			Value(&action).
-			WithTheme(huh.ThemeCatppuccin()).
+			WithTheme(huh.ThemeFunc(huh.ThemeCatppuccin)).
 			Run()
 		if err != nil {
 			tuiUtil.PrintCLIInfo("😭 Operation failed", err.Error())
