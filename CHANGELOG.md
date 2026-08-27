@@ -9,6 +9,8 @@ For releases prior to v4.6.5, see the [GitHub releases page](https://github.com/
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-08-27
+
 ### Added
 
 * **Copilot can now manage your Echos, and every change asks you first.** *Chat* gains three management tools — `create_echo`, `update_echo`, `delete_echo` — plus `ask_user`, a blocking question the assistant can put to you mid-answer. Nothing is written until you approve the specific change, and the approval is enforced by the agent loop rather than by an instruction in the prompt.
