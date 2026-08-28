@@ -11,11 +11,13 @@ For releases prior to v4.6.5, see the [GitHub releases page](https://github.com/
 
 ## [5.7.0] - 2026-08-28
 
-# Changelog
+### Fixed
 
-## Fixed
+* **Copilot multi-select now clearly shows selected options.** Selected options use a distinct fill and checkmark instead of sharing the hover state, while the model's suggested option is marked with a dot.
 
-* **MCP compatibility restored.** `/mcp` now supports `2026-07-28`, `2025-11-25`, `2025-06-18`, and `2025-03-26` concurrently. Legacy clients can connect without sessions, while protocol-specific transport and response formats are preserved.
+* **Copilot questions are now keyboard-navigable.** Options, submit, and back controls have visible focus states. Recorded answers also wrap correctly on narrow screens instead of being truncated.
+
+* **MCP compatibility restored.** `/mcp` now supports `2026-07-28`, `2025-11-25`, `2025-06-18`, and `2025-03-26` concurrently. Legacy clients can connect without sessions while retaining their protocol-specific transport and response formats.
 
 * **MCP Origin validation fixed.** Cross-origin browser requests are now rejected with `403`, protecting locally bound endpoints against DNS rebinding. Additional origins can be configured with `ECH0_WEB_CORS_ALLOWED_ORIGINS`.
 
@@ -27,7 +29,11 @@ For releases prior to v4.6.5, see the [GitHub releases page](https://github.com/
 
 * **Copilot no longer silently drops attachments.** Requests to create or modify unsupported images, files, and extension cards are now rejected explicitly instead of being reported as completed.
 
-## Added
+### Changed
+
+* **Copilot questions and confirmations now feel native to the conversation.** They use the same accent-rule treatment as reasoning and retrieval traces instead of appearing as standalone cards. Confirmation details, including Echo content, now use the reading face instead of monospace.
+
+### Added
 
 * **Structured tool results.** JSON object results now include `structuredContent`, allowing clients to consume structured data without parsing the text response.
 
