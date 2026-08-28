@@ -4,6 +4,7 @@
 package router
 
 import (
+	"github.com/lin-snow/ech0/internal/config"
 	"github.com/lin-snow/ech0/internal/handler"
 	"github.com/lin-snow/ech0/internal/middleware"
 	authModel "github.com/lin-snow/ech0/internal/model/auth"
@@ -13,7 +14,7 @@ func setupMCPRoutes(groups *AppRouterGroup, h *handler.Bundle) {
 	g := groups.MCPRouterGroup
 	g.Use(
 		middleware.RateLimit(20, 40),
-		middleware.OriginGuard(nil),
+		middleware.OriginGuard(config.Config().Web.CORS.AllowedOrigins),
 		middleware.RequireAudience(authModel.AudienceMCPRemote),
 	)
 	g.POST("", h.MCPHandler.ServeEndpoint())

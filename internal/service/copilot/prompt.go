@@ -46,6 +46,7 @@ const chatSystemPrompt = `你是用户的私人助手。你可以检索 ta 过�
 - create_echo：发布一条新的 Echo。
 - update_echo：修改某条已有的 Echo（先用 search_echos 拿到 id）。
 - delete_echo：删除某条 Echo（先用 search_echos 拿到 id）。
+- 这三个管理工具只能写正文、标签和可见性。图片、附件、音乐/视频/网站/位置等扩展卡片都动不了：既不能带着发，也不能改或删（删除是整条删，含其附件）。用户要发带图的、或要改某条的配图/卡片，如实告诉 ta 这需要在界面里操作，不要假装做到了。
 - ask_user：向用户提问并等待回答，用于「只有 ta 能决定」的选择（改成哪个标签、指的是哪一条）。
 关键纪律（务必遵守）：
 - 凡是「某段时间的总结/回顾」，**直接且只调用 summarize_echos**（据当前日期换算 date_from/date_to），**不要先用 search_echos 采样**。summarize_echos 返回的材料才是完整依据。
@@ -69,6 +70,7 @@ Management tools (they change the user's data; calling one automatically raises 
 - create_echo: post a new Echo.
 - update_echo: edit an existing Echo (get its id from search_echos first).
 - delete_echo: delete an Echo (get its id from search_echos first).
+- Those three management tools write text, tags and visibility only. Images, attachments and extension cards (music/video/website/location) are out of reach: you cannot attach them when posting, and cannot change or remove them when editing (deleting removes the whole Echo including its attachments). If the user wants to post with images, or wants an Echo's images or card changed, say plainly that it has to be done in the UI — never imply you did it.
 - ask_user: put a question to the user and wait for the answer — for choices only they can make (which tag to use, which Echo they meant).
 Key discipline (must follow):
 - For ANY "summary/review of a time period" (year-end, yearly, quarterly, monthly, or "what did I post in H1"), call summarize_echos DIRECTLY and ONLY (convert the current date into date_from/date_to); do NOT pre-sample with search_echos. Its returned material is the complete basis.
@@ -360,11 +362,12 @@ type writeStrings struct {
 	NoTags          string
 	Arrow           string
 
-	Created   string
-	Updated   string
-	Deleted   string
-	NoChange  string
-	BadEchoID string
+	Created        string
+	Updated        string
+	Deleted        string
+	NoChange       string
+	BadEchoID      string
+	UnsupportedArg string
 }
 
 func writeStringsFor(locale string) writeStrings {
@@ -396,6 +399,7 @@ func writeStringsFor(locale string) writeStrings {
 			Deleted:         "已删除，Echo ID：%s",
 			NoChange:        "没有需要修改的字段：content、tags、private 至少要给一个，且要和现在的值不同",
 			BadEchoID:       "id 不是一个有效的 Echo ID。请先用 search_echos 检索，然后照抄结果里那条的 id= 后面的完整 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）——【1】【2】只是结果编号，不是 ID。",
+			UnsupportedArg:  "本工具不支持这个参数。create_echo / update_echo 只能写 content、tags、private：图片、附件、扩展卡片（音乐/视频/网站/位置/GitHub 项目）都无法通过对话创建或修改，需要用户自己在界面里操作——如实告诉 ta，不要重试。",
 		}
 	}
 	return writeStrings{
@@ -425,6 +429,7 @@ func writeStringsFor(locale string) writeStrings {
 		Deleted:         "Deleted. Echo ID: %s",
 		NoChange:        "Nothing to update: give at least one of content, tags or private, and it must differ from the current value",
 		BadEchoID:       "id is not a valid Echo ID. Search with search_echos first, then copy the full UUID after id= on the result you mean (e.g. 019ce0ea-82dd-774f-ae2d-5445512d42ad) — 【1】【2】 are result numbers, not IDs.",
+		UnsupportedArg:  "This tool does not take that field. create_echo / update_echo can only write content, tags and private: images, attachments and extension cards (music/video/website/location/GitHub project) cannot be created or changed from a chat, and the user has to do it in the UI — tell them so instead of retrying.",
 	}
 }
 
@@ -438,6 +443,7 @@ func createEchoDescriptionFor(locale string) string {
 - content 用用户真正想发的内容。ta 让你「帮我写一条关于 X 的」时你可以代笔，但不要加“以下是为你生成的内容”这类外壳。
 - tags 优先复用系统提示里列出的已有标签；用户没提标签就不要自己加。
 - 用户明确说「发一条 / 记一下 / 帮我写并发出来」才调它。只是聊到某件事，不要擅自发布。
+- 不支持图片和附件：除 content、tags、private 之外什么都发不了，扩展卡片（音乐/视频/网站/位置/GitHub 项目）同样不行。用户想发带图的 Echo，就告诉 ta 这需要在界面里发，不要假装发了。
 - 工具返回「已发布」才算成功；返回「用户没有确认」就是没发，如实告诉 ta，不要重试。`
 	}
 	return `Post a new Echo for the user.
@@ -448,6 +454,7 @@ Must follow:
 - "content" is what the user actually wants posted. You may write it for them when they ask you to, but do not wrap it in "here is the content I generated".
 - Prefer tags that already exist (they are listed in the context block); do not invent tags the user did not mention.
 - Only call this when the user actually asks to post/record something. Merely discussing a topic is not a request to publish it.
+- No attachments: content, tags and private are all this tool can set. Images, files and extension cards (music/video/website/location/GitHub project) cannot be posted from here. If the user wants an Echo with images, tell them it has to be done in the UI — do not pretend you posted them.
 - Success is the tool returning "Posted". If it returns that the user did not confirm, nothing was posted — say so and do not retry.`
 }
 
@@ -461,6 +468,7 @@ func updateEchoDescriptionFor(locale string) string {
 - id 必须照抄 search_echos 结果里那条的「id=」后面的完整 UUID。【1】【2】是结果编号，传它一定失败。不知道改哪一条就先检索，绝对不要猜 ID。
 - 只传你要改的字段。content、tags、private 都是整体替换：传了 tags 就是把标签换成这一组，想保留原有标签就把它们一起写进来。
 - 检索命中多条、不确定用户指的是哪一条时，先用 ask_user 让 ta 选，再来改。
+- 不支持改图片、附件和扩展卡片：它们会被原样保留（改正文不会弄丢配图），但你无法增删改它们。用户要动这些，告诉 ta 在界面里改。
 - 工具返回「已更新」才算成功；返回「用户没有确认」就是没改，如实告诉 ta，不要重试。`
 	}
 	return `Edit an existing Echo.
@@ -471,6 +479,7 @@ Must follow:
 - "id" is the full UUID after "id=" on the search_echos result you mean, copied verbatim. 【1】【2】 are result numbers and will always fail. If you do not know which Echo, search first; never guess an ID.
 - Pass only the fields you are changing. content, tags and private each replace wholesale: passing tags sets the tag set to exactly that list, so include the existing tags if they should stay.
 - If several Echos match and you are unsure which one the user means, use ask_user to have them pick before editing.
+- Images, files and extension cards cannot be edited: they are carried over untouched (editing the text will not lose an Echo's images), but you cannot add, change or remove them. If the user wants that, tell them to do it in the UI.
 - Success is the tool returning "Updated". If it returns that the user did not confirm, nothing changed — say so and do not retry.`
 }
 

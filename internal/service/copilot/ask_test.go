@@ -322,6 +322,12 @@ func existingEcho() *echoModel.Echo {
 		Tags:      []echoModel.Tag{{ID: "t1", Name: "日常"}},
 		CreatedAt: ts("2026-01-02"),
 		EchoFiles: []echoModel.EchoFile{{ID: "f1"}},
+		Layout:    echoModel.LayoutGrid,
+		Extension: &echoModel.EchoExtension{
+			ID:      "x1",
+			Type:    echoModel.Extension_MUSIC,
+			Payload: map[string]any{"url": "https://example.com/a.mp3"},
+		},
 	}
 }
 
@@ -561,8 +567,88 @@ func TestUpdateEchoTool_CarriesUnshownFieldsThrough(t *testing.T) {
 	if len(got.EchoFiles) != 1 || got.EchoFiles[0].ID != "f1" {
 		t.Fatalf("files = %+v, want the existing file carried through", got.EchoFiles)
 	}
+	// UpdateEcho deletes and re-creates the extension row from what it is handed,
+	// so an extension this tool never showed the person has to arrive back intact
+	// or editing a caption would destroy the Echo's music card.
+	if got.Extension == nil || got.Extension.Type != echoModel.Extension_MUSIC {
+		t.Fatalf("extension = %+v, want the existing music card carried through", got.Extension)
+	}
+	if got.Layout != echoModel.LayoutGrid {
+		t.Fatalf("layout = %q, want the existing layout carried through", got.Layout)
+	}
 	if len(got.Tags) != 1 || got.Tags[0].Name != "日常" {
 		t.Fatalf("tags = %+v, want the existing tags untouched", got.Tags)
+	}
+}
+
+// The fields an Echo really has but these tools cannot write. encoding/json
+// drops unknown fields without a word, which here would end the run with the
+// tool reporting a posted Echo and the person reading that their images went
+// with it. Neither happened, so the call has to fail.
+func TestWriteTools_RefuseFieldsTheyCannotWrite(t *testing.T) {
+	ws := writeStringsFor("zh-CN")
+	unsupported := map[string]string{
+		"files":      `"files":[{"id":"f9"}]`,
+		"echo_files": `"echo_files":[{"id":"f9"}]`,
+		"images":     `"images":["/uploads/a.png"]`,
+		"extension":  `"extension":{"type":"MUSIC","payload":{}}`,
+		"layout":     `"layout":"grid"`,
+	}
+
+	for name, field := range unsupported {
+		t.Run(name, func(t *testing.T) {
+			echoSvc := &recordingEchoSvc{}
+			echoSvc.getByIDFn = func(string) (*echoModel.Echo, error) { return existingEcho(), nil }
+			s := &CopilotService{echoService: echoSvc, asks: newAskRegistry()}
+			a, events := newTestAsker(time.Second)
+			a.registry = s.asks
+
+			args := map[string]string{
+				"create_echo": `{"content":"写点什么",` + field + `}`,
+				"update_echo": echoArgs(testEchoID, `"content":"改过的内容"`, field),
+			}
+			for _, tool := range []agent.Tool{
+				s.createEchoTool(a, "zh-CN", time.UTC),
+				s.updateEchoTool(a, "zh-CN", time.UTC),
+			} {
+				_, err := runMutation(t, tool, args[tool.Def.Name])
+				if err == nil {
+					t.Fatalf("%s accepted %s and would have dropped it silently", tool.Def.Name, name)
+				}
+				if !strings.Contains(err.Error(), ws.UnsupportedArg) {
+					t.Fatalf("%s said %q, want the refusal that says attachments cannot be written here", tool.Def.Name, err)
+				}
+				if !strings.Contains(err.Error(), name) {
+					t.Fatalf("%s refused without naming the field: %q", tool.Def.Name, err)
+				}
+			}
+			if len(events) != 0 {
+				t.Fatal("a confirmation was shown for a call the tool cannot honour")
+			}
+			if len(echoSvc.posted) != 0 || len(echoSvc.updated) != 0 {
+				t.Fatal("a write happened for a call the tool cannot honour")
+			}
+		})
+	}
+}
+
+// Malformed JSON and a wrong type are the model's own mistakes and must read as
+// themselves: dressed up as the attachment refusal they would send it hunting
+// for a field it never passed.
+func TestWriteTools_MalformedArgsAreNotBlamedOnAttachments(t *testing.T) {
+	ws := writeStringsFor("zh-CN")
+	s := &CopilotService{echoService: &recordingEchoSvc{}, asks: newAskRegistry()}
+	a, _ := newTestAsker(time.Second)
+	a.registry = s.asks
+
+	for _, args := range []string{`{"content":123}`, `{"content":`, `not json at all`} {
+		_, err := runMutation(t, s.createEchoTool(a, "zh-CN", time.UTC), args)
+		if err == nil {
+			t.Fatalf("create_echo accepted %s", args)
+		}
+		if strings.Contains(err.Error(), ws.UnsupportedArg) {
+			t.Fatalf("%s was reported as an unsupported field: %q", args, err)
+		}
 	}
 }
 

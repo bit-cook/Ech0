@@ -4,6 +4,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -50,7 +51,7 @@ func (s *CopilotService) createEchoTool(a *asker, locale string, loc *time.Locat
 		Parameters:  json.RawMessage(createEchoSchema),
 	}, func(_ context.Context, args json.RawMessage) (AskQuestion, applyFunc, error) {
 		var in createEchoArgs
-		if err := json.Unmarshal(args, &in); err != nil {
+		if err := decodeWriteArgs(args, &in, ws); err != nil {
 			return AskQuestion{}, nil, err
 		}
 		content := strings.TrimSpace(in.Content)
@@ -100,7 +101,7 @@ func (s *CopilotService) updateEchoTool(a *asker, locale string, loc *time.Locat
 		Parameters:  json.RawMessage(updateEchoSchema),
 	}, func(ctx context.Context, args json.RawMessage) (AskQuestion, applyFunc, error) {
 		var in updateEchoArgs
-		if err := json.Unmarshal(args, &in); err != nil {
+		if err := decodeWriteArgs(args, &in, ws); err != nil {
 			return AskQuestion{}, nil, err
 		}
 		id, err := echoIDArg(in.ID, ws)
@@ -177,7 +178,7 @@ func (s *CopilotService) deleteEchoTool(a *asker, locale string, loc *time.Locat
 		Parameters:  json.RawMessage(deleteEchoSchema),
 	}, func(ctx context.Context, args json.RawMessage) (AskQuestion, applyFunc, error) {
 		var in deleteEchoArgs
-		if err := json.Unmarshal(args, &in); err != nil {
+		if err := decodeWriteArgs(args, &in, ws); err != nil {
 			return AskQuestion{}, nil, err
 		}
 		id, err := echoIDArg(in.ID, ws)
@@ -239,6 +240,36 @@ func echoIDArg(raw string, ws writeStrings) (string, error) {
 		return "", errors.New(ws.BadEchoID)
 	}
 	return id, nil
+}
+
+// decodeWriteArgs reads a write tool's arguments and refuses any field the tool
+// cannot honour.
+//
+// encoding/json ignores unknown fields, which is the wrong default here: a
+// model that passes files or extension would be told the Echo was posted, and
+// the person would read that their images went with it. Neither is true — this
+// tool writes text, tags and visibility and nothing else. Refusing is the only
+// answer that is not a lie.
+func decodeWriteArgs(args json.RawMessage, dst any, ws writeStrings) error {
+	raw := bytes.TrimSpace(args)
+	if len(raw) == 0 {
+		raw = []byte("{}")
+	}
+	// Lenient first. Malformed JSON, a truncated call and a wrong type are the
+	// model's own mistakes, and they have to reach it worded as themselves.
+	if err := json.Unmarshal(raw, dst); err != nil {
+		return err
+	}
+	// Strict second. The bytes already parsed and type-checked, so the only
+	// thing left to find is a field the tool does not have — the one mistake
+	// that needs explaining, because the field it reached for does exist on an
+	// Echo and simply is not writable from here.
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return fmt.Errorf("%s: %w", ws.UnsupportedArg, err)
+	}
+	return nil
 }
 
 // field is one line of a confirmation's detail block.
@@ -326,8 +357,8 @@ func sameStrings(a, b []string) bool {
 	return slices.Equal(left, right)
 }
 
-const createEchoSchema = `{"type":"object","properties":{"content":{"type":"string","description":"Echo 的正文，用用户想发布的原话/内容，不要加你自己的解说"},"tags":{"type":"array","items":{"type":"string"},"description":"标签名（不带 #）；优先复用系统提示里列出的已有标签，不要凭空造新标签"},"private":{"type":"boolean","description":"true 为仅自己可见；用户没说就传 false"}},"required":["content"]}`
+const createEchoSchema = `{"type":"object","description":"只能发布正文、标签和可见性。图片、附件、音乐/视频/网站/位置/GitHub 项目等扩展卡片一律不支持，传了会直接报错——用户要发带图或带卡片的 Echo，请让 ta 在界面里发。","properties":{"content":{"type":"string","description":"Echo 的正文，用用户想发布的原话/内容，不要加你自己的解说"},"tags":{"type":"array","items":{"type":"string"},"description":"标签名（不带 #）；优先复用系统提示里列出的已有标签，不要凭空造新标签"},"private":{"type":"boolean","description":"true 为仅自己可见；用户没说就传 false"}},"required":["content"],"additionalProperties":false}`
 
-const updateEchoSchema = `{"type":"object","properties":{"id":{"type":"string","description":"要修改的 Echo 的 ID：照抄 search_echos 结果里那条的 id= 后面的 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）。绝对不要传【1】这类序号，也不要自己编"},"content":{"type":"string","description":"新的正文；只在要改正文时传，传就是整条替换"},"tags":{"type":"array","items":{"type":"string"},"description":"新的标签名列表；只在要改标签时传，传就是整组替换（要保留原有标签就把它们一起写进来）"},"private":{"type":"boolean","description":"新的可见性；只在要改可见性时传"}},"required":["id"]}`
+const updateEchoSchema = `{"type":"object","description":"只能改正文、标签和可见性。这条 Echo 原有的图片、附件和扩展卡片会原样保留，但也无法用本工具修改或删除，传 files / extension 之类的字段会直接报错——用户要动这些，请让 ta 在界面里改。","properties":{"id":{"type":"string","description":"要修改的 Echo 的 ID：照抄 search_echos 结果里那条的 id= 后面的 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）。绝对不要传【1】这类序号，也不要自己编"},"content":{"type":"string","description":"新的正文；只在要改正文时传，传就是整条替换"},"tags":{"type":"array","items":{"type":"string"},"description":"新的标签名列表；只在要改标签时传，传就是整组替换（要保留原有标签就把它们一起写进来）"},"private":{"type":"boolean","description":"新的可见性；只在要改可见性时传"}},"required":["id"],"additionalProperties":false}`
 
-const deleteEchoSchema = `{"type":"object","properties":{"id":{"type":"string","description":"要删除的 Echo 的 ID：照抄 search_echos 结果里那条的 id= 后面的 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）。绝对不要传【1】这类序号，也不要自己编"}},"required":["id"]}`
+const deleteEchoSchema = `{"type":"object","description":"整条删除，包括它的图片、附件和扩展卡片。无法只删其中一部分。","properties":{"id":{"type":"string","description":"要删除的 Echo 的 ID：照抄 search_echos 结果里那条的 id= 后面的 UUID（形如 019ce0ea-82dd-774f-ae2d-5445512d42ad）。绝对不要传【1】这类序号，也不要自己编"}},"required":["id"],"additionalProperties":false}`
