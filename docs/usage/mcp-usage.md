@@ -12,6 +12,12 @@ Ech0 的 MCP 端点采用 **Streamable HTTP**（JSON-RPC over HTTP），与 [MCP
 
 若运行环境只支持本地 stdio 进程而非远程 HTTP，可通过网关或代理转发到本端点。
 
+## 在管理后台查看
+
+管理后台 **功能扩展 → MCP** 展示当前实例的端点地址、传输方式、令牌 audience、支持的协议版本，以及按权限分组的完整 Tool / Resource 名单。破坏性操作标红；点击任意名称弹出详情，显示类型、所需 Scope 与完整描述——Tool 的 `description` 是写给模型看的提示词，平铺在面板上只会挤占版面。
+
+该页面读取 `GET /api/mcp/manifest`（需要 `admin:token` scope，与访问令牌管理同权限），数据直接由 MCP 注册表推导——注册新的 Tool 或 Resource 会自动出现，不存在需要手工同步的第二份清单。端点地址按打开面板的来源拼出，所以显示的地址一定是可达的。
+
 ## 快速开始
 
 ### 1. 创建 MCP 专用 Access Token

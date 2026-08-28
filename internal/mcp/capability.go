@@ -6,6 +6,9 @@ package mcp
 const (
 	ProtocolVersion = "2026-07-28"
 	ServerName      = "ech0-mcp"
+
+	MCPEndpointPath         = "/mcp"
+	TransportStreamableHTTP = "streamable-http"
 )
 
 const (

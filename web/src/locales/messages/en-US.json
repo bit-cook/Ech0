@@ -845,7 +845,8 @@
   },
   "extensionManagement": {
     "tabConnect": "Connect",
-    "tabCopilot": "Copilot"
+    "tabCopilot": "Copilot",
+    "tabMCP": "MCP"
   },
   "userManagement": {
     "tabAccount": "Account Settings",
@@ -1079,6 +1080,35 @@
   },
   "copilotSetting": {
     "title": "Ech0 Copilot"
+  },
+  "mcpSetting": {
+    "description": "Connect Ech0 to an MCP-capable AI client so the AI can access and manage your content directly.",
+    "createToken": "Create access token",
+    "endpointTitle": "MCP Endpoint",
+    "endpointHint": "Add this address to your MCP client and authenticate with a Bearer token.",
+    "copyEndpoint": "Copy address",
+    "copySuccess": "Address copied",
+    "copyFailed": "Copy failed",
+    "loadFailed": "Could not load MCP details",
+    "transport": "Transport",
+    "audience": "Token Audience",
+    "protocolVersions": "Protocol Version",
+    "capabilitiesTitle": "Capabilities",
+    "dangerLegend": "Operations in red are destructive; have the client confirm before running them. Click any name for its required scope and full description.",
+    "groupEcho": "Content",
+    "groupProfile": "Profile",
+    "groupComment": "Comments",
+    "groupFile": "Files",
+    "groupConnect": "Connect",
+    "groupAdmin": "Site admin",
+    "groupResources": "Resources",
+    "detailClose": "Close",
+    "detailScopes": "Required scope",
+    "detailRisk": "Risk",
+    "detailRiskValue": "Destructive, cannot be undone",
+    "kindTool": "Tool",
+    "kindResource": "Resource",
+    "kindTemplate": "Resource Template"
   },
   "embeddingSetting": {
     "title": "Vector Index",

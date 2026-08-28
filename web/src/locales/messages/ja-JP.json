@@ -845,7 +845,8 @@
   },
   "extensionManagement": {
     "tabConnect": "Connect",
-    "tabCopilot": "Copilot"
+    "tabCopilot": "Copilot",
+    "tabMCP": "MCP"
   },
   "userManagement": {
     "tabAccount": "アカウント設定",
@@ -1079,6 +1080,35 @@
   },
   "copilotSetting": {
     "title": "Ech0 Copilot"
+  },
+  "mcpSetting": {
+    "description": "Ech0 を MCP 対応の AI クライアントに接続し、AI がコンテンツへ直接アクセスして管理できるようにします。",
+    "createToken": "アクセストークンを作成",
+    "endpointTitle": "MCP Endpoint",
+    "endpointHint": "このアドレスを MCP クライアントに追加し、Bearer トークンで認証します。",
+    "copyEndpoint": "アドレスをコピー",
+    "copySuccess": "アドレスをコピーしました",
+    "copyFailed": "コピーに失敗しました",
+    "loadFailed": "MCP 情報を取得できませんでした",
+    "transport": "Transport",
+    "audience": "Token Audience",
+    "protocolVersions": "Protocol Version",
+    "capabilitiesTitle": "Capabilities",
+    "dangerLegend": "赤字の操作は破壊的です。実行前にクライアント側で確認を求めてください。名前をクリックすると必要な Scope と詳細を表示します。",
+    "groupEcho": "コンテンツ",
+    "groupProfile": "プロフィール",
+    "groupComment": "コメント",
+    "groupFile": "ファイル",
+    "groupConnect": "Connect",
+    "groupAdmin": "サイト管理",
+    "groupResources": "リソース",
+    "detailClose": "閉じる",
+    "detailScopes": "必要な Scope",
+    "detailRisk": "リスク",
+    "detailRiskValue": "破壊的な操作です。取り消せません",
+    "kindTool": "Tool",
+    "kindResource": "Resource",
+    "kindTemplate": "Resource Template"
   },
   "embeddingSetting": {
     "title": "ベクトルインデックス",

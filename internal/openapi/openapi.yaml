@@ -840,6 +840,96 @@ components:
         time:
           type: string
       type: object
+    Manifest:
+      additionalProperties: true
+      properties:
+        audience:
+          type: string
+        path:
+          type: string
+        protocol_versions:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        resource_templates:
+          items:
+            $ref: "#/components/schemas/ManifestResourceTemplate"
+          type:
+            - array
+            - "null"
+        resources:
+          items:
+            $ref: "#/components/schemas/ManifestResource"
+          type:
+            - array
+            - "null"
+        tools:
+          items:
+            $ref: "#/components/schemas/ManifestTool"
+          type:
+            - array
+            - "null"
+        transport:
+          type: string
+      type: object
+    ManifestResource:
+      additionalProperties: true
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        scopes:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        title:
+          type: string
+        uri:
+          type: string
+      type: object
+    ManifestResourceTemplate:
+      additionalProperties: true
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        scopes:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        title:
+          type: string
+        uri_template:
+          type: string
+      type: object
+    ManifestTool:
+      additionalProperties: true
+      properties:
+        description:
+          type: string
+        destructive:
+          type: boolean
+        name:
+          type: string
+        read_only:
+          type: boolean
+        scopes:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        title:
+          type: string
+      type: object
     ModelResultCommentSystemSetting:
       additionalProperties: true
       properties:
@@ -1727,6 +1817,24 @@ components:
           type:
             - array
             - "null"
+        error_code:
+          type: string
+        message_key:
+          type: string
+        message_params:
+          additionalProperties: {}
+          type: object
+        msg:
+          type: string
+      type: object
+    ResultManifest:
+      additionalProperties: true
+      properties:
+        code:
+          format: int64
+          type: integer
+        data:
+          $ref: "#/components/schemas/Manifest"
         error_code:
           type: string
         message_key:
@@ -3689,6 +3797,28 @@ paths:
       summary: 获取系统初始化状态
       tags:
         - Init
+  /mcp/manifest:
+    get:
+      operationId: mcp-manifest
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultManifest"
+          description: OK
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+          description: Error
+      security:
+        - bearerAuth:
+            - admin:token
+      summary: 获取 MCP 端点信息与能力清单
+      tags:
+        - MCP
   /migration/cancel:
     post:
       operationId: migration-cancel

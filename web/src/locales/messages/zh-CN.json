@@ -845,7 +845,8 @@
   },
   "extensionManagement": {
     "tabConnect": "Connect",
-    "tabCopilot": "Copilot"
+    "tabCopilot": "Copilot",
+    "tabMCP": "MCP"
   },
   "userManagement": {
     "tabAccount": "账户设置",
@@ -1079,6 +1080,35 @@
   },
   "copilotSetting": {
     "title": "Ech0 Copilot"
+  },
+  "mcpSetting": {
+    "description": "将 Ech0 接入支持 MCP 的 AI 客户端，让 AI 直接访问和管理你的内容。",
+    "createToken": "创建访问令牌",
+    "endpointTitle": "MCP Endpoint",
+    "endpointHint": "将此地址添加到你的 MCP Client，并使用 Bearer Token 进行认证。",
+    "copyEndpoint": "复制地址",
+    "copySuccess": "地址已复制",
+    "copyFailed": "复制失败",
+    "loadFailed": "没能读取 MCP 信息",
+    "transport": "Transport",
+    "audience": "Token Audience",
+    "protocolVersions": "Protocol Version",
+    "capabilitiesTitle": "Capabilities",
+    "dangerLegend": "标红的操作具有破坏性，建议在客户端要求确认后再执行。点击名称查看所需 Scope 与完整说明。",
+    "groupEcho": "内容",
+    "groupProfile": "个人资料",
+    "groupComment": "评论",
+    "groupFile": "文件",
+    "groupConnect": "互联",
+    "groupAdmin": "站点管理",
+    "groupResources": "资源",
+    "detailClose": "关闭",
+    "detailScopes": "所需 Scope",
+    "detailRisk": "风险",
+    "detailRiskValue": "破坏性操作，无法撤销",
+    "kindTool": "Tool",
+    "kindResource": "Resource",
+    "kindTemplate": "Resource Template"
   },
   "embeddingSetting": {
     "title": "向量索引",
