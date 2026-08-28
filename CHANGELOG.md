@@ -9,6 +9,7 @@ For releases prior to v4.6.5, see the [GitHub releases page](https://github.com/
 
 ## [Unreleased]
 
+
 ## [5.7.0] - 2026-08-28
 
 ### Fixed
@@ -34,6 +35,8 @@ For releases prior to v4.6.5, see the [GitHub releases page](https://github.com/
 * **Copilot questions and confirmations now feel native to the conversation.** They use the same accent-rule treatment as reasoning and retrieval traces instead of appearing as standalone cards. Confirmation details, including Echo content, now use the reading face instead of monospace.
 
 ### Added
+
+* **MCP panel.** Extensions now has an MCP tab showing this instance's endpoint address, transport, token audience, supported protocol versions, and every available tool and resource grouped by permission. Destructive operations are marked in red, and clicking any name opens its type, required scope, and full description. The listing is derived from the MCP registry via `GET /api/mcp/manifest`, so it cannot drift from what the endpoint actually serves.
 
 * **Structured tool results.** JSON object results now include `structuredContent`, allowing clients to consume structured data without parsing the text response.
 
