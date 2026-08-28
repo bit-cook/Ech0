@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -649,6 +650,46 @@ func TestWriteTools_MalformedArgsAreNotBlamedOnAttachments(t *testing.T) {
 		if strings.Contains(err.Error(), ws.UnsupportedArg) {
 			t.Fatalf("%s was reported as an unsupported field: %q", args, err)
 		}
+	}
+}
+
+// A write tool's schema and its decoder have to agree. The decoder refuses
+// unknown fields, so a schema that quietly permits them hands the model a
+// contract the tool will not honour — it would pass files, be told no, and have
+// no way to see that the schema misled it.
+//
+// This also catches a hand-edited schema string that stopped being JSON. Those
+// consts are opaque to the compiler, and the next thing to notice would be a
+// provider rejecting the entire chat request.
+func TestWriteTools_SchemasMatchTheDecoder(t *testing.T) {
+	s := &CopilotService{echoService: &recordingEchoSvc{}, asks: newAskRegistry()}
+	a, _ := newTestAsker(time.Second)
+	a.registry = s.asks
+
+	for _, tool := range []agent.Tool{
+		s.createEchoTool(a, "zh-CN", time.UTC),
+		s.updateEchoTool(a, "zh-CN", time.UTC),
+		s.deleteEchoTool(a, "zh-CN", time.UTC),
+	} {
+		t.Run(tool.Def.Name, func(t *testing.T) {
+			var schema struct {
+				Type       string         `json:"type"`
+				Properties map[string]any `json:"properties"`
+				Additional *bool          `json:"additionalProperties"`
+			}
+			if err := json.Unmarshal(tool.Def.Parameters, &schema); err != nil {
+				t.Fatalf("schema is not valid JSON: %v", err)
+			}
+			if schema.Type != "object" {
+				t.Fatalf(`type = %q, want "object"`, schema.Type)
+			}
+			if len(schema.Properties) == 0 {
+				t.Fatal("schema declares no properties")
+			}
+			if schema.Additional == nil || *schema.Additional {
+				t.Fatal(`schema must set "additionalProperties": false — the decoder refuses unknown fields, and a schema that allows them promises the model something the tool will not do`)
+			}
+		})
 	}
 }
 
